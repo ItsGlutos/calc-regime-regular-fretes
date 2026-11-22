@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Frete Líquido — o custo real do frete depois do crédito de CBS/IBS</title>
+    <meta
+      name="description"
+      content="Simulador do pagador de frete: compare transportadoras pelo custo líquido depois do crédito de CBS/IBS, com apuração do motor oficial da Receita."
+    />
+    <meta name="theme-color" content="#0b1220" />
+    <link rel="canonical" href="https://itsglutos.github.io/calc-regime-regular-fretes/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Frete Líquido — o custo real do frete depois do crédito de CBS/IBS" />
+    <meta
+      property="og:description"
+      content="Compare transportadoras pelo custo líquido pós-crédito de CBS/IBS, com apuração do motor oficial da Receita."
+    />
+    <meta property="og:url" content="https://itsglutos.github.io/calc-regime-regular-fretes/" />
+    <meta property="og:image" content="https://itsglutos.github.io/calc-regime-regular-fretes/assets/app-hero.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Calistoga&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip" href="#conteudo">Ir para o conteúdo</a>
+
+    <header class="topbar">
+      <div class="wrap topbar__inner">
+        <a class="brand" href="./" aria-label="Frete Líquido">
+          <span class="brand__mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" width="18" height="18" fill="none">
+              <path d="M7 21h12.5M14 9.5 21.5 17 14 24.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+              <circle cx="24.5" cy="9" r="2.2" stroke="currentColor" stroke-width="1.8" />
+            </svg>
+          </span>
+          <span class="brand__name">Frete<em>Líquido</em></span>
+        </a>
+
+        <nav class="nav" aria-label="Seções do site">
+          <a href="#calculo">O cálculo</a>
+          <a href="#recursos">Recursos</a>
+          <a href="#arquitetura">Arquitetura</a>
+          <a href="#rodar">Rodar</a>
+        </nav>
+
+        <a class="btn btn--ghost btn--sm" href="https://github.com/ItsGlutos/calc-regime-regular-fretes" target="_blank" rel="noreferrer">
+          GitHub
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" aria-hidden="true">
+            <path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </a>
+      </div>
+    </header>
+
+    <main id="conteudo">
+      <section class="hero wrap">
+        <div class="hero__copy">
+          <p class="eyebrow"><span class="eyebrow__rule" aria-hidden="true"></span>Simulador do pagador · CBS/IBS</p>
+          <h1>O frete mais barato<br />nem sempre é <span class="mark">o mais barato</span>.</h1>
+          <p class="lede">
+            Desconte o crédito de CBS/IBS que a sua empresa realmente aproveita e compare transportadoras pelo
+            <strong>custo líquido</strong> — o número que decide a compra, não o preço nominal.
+          </p>
+          <div class="hero__actions">
+            <a class="btn btn--primary" href="#calculo">
+              Ver a conta
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                <path d="M4 12h15M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </a>
+            <a class="btn btn--ghost" href="#rodar">Rodar localmente</a>
+          </div>
+          <ul class="hero__facts">
+            <li>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true">
+                <path d="m4.5 12.5 4.5 4.5 10.5-11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              Motor oficial da Receita
+            </li>
+            <li>Node + Java</li>
+            <li>MIT</li>
+          </ul>
+        </div>
+
+        <div class="hero__shot">
+          <div class="shot">
+            <div class="shot__bar" aria-hidden="true">
+              <span class="shot__dot"></span>
+              <span class="shot__dot"></span>
+              <span class="shot__dot"></span>
+              <span class="shot__url">127.0.0.1:5180</span>
+            </div>
+            <img
+              src="./assets/app-hero.png"
+              width="1425"
+              height="1270"
+              alt="Interface do Frete Líquido com o formulário de frete, o custo líquido de R$ 980,00 e o alerta de crédito abaixo de 4%."
+            />
+          </div>
+          <p class="shot__note">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8" />
+              <path d="M12 11v5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
+              <circle cx="12" cy="7.8" r="1.1" fill="currentColor" />
+            </svg>
+            Esta página é uma vitrine estática. O cálculo roda localmente, contra o motor oficial.
+          </p>
+        </div>
+      </section>
+
+      <section class="stats wrap" aria-label="Números do projeto">
+        <div class="stat">
+          <strong>27,00%</strong>
+          <span>alíquota plena<br />CBS 8,50% + IBS 18,50%</span>
+        </div>
+        <div class="stat">
+          <strong>R$ 73,00</strong>
+          <span>de diferença no líquido<br />com o mesmo preço nominal</span>
+        </div>
+        <div class="stat">
+          <strong>2–3</strong>
+          <span>transportadoras comparadas<br />por custo líquido</span>
+        </div>
+      </section>
+
+      <section id="calculo" class="section wrap">
+        <header class="section__head">
+          <p class="eyebrow">A conta que muda a decisão</p>
+          <h2>Mesmo preço. Regimes diferentes.</h2>
+          <p class="section__lede">
+            Um frete de R$ 1.000,00, a mesma rota e o mesmo preço nominal. O que separa as duas transportadoras é
+            quanto do CBS/IBS elas conseguem transferir como crédito.
+          </p>
+        </header>
+
+        <div class="cards">
+          <article class="res">
+            <div class="res__top">
+              <span class="chip">Simples/DAS</span>
+              <span class="res__nominal">R$ 1.000,00 nominais</span>
+            </div>
+            <p class="res__label">Custo líquido pós-crédito</p>
+            <p class="res__net">R$ 980,00</p>
+            <div class="res__row"><span>Crédito aproveitável</span><strong>R$ 20,00 · 2,00%</strong></div>
+            <div class="res__bar" aria-hidden="true"><span style="width: 2%"></span></div>
+            <p class="res__alert">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true">
+                <path d="M12 8v5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
+                <circle cx="12" cy="16.4" r="1.1" fill="currentColor" />
+                <path d="M10.3 3.9 2.6 17.2A2 2 0 0 0 4.3 20.2h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+              </svg>
+              Crédito efetivo abaixo de 4%
+            </p>
+          </article>
+
+          <article class="res res--best">
+            <span class="res__badge">melhor no líquido</span>
+            <div class="res__top">
+              <span class="chip">Simples híbrido</span>
+              <span class="res__nominal">R$ 1.000,00 nominais</span>
+            </div>
+            <p class="res__label">Custo líquido pós-crédito</p>
+            <p class="res__net">R$ 907,00</p>
+            <div class="res__row"><span>Crédito aproveitável</span><strong>R$ 93,00 · 9,30%</strong></div>
+            <div class="res__bar" aria-hidden="true"><span style="width: 9.3%"></span></div>
+            <p class="res__ok">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8" />
+                <path d="m8.2 12.3 2.6 2.6 5-5.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              Sem alerta: o crédito passa de 4%
+            </p>
+          </article>
+        </div>
+
+        <div class="delta">
+          <span class="delta__value">R$ 73,00</span>
+          <p>a menos no custo líquido, sem nenhuma diferença no preço nominal.</p>
+        </div>
+
+        <p class="source">
+          Frete de R$ 1.000,00 · SP → BA · regime pleno (2033) · CBS/IBS apurados pelo motor oficial. A regra de
+          crédito do perfil é aplicada sobre o destaque do documento.
+        </p>
+      </section>
+
+      <section id="recursos" class="section section--alt">
+        <div class="wrap">
+          <header class="section__head">
+            <p class="eyebrow">O que está pronto</p>
+            <h2>Do formulário à auditoria.</h2>
+            <p class="section__lede">
+              O simulador cobre a decisão de compra inteira: entrada, crédito, comparação e a prova de como cada
+              número foi apurado.
+            </p>
+          </header>
+
+          <div class="features">
+            <article class="feature">
+              <span class="feature__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+                  <path d="M5 4.5h14v15H5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+                  <path d="M8 8.5h8M8 12h8M8 15.5h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                </svg>
+              </span>
+              <h3>Entrada completa</h3>
+              <p>Valor do frete, perfil do transportador, B2B/B2C, UF de origem e destino, ano de referência.</p>
+            </article>
+
+            <article class="feature">
+              <span class="feature__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+                  <path d="M4 18V9M10 18V5M16 18v-6M22 18H2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
+                </svg>
+              </span>
+              <h3>Crédito e custo líquido</h3>
+              <p>Crédito em R$ e %, custo líquido e alerta visual quando o crédito efetivo fica abaixo de 4%.</p>
+            </article>
+
+            <article class="feature">
+              <span class="feature__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+                  <path d="M8 6h12M8 12h12M8 18h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                  <circle cx="4" cy="6" r="1.2" fill="currentColor" />
+                  <circle cx="4" cy="12" r="1.2" fill="currentColor" />
+                  <circle cx="4" cy="18" r="1.2" fill="currentColor" />
+                </svg>
+              </span>
+              <h3>Comparador por líquido</h3>
+              <p>Duas ou três transportadoras ordenadas pelo custo pós-crédito, com a diferença para a melhor.</p>
+            </article>
+
+            <article class="feature">
+              <span class="feature__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+                  <path d="M6 3.5h7.5L18 8v12.5H6z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+                  <path d="M13.5 3.5V8H18M9 12h6M9 15.5h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+              <h3>Memória de cálculo</h3>
+              <p>Os passos da regra e a resposta bruta do motor em JSON, disponível para auditoria em cada resultado.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="arquitetura" class="section wrap">
+        <header class="section__head">
+          <p class="eyebrow">Arquitetura</p>
+          <h2>Do frete ao crédito, sem atalhos.</h2>
+          <p class="section__lede">
+            Três camadas e uma regra: o CBS/IBS é sempre apurado pelo motor oficial. A aplicação decide apenas
+            quanto do destaque o pagador consegue aproveitar.
+          </p>
+        </header>
+
+        <div class="flow">
+          <article class="flow__step">
+            <span class="flow__n">01</span>
+            <h3>Interface</h3>
+            <p>Página única em HTML, CSS e JS. Sem framework e sem build step.</p>
+            <code>app/public</code>
+          </article>
+          <div class="flow__arrow" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+              <path d="M4 12h15M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <article class="flow__step">
+            <span class="flow__n">02</span>
+            <h3>Aplicação</h3>
+            <p>Node 20 valida a entrada, aplica a regra de crédito do regime e monta a memória.</p>
+            <code>app/server.js · :5180</code>
+          </article>
+          <div class="flow__arrow" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none">
+              <path d="M4 12h15M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <article class="flow__step flow__step--engine">
+            <span class="flow__n">03</span>
+            <h3>Motor oficial</h3>
+            <p>Java, tabelas oficiais e memória de cálculo. Roda local, na porta 8080.</p>
+            <code>api-regime-geral.jar · :8080</code>
+          </article>
+        </div>
+
+        <div class="arch-bottom">
+          <div class="arch-note">
+            <p class="arch-note__kicker">Sem reimplementar CBS/IBS</p>
+            <p>
+              O app chama <code>POST /api/calculadora/regime-geral</code> e recebe <code>vCBS</code>,
+              <code>vIBS</code> e a memória do motor. O destaque é o <strong>teto</strong> do crédito; o regime do
+              transportador define só a fração aproveitável.
+            </p>
+          </div>
+
+          <div class="contract">
+            <div class="contract__col">
+              <p class="contract__title">Requisição</p>
+              <pre><code>{
+  "dhFatoGerador": "2033-06-15T10:00:00-03:00",
+  "uf": "BA",
+  "municipio": 2927408,
+  "itens": [{
+    "nbs": "105011220",
+    "cst": "000",
+    "cClassTrib": "000001",
+    "baseCalculo": 1000.00
+  }]
+}</code></pre>
+            </div>
+            <div class="contract__col">
+              <p class="contract__title">Resposta (recorte)</p>
+              <pre><code>{
+  "tribCalc": { "IBSCBS": {
+    "gIBSCBS": {
+      "vIBS": "185.00",
+      "gCBS": { "vCBS": "85.00" }
+    },
+    "memoriaCalculo": { "..." }
+  } }
+}</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="rodar" class="section section--dark">
+        <div class="wrap rodar">
+          <div class="rodar__copy">
+            <p class="eyebrow eyebrow--light">Rodar localmente</p>
+            <h2>Um comando sobe os dois serviços.</h2>
+            <p>
+              O <code>run.ps1</code> inicia o motor oficial se ele ainda não estiver no ar, espera a porta 8080
+              responder e sobe a interface. Rodar de novo com ela aberta só imprime a URL.
+            </p>
+            <ul class="req">
+              <li>Java 25</li>
+              <li>Node 20+</li>
+              <li>PowerShell</li>
+            </ul>
+            <p class="rodar__fine">
+              Sem o JAR compilado, rode antes <code>.\mvnw.cmd -DskipTests package</code>. O motor usa a base
+              SQLite gerada pelo Flyway.
+            </p>
+          </div>
+
+          <div class="terminal" role="img" aria-label="Terminal mostrando o comando run.ps1 e as URLs locais do motor e da interface.">
+            <div class="terminal__bar" aria-hidden="true">
+              <span></span><span></span><span></span>
+              <em>PowerShell</em>
+            </div>
+            <pre><code><span class="t-prompt">PS&gt;</span> .\run.ps1
+
+  Frete Liquido - simulador do pagador de frete
+  ---------------------------------------------
+  Motor oficial ja esta no ar em http://127.0.0.1:8080
+  Interface: <span class="t-ok">http://127.0.0.1:5180</span>
+
+  Ctrl+C encerra a aplicacao.</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="section wrap" id="mobile">
+        <div class="mobile">
+          <div class="mobile__copy">
+            <p class="eyebrow">Responsivo</p>
+            <h2>A decisão também cabe no celular.</h2>
+            <p>
+              Em 390px a tabela do comparador esconde as colunas secundárias e mantém o custo líquido visível, sem
+              rolagem horizontal. A memória de cálculo continua a um toque.
+            </p>
+            <ul class="ticks">
+              <li>Alvos de toque com pelo menos 44px</li>
+              <li>Contraste e foco visível em todos os controles</li>
+              <li>Estados de carregamento, erro e comparação desatualizada</li>
+            </ul>
+          </div>
+          <div class="phone">
+            <div class="phone__screen">
+              <img src="./assets/app-mobile.png" width="390" height="660" alt="Cartão de resultado no celular mostrando custo líquido de R$ 980,00 e alerta de crédito abaixo de 4%." />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section wrap" id="premissas">
+        <header class="section__head">
+          <p class="eyebrow">Premissas visíveis</p>
+          <h2>O que o simulador assume — e mostra.</h2>
+        </header>
+
+        <div class="notes">
+          <article class="note">
+            <span class="note__n">01</span>
+            <h3>Regime pleno por padrão</h3>
+            <p>
+              O cenário padrão é 2033, com CBS 8,50% e IBS 18,50%. Em 2026, a fase de teste destaca 1% e o crédito
+              de todos os perfis fica limitado a esse valor.
+            </p>
+          </article>
+          <article class="note">
+            <span class="note__n">02</span>
+            <h3>Faixas são estimativas</h3>
+            <p>
+              Simples/DAS (0,92% a 4%), híbrido (9% a 9,3%) e autônomo/MEI (1,8% a 4%) são faixas setoriais. O app
+              sinaliza a estimativa e permite ajustar a taxa dentro da faixa.
+            </p>
+          </article>
+          <article class="note">
+            <span class="note__n">03</span>
+            <h3>B2C não aproveita crédito</h3>
+            <p>
+              Na venda ao consumidor final, o pagador não se credita de CBS/IBS: o custo líquido é o preço cheio.
+              A hipótese aparece na memória de cada simulação.
+            </p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="wrap foot__inner">
+        <div class="foot__brand">
+          <span class="brand__mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" width="16" height="16" fill="none">
+              <path d="M7 21h12.5M14 9.5 21.5 17 14 24.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+              <circle cx="24.5" cy="9" r="2.2" stroke="currentColor" stroke-width="1.8" />
+            </svg>
+          </span>
+          <div>
+            <p class="foot__name">Frete Líquido</p>
+            <p class="foot__desc">CBS/IBS apurados pelo motor oficial da Receita. Simulação, não apuração fiscal.</p>
+          </div>
+        </div>
+
+        <nav class="foot__links" aria-label="Links do projeto">
+          <a href="https://github.com/ItsGlutos/calc-regime-regular-fretes" target="_blank" rel="noreferrer">Repositório</a>
+          <a href="https://github.com/ItsGlutos/calc-regime-regular-fretes/blob/main/app/README.md" target="_blank" rel="noreferrer">Documentação</a>
+          <a href="https://github.com/ReceitaFederal/calculadora-rtc-regime-regular" target="_blank" rel="noreferrer">Motor oficial</a>
+          <a href="https://github.com/ItsGlutos/calc-regime-regular-fretes/blob/main/LICENSE" target="_blank" rel="noreferrer">Licença MIT</a>
+        </nav>
+      </div>
+      <div class="wrap foot__base">
+        <span>Vitrine estática · a aplicação completa roda localmente.</span>
+        <span>Feito com o motor oficial da Receita.</span>
+      </div>
+    </footer>
+  </body>
+</html>

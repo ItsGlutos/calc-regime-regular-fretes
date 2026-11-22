@@ -34,6 +34,60 @@ Todos os caminhos começam com `http://localhost:8080/api/calculadora`. A lista 
 
 Exemplos de utilização da API estão em [docs/exemplos.md](docs/exemplos.md).
 
+### Simulador de frete
+
+Além dos endpoints de cálculo, este fork inclui um simulador da carga tributária do **transporte de
+cargas** ao longo da transição da reforma (2025 a 2034), com interface visual simples em três abas:
+
+1. **Projeção anual** — valor do frete **diário, quinzenal ou mensal**, contando apenas **dias úteis**
+   (segunda a sexta), com comparativo ano a ano ("hoje pagamos isso, amanhã pagamos aquilo"), notas
+   por etapa e a **tabela oficial de ICMS interestadual** (Resolução do Senado nº 22/1989).
+2. **CT-e de hoje** — o pagamento de um CT-e real de novembro de 2026: composição do documento,
+   tributos embutidos, retenções por tipo de transportador, créditos da pagadora e o que muda em
+   2027, 2029 e 2033, incluindo o **split payment**.
+3. **Produto & contrato** — 31 lacunas para transformar o simulador em produto de contas a pagar e as
+   **12 cláusulas** do anexo tributário do contrato de transporte, com download em markdown.
+
+- Interface: `http://localhost:8080/api/frete`
+- API: `GET /api/calculadora/frete/parametros`, `POST /api/calculadora/frete/projecao`,
+  `GET /api/calculadora/frete/cte/exemplo`, `POST /api/calculadora/frete/cte/pagamento`,
+  `GET /api/calculadora/frete/produto`, `GET /api/calculadora/frete/produto/anexo`,
+  `POST /api/calculadora/frete/credito`
+- Documentação do modelo, premissas e cronograma: [docs/frete.md](docs/frete.md)
+- Diagnóstico de produto e anexo contratual: [docs/produto.md](docs/produto.md)
+
+O IBS e a CBS de cada ano são apurados pela própria calculadora do regime regular (item de CT-e,
+cClassTrib `000001`); ICMS, PIS, COFINS e ISS são compostos conforme o cronograma de extinção.
+
+O endpoint de crédito fecha a conta pelo lado de quem **paga** o frete: devolve o CBS/IBS destacado no
+CT-e como crédito apropriável e o custo líquido (frete − crédito), com a memória de cálculo do motor.
+
+### App web: Frete Líquido (custo líquido do pagador)
+
+Interface web local, sem build step, para quem **paga** o frete comparar transportadoras de regimes
+tributários diferentes pelo custo líquido — não pelo preço nominal.
+
+- formulário com valor do frete, perfil do transportador (Simples/DAS, Simples híbrido, regime regular,
+  autônomo/MEI), tipo de operação (B2B/B2C), UFs de origem e destino e ano de referência;
+- crédito aproveitável (R$ e %), custo líquido e alerta visual quando o crédito efetivo fica abaixo de 4%;
+- comparador de 2 a 3 transportadoras ordenado por custo líquido pós-crédito;
+- memória de cálculo com a resposta bruta do motor oficial, para auditoria.
+
+Cada simulação chama `POST /api/calculadora/regime-geral`; nenhuma alíquota de CBS/IBS é recalculada na
+aplicação. O crédito do regime é aplicado sobre o destaque do motor, com as faixas de Simples, híbrido e
+autônomo/MEI sinalizadas como estimativa.
+
+```powershell
+.\run.ps1
+```
+
+Interface local: `http://127.0.0.1:5180` · site do projeto:
+<https://itsglutos.github.io/calc-regime-regular-fretes/>
+
+Detalhes e API em [app/README.md](app/README.md) · arquitetura em [ARCHITECTURE.md](ARCHITECTURE.md).
+
+![Frete Líquido](app/docs/web-desktop.png)
+
 ---
 
 ## Requisitos

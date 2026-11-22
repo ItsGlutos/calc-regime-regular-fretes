@@ -25,3 +25,19 @@ replay_pid*
 
 # build
 .mirror-manifest
+target/
+
+# banco gerado pelo Flyway (ver README)
+calculadora/
+
+# execuÃ§Ã£o local
+logs-app.out
+logs-app.err
+tmp-*.png
+
+# aplicação e site
+node_modules/
+.DS_Store
+Thumbs.db
+.env
+

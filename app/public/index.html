@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Frete Líquido — custo real do frete pós-crédito de CBS/IBS</title>
+    <meta
+      name="description"
+      content="Simulador do pagador de frete: compare transportadoras pelo custo líquido depois do crédito de CBS/IBS, com apuração do motor oficial da Receita."
+    />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230F172A'/%3E%3Cpath d='M9 20.5h11.5M16 9.5l6.5 6.5-6.5 6.5' stroke='%23fff' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Calistoga&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <a class="skip" href="#conteudo">Ir para o conteúdo</a>
+
+    <header class="topbar">
+      <div class="wrap topbar__inner">
+        <a class="brand" href="/" aria-label="Frete Líquido — página inicial">
+          <span class="brand__mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" width="18" height="18" fill="none">
+              <path d="M7 21h12.5M14 9.5 21.5 17 14 24.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+              <circle cx="24.5" cy="9" r="2.2" stroke="currentColor" stroke-width="1.8" />
+            </svg>
+          </span>
+          <span class="brand__name">Frete<em>Líquido</em></span>
+        </a>
+
+        <div class="topbar__right">
+          <span class="engine" id="enginePill" title="Status do motor oficial">
+            <span class="engine__dot" aria-hidden="true"></span>
+            <span class="engine__label">Motor da Receita</span>
+            <span class="engine__meta" id="engineVersion">conectando…</span>
+          </span>
+          <a
+            class="ghost-link"
+            href="https://github.com/ReceitaFederal/calculadora-rtc-regime-regular"
+            target="_blank"
+            rel="noreferrer"
+            >Código do motor
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" aria-hidden="true">
+              <path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main id="conteudo" class="wrap">
+      <section class="page-head">
+        <div class="page-head__copy">
+          <p class="eyebrow"><span class="eyebrow__rule" aria-hidden="true"></span>Simulador do pagador · CBS/IBS</p>
+          <h1>O frete mais barato<br />nem sempre é <span class="mark">o mais barato</span>.</h1>
+          <p class="lede">
+            Desconte o crédito de CBS/IBS que você realmente aproveita. O que sobra é o custo líquido — o número
+            que compara transportadoras de regimes tributários diferentes.
+          </p>
+        </div>
+        <dl class="facts">
+          <div class="fact">
+            <dt>Destaque no ano</dt>
+            <dd id="headDestaque">27,00%</dd>
+            <small id="headDestaqueSub">CBS 8,50 + IBS 18,50</small>
+          </div>
+          <div class="fact">
+            <dt>Regra do crédito</dt>
+            <dd>Destaque → crédito</dd>
+            <small>limitado ao CBS/IBS do documento</small>
+          </div>
+        </dl>
+      </section>
+
+      <div class="motor-alert" id="motorAlert" role="alert" hidden></div>
+
+      <div class="workspace">
+        <form class="card form" id="form" novalidate>
+          <div class="card__head">
+            <div>
+              <h2>Dados do frete</h2>
+              <p class="card__sub">Valor, regime e rota.</p>
+            </div>
+            <button class="icon-btn" type="button" id="reset" title="Restaurar exemplo" aria-label="Restaurar exemplo">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                <path d="M4 10a8 8 0 1 1 2.2 7.4M4 5v5h5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="field">
+            <label for="valor">Valor do frete</label>
+            <div class="money">
+              <span class="money__prefix" aria-hidden="true">R$</span>
+              <input
+                id="valor"
+                name="valor"
+                type="text"
+                inputmode="decimal"
+                spellcheck="false"
+                autocomplete="off"
+                value="1.000,00"
+                aria-describedby="valorHint"
+              />
+            </div>
+            <p class="hint" id="valorHint">Preço nominal cobrado pela transportadora.</p>
+          </div>
+
+          <div class="field">
+            <label for="perfil">Perfil do transportador</label>
+            <select id="perfil" name="perfil"></select>
+            <p class="hint" id="perfilHint"></p>
+          </div>
+
+          <div class="field taxa" id="taxaWrap" hidden>
+            <div class="field__row">
+              <label for="taxaRange">Crédito do regime</label>
+              <output class="badge-soft" id="taxaOut" for="taxaRange">2,00%</output>
+            </div>
+            <input type="range" id="taxaRange" min="0.92" max="4" step="0.01" value="2" />
+            <div class="range-legend">
+              <span id="taxaMin">0,92%</span>
+              <span>estimativa setorial</span>
+              <span id="taxaMax">4,00%</span>
+            </div>
+          </div>
+
+          <div class="field field--fieldset">
+            <span class="label" id="operacaoLabel">Tipo de operação</span>
+            <div class="segmented" role="radiogroup" aria-labelledby="operacaoLabel" id="operacao"></div>
+            <p class="hint" id="operacaoHint"></p>
+          </div>
+
+          <div class="field-grid">
+            <div class="field">
+              <label for="ufOrigem">UF origem</label>
+              <select id="ufOrigem"></select>
+            </div>
+            <div class="field">
+              <label for="ufDestino">UF destino</label>
+              <select id="ufDestino"></select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="ano">Ano de referência</label>
+            <select id="ano"></select>
+            <p class="hint" id="anoHint"></p>
+          </div>
+
+          <button class="btn btn--primary btn--block" id="calcular" type="submit">
+            <span>Calcular custo líquido</span>
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+              <path d="M4 12h15M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+          <p class="fineprint">
+            Cada cálculo consulta o motor oficial da Receita. Nenhuma alíquota de CBS/IBS é recalculada aqui.
+          </p>
+        </form>
+
+        <section class="card result" id="resultado" aria-live="polite" aria-busy="true">
+          <div class="skeleton-wrap" aria-hidden="true">
+            <div class="skeleton skeleton--line w-30"></div>
+            <div class="skeleton skeleton--hero"></div>
+            <div class="skeleton skeleton--line w-60"></div>
+            <div class="skeleton skeleton--bar"></div>
+            <div class="skeleton skeleton--block"></div>
+          </div>
+        </section>
+      </div>
+
+      <section class="card comparator" aria-labelledby="comparadorTitulo">
+        <div class="card__head">
+          <div>
+            <h2 id="comparadorTitulo">Comparador de transportadoras</h2>
+            <p class="card__sub">
+              Mesmo trecho, preços e regimes diferentes. A ordem é pelo custo líquido — não pelo nominal.
+            </p>
+          </div>
+          <span class="chip chip--soft">2 a 3 transportadoras</span>
+        </div>
+
+        <div class="carriers" id="carriers"></div>
+
+        <button class="btn btn--dashed" type="button" id="adicionar">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+          Adicionar transportadora
+        </button>
+
+        <div class="comparator__actions">
+          <button class="btn btn--primary" type="button" id="comparar">
+            <span>Comparar custo líquido</span>
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+              <path d="M4 18V9M10 18V5M16 18v-6M22 18H2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
+            </svg>
+          </button>
+          <button class="btn btn--ghost" type="button" id="cenarioAceite">Cenário do aceite · 2 × R$ 1.000</button>
+          <span class="comparator__hint">O vencedor é o menor custo líquido pós-crédito.</span>
+        </div>
+
+        <p class="stale-note" id="staleNote" hidden>Dados do frete ou do comparador foram alterados — clique em Comparar para atualizar o ranking.</p>
+
+        <div id="comparacao" aria-live="polite"></div>
+      </section>
+
+      <footer class="foot">
+        <p>
+          Motor:
+          <a href="https://github.com/ReceitaFederal/calculadora-rtc-regime-regular" target="_blank" rel="noreferrer"
+            >calculadora-rtc-regime-regular</a
+          >
+          (MIT) · CBS/IBS apurados pela API oficial, item de CT-e NBS 105011220.
+        </p>
+        <p>
+          Simulação para decisão de compra. As faixas de crédito de Simples, Simples híbrido e autônomo/MEI são
+          estimativas setoriais — não substituem a apuração fiscal.
+        </p>
+      </footer>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

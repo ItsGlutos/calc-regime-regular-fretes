@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Simulador de frete · Reforma Tributária</title>
+  <meta name="description" content="Simule quanto de frete será pago em tributos a cada ano da reforma tributária, veja o pagamento de um CT-e hoje e o que falta para transformar o simulador em produto.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+
+  <header class="topbar">
+    <div class="wrap topbar__inner">
+      <p class="eyebrow">Receita Federal · Reforma Tributária do Consumo · LC 214/2025</p>
+      <h1>Quanto do frete será pago em tributos?</h1>
+      <p class="lede">
+        Simule o frete por dia útil, quinzena ou mês, veja o CT-e que a empresa paga hoje
+        e o que falta para o simulador virar produto de uso contínuo.
+      </p>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Seções do simulador">
+    <div class="wrap tabs__inner" role="tablist">
+      <button type="button" class="tabs__item is-active" role="tab" id="tab-projecao"
+              aria-controls="painel-projecao" aria-selected="true" data-painel="projecao">
+        <span class="tabs__numero" aria-hidden="true">1</span>
+        <span class="tabs__texto">
+          <strong>Projeção anual</strong>
+          <small>2025 → 2034</small>
+        </span>
+      </button>
+      <button type="button" class="tabs__item" role="tab" id="tab-cte"
+              aria-controls="painel-cte" aria-selected="false" data-painel="cte" tabindex="-1">
+        <span class="tabs__numero" aria-hidden="true">2</span>
+        <span class="tabs__texto">
+          <strong>CT-e de hoje</strong>
+          <small>pagamento em novembro de 2026</small>
+        </span>
+      </button>
+      <button type="button" class="tabs__item" role="tab" id="tab-produto"
+              aria-controls="painel-produto" aria-selected="false" data-painel="produto" tabindex="-1">
+        <span class="tabs__numero" aria-hidden="true">3</span>
+        <span class="tabs__texto">
+          <strong>Produto &amp; contrato</strong>
+          <small>lacunas e anexo tributário</small>
+        </span>
+      </button>
+    </div>
+  </nav>
+
+  <main id="conteudo" class="wrap">
+
+    <!-- ============================================================ 1 · PROJEÇÃO -->
+    <section id="painel-projecao" class="painel layout" role="tabpanel" aria-labelledby="tab-projecao">
+      <section class="card form-card" aria-labelledby="titulo-simulacao">
+        <h2 id="titulo-simulacao" class="card__title">Dados da operação</h2>
+
+        <form id="form-simulacao" novalidate>
+          <div class="field">
+            <label for="valorFrete" id="label-valor">Valor do frete mensal</label>
+            <div class="input-money">
+              <span class="input-money__prefix" aria-hidden="true">R$</span>
+              <input id="valorFrete" name="valorFrete" type="text" inputmode="decimal"
+                     autocomplete="off" value="10.000,00" aria-describedby="hint-valor">
+            </div>
+            <p class="hint" id="hint-valor">Valor de um mês de operação, em dias úteis.</p>
+          </div>
+
+          <div class="field">
+            <span class="field__label" id="label-periodicidade">Periodicidade</span>
+            <div class="segmented" role="group" aria-labelledby="label-periodicidade">
+              <button type="button" class="segmented__item" data-periodicidade="DIARIO" aria-pressed="false">Diário</button>
+              <button type="button" class="segmented__item" data-periodicidade="QUINZENAL" aria-pressed="false">Quinzenal</button>
+              <button type="button" class="segmented__item" data-periodicidade="MENSAL" aria-pressed="true">Mensal</button>
+            </div>
+            <p class="hint" id="hint-periodicidade">Mensal: todos os dias úteis do mês.</p>
+          </div>
+
+          <div class="field">
+            <label for="mesReferencia">Mês de referência</label>
+            <select id="mesReferencia" name="mesReferencia"></select>
+            <p class="hint" id="hint-mes">O mesmo mês tem quantidades diferentes de dias úteis a cada ano.</p>
+          </div>
+
+          <div class="field">
+            <label for="tipoOperacao">Tipo de operação</label>
+            <select id="tipoOperacao" name="tipoOperacao"></select>
+            <p class="hint" id="hint-tipo">Define o tributo do regime anterior: ICMS ou ISS.</p>
+          </div>
+
+          <div class="field field--ufs" id="campo-ufs">
+            <div class="field-row">
+              <div>
+                <label for="ufOrigem">UF de origem</label>
+                <select id="ufOrigem" name="ufOrigem"></select>
+              </div>
+              <div>
+                <label for="ufDestino">UF de destino</label>
+                <select id="ufDestino" name="ufDestino"></select>
+              </div>
+            </div>
+            <p class="hint" id="hint-icms">ICMS interestadual conforme a tabela oficial.</p>
+          </div>
+
+          <div class="field" id="campo-aliquota" hidden>
+            <label for="aliquota">Alíquota do <span id="label-aliquota">ICMS</span></label>
+            <div class="input-suffix">
+              <input id="aliquota" name="aliquota" type="number" min="0" max="100" step="0.01"
+                     inputmode="decimal" value="18" aria-describedby="hint-aliquota">
+              <span class="input-suffix__suffix" aria-hidden="true">%</span>
+            </div>
+            <p class="hint" id="hint-aliquota">Alíquota interna do estado.</p>
+          </div>
+
+          <div class="field">
+            <label for="regimePisCofins">PIS/COFINS</label>
+            <select id="regimePisCofins" name="regimePisCofins"></select>
+            <p class="hint">Vigentes até 2026; substituídos pela CBS a partir de 2027.</p>
+          </div>
+
+          <div class="field">
+            <label for="servico">Serviço de transporte</label>
+            <select id="servico" name="servico"></select>
+            <p class="hint">Código NBS usado na calculadora oficial do regime regular.</p>
+          </div>
+
+          <div class="actions">
+            <button type="submit" class="btn btn--primary" id="btn-simular">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M4 4h16v4H4zM4 12h10v8H4zM18 12h2v8h-2z" fill="currentColor"></path>
+              </svg>
+              Calcular projeção
+            </button>
+            <button type="button" class="btn btn--ghost" id="btn-restaurar">Restaurar</button>
+          </div>
+
+          <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+        </form>
+
+        <details class="params" id="params-transicao">
+          <summary>
+            <span>Parâmetros da transição (2027–2034)</span>
+            <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </summary>
+          <p class="hint">
+            2026 está definido em lei (CBS 0,90% · IBS 0,10%). De 2027 em diante as alíquotas de
+            referência são fixadas anualmente — ajuste os valores se quiser simular outro cenário.
+          </p>
+          <div class="params__table-wrap">
+            <table class="table table--params" id="tabela-parametros">
+              <thead>
+                <tr>
+                  <th scope="col">Ano</th>
+                  <th scope="col">CBS %</th>
+                  <th scope="col">IBS UF %</th>
+                  <th scope="col">IBS Mun %</th>
+                  <th scope="col">Red. ICMS/ISS %</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+
+      <section class="results" id="resultados" aria-labelledby="titulo-resultados">
+        <h2 id="titulo-resultados" class="sr-only">Resultados da simulação</h2>
+
+        <div class="alert" id="alerta-erro" role="alert" hidden></div>
+
+        <div class="kpis" id="kpis"></div>
+
+        <section class="card chart-card" aria-labelledby="titulo-grafico">
+          <div class="card__head">
+            <div>
+              <h3 id="titulo-grafico" class="card__title">Carga efetiva sobre o frete, por ano</h3>
+              <p class="card__subtitle" id="subtitulo-grafico">Valores em reais e percentual sobre o frete do período.</p>
+            </div>
+            <ul class="legend" id="legenda" aria-label="Legenda do gráfico"></ul>
+          </div>
+          <div class="chart" id="grafico" role="img" aria-describedby="grafico-descricao"></div>
+          <p class="sr-only" id="grafico-descricao">O gráfico repete os valores das tabelas abaixo, ano a ano.</p>
+          <p class="chart-note" id="nota-grafico"></p>
+        </section>
+
+        <section class="card" aria-labelledby="titulo-evolucao">
+          <div class="card__head">
+            <div>
+              <h3 id="titulo-evolucao" class="card__title">Hoje pagamos isso, amanhã pagamos aquilo</h3>
+              <p class="card__subtitle">Carga do período, variação contra o ano anterior e contra 2025.</p>
+            </div>
+            <button type="button" class="btn btn--ghost btn--sm" id="btn-csv">
+              <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+              Exportar CSV
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="tabela-evolucao">
+              <caption class="sr-only">Evolução da carga tributária do frete por ano</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Ano</th>
+                  <th scope="col">Fase</th>
+                  <th scope="col" class="num">Dias úteis</th>
+                  <th scope="col" class="num">Valor do período</th>
+                  <th scope="col" class="num">Carga efetiva</th>
+                  <th scope="col" class="num">% do frete</th>
+                  <th scope="col" class="num">
+                    <abbr title="Variação em reais e em pontos percentuais em relação ao ano anterior">vs ano anterior</abbr>
+                  </th>
+                  <th scope="col" class="num">
+                    <abbr title="Variação em pontos percentuais em relação a 2025">vs 2025</abbr>
+                  </th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p class="table-nota" id="nota-evolucao"></p>
+
+          <h4 class="subtitulo-tabela">Composição por tributo</h4>
+          <div class="table-wrap">
+            <table class="table" id="tabela-composicao">
+              <caption class="sr-only">Composição da carga por tributo e ano</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Ano</th>
+                  <th scope="col" class="num">CBS</th>
+                  <th scope="col" class="num">IBS UF</th>
+                  <th scope="col" class="num">IBS Mun</th>
+                  <th scope="col" class="num">ICMS</th>
+                  <th scope="col" class="num">PIS/COFINS</th>
+                  <th scope="col" class="num">ISS</th>
+                  <th scope="col" class="num">Total destacado</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p class="table-nota">
+            <sup aria-hidden="true">1</sup> Em 2026 a CBS e o IBS são destacados, mas compensáveis com PIS/COFINS e
+            ICMS: por isso não integram a carga efetiva daquele ano. Valores em reais.
+          </p>
+
+          <div class="memoria" id="memoria" hidden>
+            <div class="memoria__head">
+              <h4 id="memoria-titulo">Memória de cálculo</h4>
+              <button type="button" class="btn btn--ghost btn--sm" id="btn-fechar-memoria">Fechar</button>
+            </div>
+            <dl class="memoria__list" id="memoria-lista"></dl>
+          </div>
+        </section>
+
+        <section class="card" aria-labelledby="titulo-notas">
+          <div class="card__head">
+            <div>
+              <h3 id="titulo-notas" class="card__title">Notas por etapa: o que muda em relação ao método anterior</h3>
+              <p class="card__subtitle">
+                Cada ano da transição, com as mudanças tributo a tributo, o efeito na carga e o fundamento normativo.
+              </p>
+            </div>
+          </div>
+          <ol class="notas" id="notas-etapa"></ol>
+        </section>
+
+        <section class="card" aria-labelledby="titulo-icms">
+          <div class="card__head">
+            <div>
+              <h3 id="titulo-icms" class="card__title">Tabela oficial de ICMS interestadual</h3>
+              <p class="card__subtitle">
+                Resolução do Senado Federal nº 22/1989 — 7% e 12% conforme origem e destino.
+              </p>
+            </div>
+          </div>
+          <div class="tabela-icms" id="tabela-icms"></div>
+          <p class="table-nota">
+            O destaque marca a combinação selecionada na simulação. * Sudeste exceto Espírito Santo.
+            Não estão incluídos o ICMS de 4% para mercadorias importadas (Resolução nº 13/2012) nem o
+            adicional do FECP, que varia por estado.
+          </p>
+        </section>
+
+        <section class="card notes" aria-labelledby="titulo-premissas">
+          <h3 id="titulo-premissas" class="card__title">Premissas e fontes</h3>
+          <ul id="lista-avisos"></ul>
+        </section>
+      </section>
+    </section>
+
+    <!-- =============================================================== 2 · CT-E -->
+    <section id="painel-cte" class="painel layout" role="tabpanel" aria-labelledby="tab-cte" hidden>
+      <section class="card form-card" aria-labelledby="titulo-cte-form">
+        <h2 id="titulo-cte-form" class="card__title">O documento de hoje</h2>
+        <p class="card__subtitle">CT-e de 5 de novembro de 2026, pago em 20 de novembro de 2026.</p>
+
+        <form id="form-cte" novalidate>
+          <div class="field">
+            <label for="cteTransportador">Transportador</label>
+            <select id="cteTransportador" name="tipoTransportador"></select>
+            <p class="hint" id="hint-cte-transportador">Define as retenções praticadas no pagamento.</p>
+          </div>
+
+          <div class="field">
+            <label for="cteRegimePagadora">Regime da pagadora</label>
+            <select id="cteRegimePagadora" name="regimePagadora"></select>
+            <p class="hint">Define o crédito que a empresa aproveita sobre o frete.</p>
+          </div>
+
+          <fieldset class="field">
+            <legend class="field__label">Retenções praticadas</legend>
+            <div class="checks">
+              <label class="check"><input type="checkbox" id="cteRetIrrf"><span>IRRF 1,5%</span></label>
+              <label class="check"><input type="checkbox" id="cteRetInss"><span>INSS 11%</span></label>
+              <label class="check"><input type="checkbox" id="cteRetSest"><span>SEST/SENAT 2,5%</span></label>
+            </div>
+          </fieldset>
+
+          <div class="field">
+            <label for="ctePagamento">Data de pagamento</label>
+            <input type="date" id="ctePagamento" name="dataPagamento">
+            <p class="hint">O comparativo cobre 2026 a 2034.</p>
+          </div>
+
+          <div class="actions">
+            <button type="submit" class="btn btn--primary" id="btn-cte-calcular">Recalcular</button>
+            <button type="button" class="btn btn--ghost" id="btn-cte-restaurar">Restaurar exemplo</button>
+          </div>
+
+          <p class="form-status" id="cte-status" role="status" aria-live="polite"></p>
+        </form>
+
+        <div class="doc" id="cte-identificacao" aria-label="Identificação do documento"></div>
+      </section>
+
+      <section class="results" aria-labelledby="titulo-cte">
+        <h2 id="titulo-cte" class="sr-only">Pagamento do CT-e</h2>
+
+        <div class="alert" id="cte-alerta" role="alert" hidden></div>
+
+        <div class="kpis kpis--4" id="cte-kpis"></div>
+
+        <section class="card" aria-labelledby="titulo-cte-composicao">
+          <div class="card__head">
+            <div>
+              <h3 id="titulo-cte-composicao" class="card__title">Como o valor do CT-e se forma</h3>
+              <p class="card__subtitle">Parcelas da prestação e o que entra na base dos tributos.</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="cte-componentes">
+              <caption class="sr-only">Composição do valor do CT-e</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Parcela</th>
+                  <th scope="col" class="num">Valor</th>
+                  <th scope="col" class="num">% do CT-e</th>
+                  <th scope="col">Base dos tributos</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p class="table-nota" id="nota-cte-composicao"></p>
+        </section>
+
+        <section class="card" aria-labelledby="titulo-cte-tributos">
+          <div class="card__head">
+            <div>
+              <h3 id="titulo-cte-tributos" class="card__title">Tributos destacados no documento</h3>
+              <p class="card__subtitle">
+                Cobrados “por dentro” do valor da prestação: quem apura, quanto vale e se gera crédito.
+              </p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="cte-tributos">
+              <caption class="sr-only">Tributos destacados no CT-e</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Tributo</th>
+                  <th scope="col" class="num">Alíquota</th>
+                  <th scope="col" class="num">Valor</th>
+                  <th scope="col">Apuração</th>
+                  <th scope="col">Crédito da pagadora</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot></tfoot>
+            </table>
+          </div>
+          <p class="table-nota" id="nota-cte-tributos"></p>
+        </section>
+
+        <section class="card" aria-labelledby="titulo-cte-pagamento">
+          <div class="card__head">
+            <div>
+              <h3 id="titulo-cte-pagamento" class="card__title">Da conta ao pagamento</h3>
+              <p class="card__subtitle">O que sai do caixa da pagadora e o que chega ao transportador.</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="table table--pagamento" id="cte-pagamento">
+              <caption class="sr-only">Fluxo de pagamento do CT-e</caption>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p class="table-nota" id="nota-cte-pagamento"></p>
+        </section>
+
+        <section class="card" aria-labelledby="titulo-cte-comparativo">
+          <div class="card__head">
+            <div>
+              <h3 id="titulo-cte-comparativo" class="card__title">O mesmo CT-e nos próximos anos</h3>
+              <p class="card__subtitle">
+                Valor do documento congelado para isolar o efeito das alíquotas e do split payment.
+              </p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="cte-comparativo">
+              <caption class="sr-only">O mesmo CT-e em 2026, 2027, 2029 e 2033</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Ano</th>
+                  <th scope="col" class="num">ICMS</th>
+                  <th scope="col" class="num">PIS/COFINS</th>
+                  <th scope="col" class="num">IBS + CBS</th>
+                  <th scope="col" class="num">Total</th>
+                  <th scope="col" class="num">% do frete</th>
+                  <th scope="col" class="num">Split payment</th>
+                  <th scope="col" class="num">Líquido ao transportador</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p class="table-nota" id="nota-cte-comparativo"></p>
+        </section>
+
+        <section class="card" aria-labelledby="titulo-cte-conferencia">
+          <div class="card__head">
+            <div>
+              <h3 id="titulo-cte-conferencia" class="card__title">Conferência do documento</h3>
+              <p class="card__subtitle">
+                O que o simulador já confere sozinho e o que ainda depende de integração ou de contrato.
+              </p>
+            </div>
+          </div>
+          <ul class="conferencias" id="cte-conferencias"></ul>
+        </section>
+
+        <section class="card notes" aria-labelledby="titulo-cte-premissas">
+          <h3 id="titulo-cte-premissas" class="card__title">Premissas do pagamento</h3>
+          <ul id="cte-premissas"></ul>
+        </section>
+      </section>
+    </section>
+
+    <!-- ============================================================ 3 · PRODUTO -->
+    <section id="painel-produto" class="painel" role="tabpanel" aria-labelledby="tab-produto" hidden>
+      <div class="produto-intro">
+        <div>
+          <h2 class="produto-intro__titulo">Do simulador ao produto de uso contínuo</h2>
+          <p class="produto-intro__texto">
+            Um simulador responde “quanto vai custar”. Um produto de uma empresa pagadora de frete responde
+            “este CT-e está certo, quanto eu retenho, quanto eu recupero e quanto eu pago”. Abaixo está o que
+            já está pronto, o que falta e o anexo que leva essas regras para o contrato com o transportador.
+          </p>
+        </div>
+        <a class="btn btn--primary" id="btn-anexo" href="../calculadora/frete/produto/anexo" download>
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+          Baixar anexo tributário
+        </a>
+      </div>
+
+      <div class="alert" id="produto-alerta" role="alert" hidden></div>
+
+      <div class="kpis kpis--4" id="produto-kpis"></div>
+
+      <section class="card" aria-labelledby="titulo-lacunas">
+        <div class="card__head">
+          <div>
+            <h3 id="titulo-lacunas" class="card__title">Lacunas por dimensão</h3>
+            <p class="card__subtitle">
+              O que já está implementado, o que está parcial e o que precisa entrar antes de vender.
+            </p>
+          </div>
+        </div>
+        <div class="chips" id="produto-filtros" role="group" aria-label="Filtrar lacunas por dimensão"></div>
+        <div class="table-wrap">
+          <table class="table" id="produto-lacunas">
+            <caption class="sr-only">Lacunas do produto por dimensão, situação e próximo passo</caption>
+            <thead>
+              <tr>
+                <th scope="col">Dimensão</th>
+                <th scope="col">Item</th>
+                <th scope="col">Situação</th>
+                <th scope="col">Por que importa</th>
+                <th scope="col">Próximo passo</th>
+                <th scope="col">Onda</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="titulo-ondas">
+        <div class="card__head">
+          <div>
+            <h3 id="titulo-ondas" class="card__title">Ondas de evolução</h3>
+            <p class="card__subtitle">Sequência sugerida para chegar ao produto vendável.</p>
+          </div>
+        </div>
+        <ol class="ondas" id="produto-ondas"></ol>
+      </section>
+
+      <section class="card" aria-labelledby="titulo-clausulas">
+        <div class="card__head">
+          <div>
+            <h3 id="titulo-clausulas" class="card__title">Anexo contratual: 12 cláusulas para o contrato de transporte</h3>
+            <p class="card__subtitle">
+              Minutas que traduzem a reforma em obrigação, retenção e liquidação. Baixe o anexo completo em markdown.
+            </p>
+          </div>
+        </div>
+        <div class="clausulas" id="produto-clausulas"></div>
+      </section>
+
+      <p class="table-nota" id="produto-avisos"></p>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <p>
+        Projeção construída sobre a API oficial de cálculo do regime regular
+        (<span id="versao-app">1.7.2</span> · base de dados <span id="versao-base">—</span>).
+        Valores estimados a partir das alíquotas de referência; não substituem a apuração fiscal.
+      </p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+  <script src="cte.js"></script>
+  <script src="produto.js"></script>
+  <script src="tabs.js"></script>
+</body>
+</html>

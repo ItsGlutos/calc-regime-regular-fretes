@@ -1,0 +1,13 @@
+{
+  "name": "frete-liquido",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Simulador do pagador de frete: custo líquido pós-crédito de CBS/IBS, com apuração pelo motor oficial da Receita.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
