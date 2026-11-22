@@ -6,7 +6,7 @@
     <title>Frete Líquido — custo real do frete pós-crédito de CBS/IBS</title>
     <meta
       name="description"
-      content="Simulador do pagador de frete: compare transportadoras pelo custo líquido depois do crédito de CBS/IBS, com apuração do motor oficial da Receita."
+      content="Simulador do pagador de frete: compare transportadoras pelo custo líquido depois do crédito de CBS/IBS, com apuração pelos motores oficiais da Receita."
     />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230F172A'/%3E%3Cpath d='M9 20.5h11.5M16 9.5l6.5 6.5-6.5 6.5' stroke='%23fff' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -33,9 +33,9 @@
         </a>
 
         <div class="topbar__right">
-          <span class="engine" id="enginePill" title="Status do motor oficial">
+          <span class="engine" id="enginePill" title="Status dos motores oficiais">
             <span class="engine__dot" aria-hidden="true"></span>
-            <span class="engine__label">Motor da Receita</span>
+            <span class="engine__label">Motores da Receita</span>
             <span class="engine__meta" id="engineVersion">conectando…</span>
           </span>
           <a
@@ -116,6 +116,48 @@
             <p class="hint" id="perfilHint"></p>
           </div>
 
+          <div class="field field--simples" id="simplesWrap" hidden>
+            <div class="field__row">
+              <span class="label">Alíquotas efetivas do PGDAS</span>
+              <span class="badge-soft" id="simplesFonte" aria-live="polite">estimativa</span>
+            </div>
+            <div class="field-grid">
+              <div class="field">
+                <label for="aliquotaCbs">CBS (%)</label>
+                <input
+                  id="aliquotaCbs"
+                  name="aliquotaCbs"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  placeholder="2,3591"
+                  aria-describedby="simplesHint"
+                />
+              </div>
+              <div class="field">
+                <label for="aliquotaIbs">IBS (%)</label>
+                <input
+                  id="aliquotaIbs"
+                  name="aliquotaIbs"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  placeholder="0,0260"
+                  aria-describedby="simplesHint"
+                />
+              </div>
+            </div>
+            <div class="field">
+              <label for="atividade">Atividade no Simples</label>
+              <select id="atividade"></select>
+            </div>
+            <p class="hint" id="simplesHint">
+              Informe a linha de alíquotas efetivas do PGDAS do transportador (CBS e IBS, em %). Com as duas
+              preenchidas e ano a partir de 2027, o crédito é apurado pelo Motor do Simples Nacional. Em branco,
+              vale a faixa setorial estimada.
+            </p>
+          </div>
+
           <div class="field taxa" id="taxaWrap" hidden>
             <div class="field__row">
               <label for="taxaRange">Crédito do regime</label>
@@ -159,7 +201,8 @@
             </svg>
           </button>
           <p class="fineprint">
-            Cada cálculo consulta o motor oficial da Receita. Nenhuma alíquota de CBS/IBS é recalculada aqui.
+            Cada cálculo consulta o motor do regime escolhido: regime regular (8080) ou Simples Nacional (8082).
+            Nenhuma alíquota de CBS/IBS é recalculada aqui.
           </p>
         </form>
 
@@ -201,7 +244,7 @@
               <path d="M4 18V9M10 18V5M16 18v-6M22 18H2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
             </svg>
           </button>
-          <button class="btn btn--ghost" type="button" id="cenarioAceite">Cenário do aceite · 2 × R$ 1.000</button>
+          <button class="btn btn--ghost" type="button" id="cenarioAceite">Cenário do aceite · PGDAS 2027</button>
           <span class="comparator__hint">O vencedor é o menor custo líquido pós-crédito.</span>
         </div>
 
@@ -212,15 +255,19 @@
 
       <footer class="foot">
         <p>
-          Motor:
+          Motores:
           <a href="https://github.com/ReceitaFederal/calculadora-rtc-regime-regular" target="_blank" rel="noreferrer"
             >calculadora-rtc-regime-regular</a
           >
-          (MIT) · CBS/IBS apurados pela API oficial, item de CT-e NBS 105011220.
+          e
+          <a href="https://github.com/ReceitaFederal/calculadora-rtc-simples-nacional" target="_blank" rel="noreferrer"
+            >calculadora-rtc-simples-nacional</a
+          >
+          (MIT) · CBS/IBS apurados pelas APIs oficiais, item de CT-e NBS 105011220.
         </p>
         <p>
-          Simulação para decisão de compra. As faixas de crédito de Simples, Simples híbrido e autônomo/MEI são
-          estimativas setoriais — não substituem a apuração fiscal.
+          Simulação para decisão de compra. O Simples/DAS usa as alíquotas efetivas do PGDAS quando informadas; sem
+          elas, e para autônomo/MEI, valem as faixas setoriais estimadas — não substituem a apuração fiscal.
         </p>
       </footer>
     </main>

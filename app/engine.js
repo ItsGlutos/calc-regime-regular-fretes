@@ -1,32 +1,42 @@
 /**
- * Cliente do motor oficial da Receita:
- * https://github.com/ReceitaFederal/calculadora-rtc-regime-regular
+ * Clientes dos motores oficiais da Receita:
+ * - https://github.com/ReceitaFederal/calculadora-rtc-regime-regular
+ * - https://github.com/ReceitaFederal/calculadora-rtc-simples-nacional
  *
  * Nenhuma alíquota de CBS/IBS é calculada neste arquivo. Toda a apuração do
- * tributo é feita pelo motor; aqui só montamos a operação de CT-e e lemos a
+ * tributo é feita pelos motores; aqui só montamos a operação de CT-e e lemos a
  * resposta bruta que fica disponível para auditoria na interface.
  */
 
 export const MOTOR_URL = String(process.env.MOTOR_URL ?? 'http://127.0.0.1:8080').replace(/\/+$/, '')
 
+export const MOTOR_SIMPLES_URL = String(process.env.MOTOR_SIMPLES_URL ?? 'http://127.0.0.1:8082').replace(
+  /\/+$/,
+  '',
+)
+
 export const TIMEOUT_PADRAO = Number(process.env.MOTOR_TIMEOUT_MS ?? 20000)
 
 export class MotorError extends Error {
-  constructor(mensagem, { status = null, corpo = null, causa = null } = {}) {
+  constructor(mensagem, { status = null, corpo = null, causa = null, fonte = null } = {}) {
     super(mensagem)
     this.name = 'MotorError'
     this.status = status
     this.corpo = corpo
     this.causa = causa
+    this.fonte = fonte
   }
 }
 
-async function requisitar(caminho, { metodo = 'GET', corpo, timeout = TIMEOUT_PADRAO } = {}) {
+async function requisitar(
+  caminho,
+  { metodo = 'GET', corpo, timeout = TIMEOUT_PADRAO, baseUrl = MOTOR_URL, nome = 'Motor oficial' } = {},
+) {
   const controlador = new AbortController()
   const timer = setTimeout(() => controlador.abort(), timeout)
 
   try {
-    const resposta = await fetch(`${MOTOR_URL}${caminho}`, {
+    const resposta = await fetch(`${baseUrl}${caminho}`, {
       method: metodo,
       headers: corpo ? { 'Content-Type': 'application/json', Accept: 'application/json' } : { Accept: 'application/json' },
       body: corpo ? JSON.stringify(corpo) : undefined,
@@ -46,7 +56,7 @@ async function requisitar(caminho, { metodo = 'GET', corpo, timeout = TIMEOUT_PA
         (json && (json.detail || json.title || (Array.isArray(json.erros) ? json.erros[0]?.detail : null))) ||
         texto.slice(0, 400) ||
         `HTTP ${resposta.status}`
-      throw new MotorError(`Motor oficial respondeu HTTP ${resposta.status}: ${detalhe}`, {
+      throw new MotorError(`${nome} respondeu HTTP ${resposta.status}: ${detalhe}`, {
         status: resposta.status,
         corpo: json ?? texto,
       })
@@ -56,12 +66,12 @@ async function requisitar(caminho, { metodo = 'GET', corpo, timeout = TIMEOUT_PA
   } catch (erro) {
     if (erro instanceof MotorError) throw erro
     if (erro?.name === 'AbortError') {
-      throw new MotorError(`Motor oficial não respondeu em ${Math.round(timeout / 1000)}s (${MOTOR_URL}).`, {
+      throw new MotorError(`${nome} não respondeu em ${Math.round(timeout / 1000)}s (${baseUrl}).`, {
         causa: erro,
       })
     }
     throw new MotorError(
-      `Não foi possível falar com o motor oficial em ${MOTOR_URL}. Suba o serviço e tente de novo. (${erro?.message ?? erro})`,
+      `Não foi possível falar com o ${nome.toLowerCase()} em ${baseUrl}. Suba o serviço e tente de novo. (${erro?.message ?? erro})`,
       { causa: erro },
     )
   } finally {
@@ -172,6 +182,159 @@ export async function calcularFrete({ valorFrete, ano, uf, municipio, aliquotas 
     resposta: json,
     texto,
     ...interpretarResposta(json),
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Motor do Simples Nacional                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Monta a operação de CT-e (tpDoc 57) do Simples Nacional para a atividade de
+ * transporte de carga (cAtivSN 05, Anexo III). As alíquotas efetivas vêm da
+ * linha do PGDAS informada pelo pagador; o motor escolhe o par do anexo.
+ */
+export function montarOperacaoSimples({ valorFrete, ano, atividade = '05', aliquotaCbs, aliquotaIbs }) {
+  const item = {
+    numero: 1,
+    cAtivSN: String(atividade),
+    cClassTrib: '000001',
+    nbs: '105011220',
+    baseCalculo: Number(valorFrete).toFixed(2),
+    valorImpostoSeletivo: '0.00',
+  }
+
+  const operacao = {
+    id: `frete-sn-${Date.now().toString(16)}-${Math.floor(Math.random() * 1e9).toString(16)}`,
+    versao: '1.0.0',
+    data: `${ano}-06-15`,
+    tpDoc: '57',
+    CRT: '1',
+    itens: [item],
+  }
+
+  // A atividade 90 é não tributável e não tem anexo: o motor não recebe a
+  // linha de alíquotas. As demais usam o Anexo III do transporte de carga.
+  if (String(atividade) !== '90') {
+    const par = {
+      pCBSSN: String(aliquotaCbs),
+      pIBSSN: String(aliquotaIbs),
+    }
+    operacao.aliquotasEfetivas = {
+      anexoIII: {
+        ...par,
+        semRedistribuicaoISS: { ...par },
+      },
+    }
+  }
+
+  return operacao
+}
+
+/** Lê o item calculado do Simples e devolve o destaque e a memória. */
+export function interpretarRespostaSimples(resposta) {
+  const objeto = Array.isArray(resposta?.objetos) ? resposta.objetos[0] : null
+  const trib = objeto?.tribCalc ?? null
+
+  if (!trib || objeto?.estadoItem !== 'CALCULADO') {
+    const motivo = objeto?.motivoEstado
+    const erro =
+      objeto?.erros?.[0]?.detail ??
+      motivo?.descricao ??
+      motivo?.motivo ??
+      (objeto?.estadoItem ? `item ${objeto.estadoItem}` : 'resposta sem o cálculo do Simples')
+    throw new MotorError(`O motor do Simples Nacional não apurou CBS/IBS para a operação: ${erro}.`)
+  }
+
+  const numero = (valor) => {
+    const n = Number(valor)
+    return Number.isFinite(n) ? n : 0
+  }
+
+  const vCbs = numero(trib.vCBSSN)
+  const vIbs = numero(trib.vIBSSN)
+
+  return {
+    vBC: numero(trib.vBC),
+    vCBS: vCbs,
+    vIBS: vIbs,
+    vIBSUf: 0,
+    vIBSMun: 0,
+    destaque: vCbs + vIbs,
+    aliquotaCbs: numero(trib.pCBSSN),
+    aliquotaIbs: numero(trib.pIBSSN),
+    aliquotaIbsUf: 0,
+    aliquotaIbsMun: 0,
+    reducao: { cbs: null, ibsUf: null, ibsMun: null },
+    creditoPresumido: 0,
+    calculoSimulado: false,
+    memoriaCalculo: trib.memoriaCalculo ?? null,
+    estado: objeto.estadoItem,
+    receitaBruta: numero(trib.vRBSNitem),
+    tipoReceitaBruta: trib.tpRBSNDescricao ?? null,
+    resolucaoAliquotas: resposta?.resolucaoAliquotas ?? null,
+    total: resposta?.total ?? null,
+  }
+}
+
+/** Uma apuração de CBS/IBS do Simples Nacional, com a resposta bruta preservada. */
+export async function calcularFreteSimples({ valorFrete, ano, atividade, aliquotaCbs, aliquotaIbs }) {
+  const operacao = montarOperacaoSimples({ valorFrete, ano, atividade, aliquotaCbs, aliquotaIbs })
+  const { status, headers, texto, json } = await requisitar(
+    '/api/calculadora/observabilidade/simples-nacional/nao-assistido',
+    {
+      metodo: 'POST',
+      corpo: operacao,
+      baseUrl: MOTOR_SIMPLES_URL,
+      nome: 'Motor do Simples Nacional',
+    },
+  )
+
+  if (headers['x-calc-app-version']) versaoSimplesObservada = headers['x-calc-app-version']
+  if (headers['x-calc-db-version']) baseSimplesObservada = headers['x-calc-db-version']
+
+  return {
+    operacao,
+    status,
+    headers: {
+      aplicacao: headers['x-calc-app-version'] ?? null,
+      baseDados: headers['x-calc-db-version'] ?? null,
+      avisoSimulado: null,
+    },
+    resposta: json,
+    texto,
+    ...interpretarRespostaSimples(json),
+  }
+}
+
+let versaoSimplesObservada = null
+let baseSimplesObservada = null
+
+/** Versão e base do motor do Simples, para o selo da interface. */
+export async function verificarMotorSimples() {
+  try {
+    const { headers, json } = await requisitar('/api/versao', {
+      timeout: 8000,
+      baseUrl: MOTOR_SIMPLES_URL,
+      nome: 'Motor do Simples Nacional',
+    })
+    return {
+      online: true,
+      url: MOTOR_SIMPLES_URL,
+      versao: json?.versaoApp ?? headers['x-calc-app-version'] ?? versaoSimplesObservada,
+      baseDados: json?.versaoDb ?? headers['x-calc-db-version'] ?? baseSimplesObservada,
+      ambiente: json?.ambiente ?? null,
+      erro: null,
+    }
+  } catch (erro) {
+    return {
+      online: false,
+      url: MOTOR_SIMPLES_URL,
+      versao: versaoSimplesObservada,
+      baseDados: baseSimplesObservada,
+      ambiente: null,
+      erro: erro?.message ?? String(erro),
+    }
   }
 }
 

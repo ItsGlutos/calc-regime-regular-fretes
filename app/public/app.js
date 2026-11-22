@@ -28,8 +28,8 @@ const estado = {
   perfil: 'SIMPLES_DAS',
   operacao: 'B2B',
   cargas: [
-    { nome: 'Rota Sul Logística', preco: '1.000,00', perfil: 'SIMPLES_DAS' },
-    { nome: 'Via Brasil Transportes', preco: '1.000,00', perfil: 'SIMPLES_HIBRIDO' },
+    { nome: 'Rota Sul Logística', preco: '1.000,00', perfil: 'SIMPLES_DAS', pCbs: '', pIbs: '' },
+    { nome: 'Via Brasil Transportes', preco: '1.000,00', perfil: 'SIMPLES_HIBRIDO', pCbs: '', pIbs: '' },
   ],
   ultimaSimulacao: null,
   ultimaComparacao: null,
@@ -64,12 +64,24 @@ async function carregarOpcoes() {
 function renderizarPerfis() {
   const alvo = $('#perfil')
   alvo.innerHTML = estado.opcoes.perfis
-    .map(
-      (perfil) =>
-        `<option value="${perfil.id}">${esc(perfil.curto)} · ${esc(perfil.estimativa ? perfil.faixa : 'crédito integral')}</option>`,
-    )
+    .map((perfil) => {
+      const legenda = perfil.requerAliquotas
+        ? 'PGDAS ou estimativa'
+        : perfil.estimativa
+          ? perfil.faixa
+          : 'crédito integral'
+      return `<option value="${perfil.id}">${esc(perfil.curto)} · ${esc(legenda)}</option>`
+    })
     .join('')
   alvo.value = estado.perfil
+}
+
+function renderizarAtividades() {
+  const alvo = $('#atividade')
+  alvo.innerHTML = estado.opcoes.atividadesSimples
+    .map((atividade) => `<option value="${atividade.id}">${esc(atividade.rotulo)}</option>`)
+    .join('')
+  alvo.value = estado.opcoes.atividadesSimples[0]?.id ?? '05'
 }
 
 function renderizarOperacao() {
@@ -116,13 +128,25 @@ function atualizarPerfil() {
   const perfil = estado.opcoes.perfis.find((item) => item.id === estado.perfil)
   if (!perfil) return
 
-  $('#perfilHint').textContent = perfil.estimativa
-    ? `${perfil.descricao} Faixa de ${perfil.faixa} do frete — ajuste abaixo.`
+  const ehSimples = perfil.id === 'SIMPLES_DAS'
+  $('#simplesWrap').hidden = !ehSimples
+
+  $('#perfilHint').textContent = ehSimples
+    ? `${perfil.descricao} Informe as alíquotas do PGDAS abaixo para o cálculo real; sem elas, vale a faixa estimada.`
     : perfil.descricao
 
+  const ano = Number($('#ano')?.value ?? 2033)
+  const anoInicio = estado.opcoes?.anoInicioSimples ?? 2027
+  const temReal = ehSimples && temAliquotasSimples() && ano >= anoInicio
+  const usaEstimativa = ehSimples ? !temReal : perfil.estimativa
   const envoltorio = $('#taxaWrap')
-  envoltorio.hidden = !perfil.estimativa
-  if (!perfil.estimativa) return
+  envoltorio.hidden = !usaEstimativa
+
+  if (ehSimples) {
+    atualizarFonteSimples()
+  }
+
+  if (!usaEstimativa) return
 
   const slider = $('#taxaRange')
   slider.min = String(perfil.min)
@@ -133,6 +157,44 @@ function atualizarPerfil() {
   $('#taxaMin').textContent = pct(perfil.min)
   $('#taxaMax').textContent = pct(perfil.max)
   $('#taxaOut').textContent = pct(perfil.ref)
+}
+
+function temAliquotasSimples() {
+  return Boolean($('#aliquotaCbs')?.value.trim() && $('#aliquotaIbs')?.value.trim())
+}
+
+function atualizarFonteSimples() {
+  const cbs = $('#aliquotaCbs').value.trim()
+  const ibs = $('#aliquotaIbs').value.trim()
+  const preenchidas = Number(Boolean(cbs)) + Number(Boolean(ibs))
+  const ano = Number($('#ano')?.value ?? 2033)
+  const anoInicio = estado.opcoes?.anoInicioSimples ?? 2027
+  const real = preenchidas === 2 && ano >= anoInicio
+
+  $('#simplesFonte').textContent =
+    preenchidas === 2 && ano < anoInicio
+      ? `estimativa em ${ano}`
+      : preenchidas === 2
+        ? 'cálculo real'
+        : preenchidas === 1
+          ? 'preencha as duas'
+          : 'estimativa'
+  $('#taxaWrap').hidden = real
+
+  if (!real) {
+    const perfil = estado.opcoes?.perfis.find((item) => item.id === 'SIMPLES_DAS')
+    if (perfil) {
+      const slider = $('#taxaRange')
+      slider.min = String(perfil.min)
+      slider.max = String(perfil.max)
+      slider.step = '0.01'
+      slider.value = String(perfil.ref)
+      slider.setAttribute('aria-valuetext', `${numero(perfil.ref)}% do frete`)
+      $('#taxaMin').textContent = pct(perfil.min)
+      $('#taxaMax').textContent = pct(perfil.max)
+      $('#taxaOut').textContent = pct(perfil.ref)
+    }
+  }
 }
 
 function atualizarAno() {
@@ -149,29 +211,45 @@ function atualizarAno() {
     TRANSICAO_IBS: 'IBS cresce e o ICMS cai na mesma proporção. O crédito do frete aumenta ano a ano.',
     REGIME_PLENO: 'Regime pleno: CBS 8,50% + IBS 18,50%. É o cenário que compara de verdade os regimes.',
   }
-  $('#anoHint').textContent = dicas[item.fase] ?? ''
+  const simplesIndisponivel =
+    estado.perfil === 'SIMPLES_DAS' && ano < estado.opcoes.anoInicioSimples
+      ? ` O Motor do Simples só tem tabelas a partir de ${estado.opcoes.anoInicioSimples}; neste ano o crédito do Simples/DAS usa a faixa estimada.`
+      : ''
+  $('#anoHint').textContent = `${dicas[item.fase] ?? ''}${simplesIndisponivel}`
+  if (estado.perfil === 'SIMPLES_DAS') atualizarFonteSimples()
 }
 
-function atualizarMotor(motor) {
+function atualizarMotor() {
+  const regular = estado.opcoes.motor
+  const simples = estado.opcoes.motorSimples
   const pilula = $('#enginePill')
-  const offline = !motor.online
+  const offline = !regular.online || !simples.online
   pilula.classList.toggle('is-offline', offline)
-  $('#engineVersion').textContent = offline
-    ? 'offline'
-    : `${motor.versao ?? 'online'} · ${motor.baseDados ?? 'sem base'}`
-  pilula.title = offline
-    ? `Motor indisponível em ${motor.url}`
-    : `Motor oficial em ${motor.url} · alíquotas de transição: ${motor.fonteAliquotas}${motor.aviso ? ` · ${motor.aviso}` : ''}`
+
+  const rotuloRegular = regular.online ? `${regular.versao ?? 'online'}` : 'regular offline'
+  const rotuloSimples = simples.online ? `${simples.versao ?? 'online'}` : 'SN offline'
+  $('#engineVersion').textContent = `${rotuloRegular} · ${rotuloSimples}`
+  pilula.title = `Regime regular: ${regular.url} (${regular.online ? 'online' : 'offline'}) · Simples Nacional: ${simples.url} (${simples.online ? 'online' : 'offline'})`
 
   const alerta = $('#motorAlert')
   if (offline) {
     alerta.hidden = false
+    const linhas = []
+    if (!regular.online) {
+      linhas.push(
+        `<li>Regime regular (<code>${esc(regular.url)}</code>): offline. ${regular.erro ? esc(regular.erro) : ''}</li>`,
+      )
+    }
+    if (!simples.online) {
+      linhas.push(
+        `<li>Simples Nacional (<code>${esc(simples.url)}</code>): offline. ${simples.erro ? esc(simples.erro) : ''}</li>`,
+      )
+    }
     alerta.innerHTML = `${ICONE.motor.replace('width="18" height="18"', 'width="18" height="18" style="flex:none;margin-top:1px"')}
       <div>
-        <strong>O motor oficial não está respondendo.</strong>
-        Suba o serviço em <code>${esc(motor.url)}</code> e recarregue:
-        <br /><code>java -Dspring.profiles.active=offline -jar target\\api-regime-geral.jar</code>
-        ${motor.erro ? `<br /><span style="opacity:.8">${esc(motor.erro)}</span>` : ''}
+        <strong>Um dos motores oficiais não está respondendo.</strong>
+        <ul style="margin:8px 0 0;padding-left:18px">${linhas.join('')}</ul>
+        Suba os dois serviços com <code>.\\run.ps1</code> e recarregue.
       </div>`
   } else {
     alerta.hidden = true
@@ -185,14 +263,21 @@ function atualizarMotor(motor) {
 
 function lerEntrada() {
   const perfil = estado.opcoes.perfis.find((item) => item.id === estado.perfil)
+  const ehSimples = perfil?.id === 'SIMPLES_DAS'
+  const ano = Number($('#ano').value)
+  const anoInicio = estado.opcoes.anoInicioSimples ?? 2027
+  const usaReal = ehSimples && temAliquotasSimples() && ano >= anoInicio
   return {
     valorFrete: $('#valor').value,
     perfil: estado.perfil,
     tipoOperacao: estado.operacao,
     ufOrigem: $('#ufOrigem').value,
     ufDestino: $('#ufDestino').value,
-    ano: Number($('#ano').value),
-    taxaCredito: perfil?.estimativa ? Number($('#taxaRange').value) : undefined,
+    ano,
+    taxaCredito: perfil?.estimativa && !usaReal ? Number($('#taxaRange').value) : undefined,
+    aliquotaCbs: ehSimples ? $('#aliquotaCbs').value.trim() : undefined,
+    aliquotaIbs: ehSimples ? $('#aliquotaIbs').value.trim() : undefined,
+    atividade: ehSimples ? $('#atividade').value : undefined,
   }
 }
 
@@ -252,7 +337,7 @@ function mostrarErro(painel, mensagem) {
     </div>
     <h2>Não foi possível calcular</h2>
     <p>${esc(mensagem)}</p>
-    <p>Confira se o motor oficial está no ar em <code>http://127.0.0.1:8080</code>. O cálculo de CBS/IBS não é refeito aqui — sem o motor, não há simulação.</p>
+    <p>Confira se os dois motores estão no ar: regime regular em <code>http://127.0.0.1:8080</code> e Simples Nacional em <code>http://127.0.0.1:8082</code>. O cálculo de CBS/IBS não é refeito aqui — sem o motor do regime escolhido, não há simulação.</p>
     <button class="btn btn--ghost" type="button" id="tentarNovamente">Tentar de novo</button>`
 
   $('#tentarNovamente')?.addEventListener('click', () => simular())
@@ -276,15 +361,29 @@ function renderizarResultado(dados) {
   const { entrada, motor, resultado } = dados
 
   if (motor.versao) {
-    estado.opcoes.motor.versao = motor.versao
-    estado.opcoes.motor.baseDados = motor.baseDados ?? estado.opcoes.motor.baseDados
-    atualizarMotor(estado.opcoes.motor)
+    const alvo = motor.fonte === 'simples-nacional' ? estado.opcoes.motorSimples : estado.opcoes.motor
+    alvo.online = true
+    alvo.versao = motor.versao
+    alvo.baseDados = motor.baseDados ?? alvo.baseDados
+    atualizarMotor()
   }
 
   const niveis = { atencao: 'warn', ok: 'ok', neutro: 'neutral' }
   const icone = resultado.alerta.nivel === 'atencao' ? ICONE.alerta : resultado.alerta.nivel === 'ok' ? ICONE.ok : ICONE.neutro
   const cobertura = Math.max(0, Math.min(100, resultado.percentualCredito))
   const creditoPerdido = resultado.creditoPerdido
+  const fonte = entrada.perfil.fonteCredito
+  const chipFonte =
+    fonte === 'simples'
+      ? '<span class="chip chip--best">motor do Simples · PGDAS</span>'
+      : fonte === 'integral' && entrada.perfil.id === 'SIMPLES_HIBRIDO'
+        ? '<span class="chip chip--best">regime regular</span>'
+        : fonte === 'estimativa'
+          ? '<span class="chip chip--best">crédito estimado</span>'
+          : ''
+  const avisos = Array.isArray(dados.avisos) && dados.avisos.length
+    ? `<div class="callout">${ICONE.info}<div>${dados.avisos.map((aviso) => `<p>${esc(aviso)}</p>`).join('')}</div></div>`
+    : ''
 
   painel.className = 'card result'
   painel.innerHTML = `
@@ -295,7 +394,7 @@ function renderizarResultado(dados) {
         <span class="chip">${esc(entrada.tipoOperacao)}</span>
         <span class="chip">${esc(entrada.rota)}</span>
         <span class="chip chip--year">${entrada.ano} · ${esc(motor.faseRotulo)}</span>
-        ${entrada.perfil.estimativa ? '<span class="chip chip--best">crédito estimado</span>' : ''}
+        ${chipFonte}
       </div>
     </div>
 
@@ -336,10 +435,12 @@ function renderizarResultado(dados) {
       </div>
     </div>
 
+    ${avisos}
+
     <div class="audit">
       <div class="audit__head">
         <h3>Memória de cálculo</h3>
-        <span class="tag">motor oficial</span>
+        <span class="tag">${esc(motor.nome ?? 'motor oficial')}</span>
       </div>
       <dl class="steps">${passosHTML(dados)}</dl>
 
@@ -350,7 +451,7 @@ function renderizarResultado(dados) {
         </summary>
         <pre>${esc(JSON.stringify(motor.resposta, null, 2))}</pre>
         <div class="raw__bar">
-          <span>NBS 105011220 · CST 000 · cClassTrib 000001${motor.calculoSimulado ? ' · cálculo simulado' : ''}</span>
+          <span>${esc(motor.rotuloOperacao)}${motor.calculoSimulado ? ' · cálculo simulado' : ''}</span>
           <button class="btn btn--tiny" type="button" data-copiar-sim>Copiar JSON</button>
         </div>
       </details>
@@ -400,6 +501,16 @@ function renderizarCargas() {
         <button class="icon-btn carrier__remove" type="button" data-remover="${indice}" aria-label="Remover ${esc(carga.nome) || `transportadora ${letras[indice]}`}" ${estado.cargas.length <= 2 ? 'disabled' : ''}>
           ${ICONE.lixeira}
         </button>
+        <div class="carrier__rates" ${carga.perfil === 'SIMPLES_DAS' ? '' : 'hidden'}>
+          <div class="carrier__field">
+            <label for="cbs-${indice}">CBS % (PGDAS)</label>
+            <input id="cbs-${indice}" data-campo="pCbs" type="text" inputmode="decimal" value="${esc(carga.pCbs ?? '')}" placeholder="2,3591" />
+          </div>
+          <div class="carrier__field">
+            <label for="ibs-${indice}">IBS % (PGDAS)</label>
+            <input id="ibs-${indice}" data-campo="pIbs" type="text" inputmode="decimal" value="${esc(carga.pIbs ?? '')}" placeholder="0,0260" />
+          </div>
+        </div>
       </div>`,
     )
     .join('')
@@ -430,6 +541,9 @@ async function comparar() {
         nome: carga.nome,
         preco: carga.preco,
         perfil: carga.perfil,
+        aliquotaCbs: carga.perfil === 'SIMPLES_DAS' ? carga.pCbs : undefined,
+        aliquotaIbs: carga.perfil === 'SIMPLES_DAS' ? carga.pIbs : undefined,
+        atividade: carga.perfil === 'SIMPLES_DAS' ? '05' : undefined,
       })),
       ano: Number($('#ano').value),
       tipoOperacao: estado.operacao,
@@ -460,7 +574,7 @@ function renderizarComparacao(dados) {
         <td><span class="rank">${indice + 1}</span></td>
         <td class="cell-name">
           <strong>${esc(item.nome)}</strong>
-          <small class="cell-meta"><span>${esc(item.perfil.curto)}</span><span>${brl(item.valorFrete)} nominais</span></small>
+          <small class="cell-meta"><span>${esc(item.perfil.curto)}${item.perfil.fonteCredito === 'simples' ? ' · PGDAS' : item.perfil.fonteCredito === 'estimativa' ? ' · estimado' : ''}</span><span>${brl(item.valorFrete)} nominais</span></small>
           ${indice === 0 ? '<span class="best-chip">melhor no líquido</span>' : ''}
         </td>
         <td>${esc(item.perfil.curto)}</td>
@@ -537,7 +651,7 @@ function renderizarComparacao(dados) {
           <tbody>${linhas}</tbody>
         </table>
       </div>
-      <p class="table-note">Crédito por faixa setorial (estimativa) em Simples, Simples híbrido e autônomo/MEI. No regime regular, o destaque integral do motor vira crédito.</p>
+      <p class="table-note">Simples/DAS: cálculo real pelo Motor do Simples quando as alíquotas do PGDAS são informadas; sem elas, faixa setorial estimada. Simples híbrido e regime regular: crédito integral do destaque apurado pelo regime regular.</p>
       ${observacoes.join('')}
     </div>`
 }
@@ -603,8 +717,18 @@ function ligarEventos() {
     const indice = Number(evento.target.closest('.carrier')?.dataset.indice)
     if (!Number.isInteger(indice)) return
     estado.cargas[indice][campo] = evento.target.value
+    if (campo === 'perfil') renderizarCargas()
     marcarDesatualizado(true)
   })
+
+  for (const seletor of ['#aliquotaCbs', '#aliquotaIbs']) {
+    $(seletor).addEventListener('input', () => {
+      atualizarFonteSimples()
+      marcarDesatualizado(true)
+    })
+  }
+
+  $('#atividade').addEventListener('change', () => marcarDesatualizado(true))
 
   $('#carriers').addEventListener('click', (evento) => {
     const remover = evento.target.closest('[data-remover]')
@@ -630,15 +754,20 @@ function ligarEventos() {
 
   $('#cenarioAceite').addEventListener('click', () => {
     estado.cargas = [
-      { nome: 'Rota Sul Logística', preco: '1.000,00', perfil: 'SIMPLES_DAS' },
-      { nome: 'Via Brasil Transportes', preco: '1.000,00', perfil: 'SIMPLES_HIBRIDO' },
+      { nome: 'Rota Sul Logística', preco: '1.000,00', perfil: 'SIMPLES_DAS', pCbs: '2,3591', pIbs: '0,0260' },
+      { nome: 'Via Brasil Transportes', preco: '1.000,00', perfil: 'SIMPLES_HIBRIDO', pCbs: '', pIbs: '' },
     ]
     $('#valor').value = '1.000,00'
+    $('#ano').value = '2027'
     estado.perfil = 'SIMPLES_DAS'
+    $('#aliquotaCbs').value = '2,3591'
+    $('#aliquotaIbs').value = '0,0260'
     renderizarPerfis()
     atualizarPerfil()
+    atualizarAno()
     renderizarCargas()
     comparar()
+    simular()
   })
 
   $('#comparacao').addEventListener('click', (evento) => {
@@ -686,14 +815,16 @@ function restaurar() {
   estado.perfil = 'SIMPLES_DAS'
   estado.operacao = 'B2B'
   estado.cargas = [
-    { nome: 'Rota Sul Logística', preco: '1.000,00', perfil: 'SIMPLES_DAS' },
-    { nome: 'Via Brasil Transportes', preco: '1.000,00', perfil: 'SIMPLES_HIBRIDO' },
+    { nome: 'Rota Sul Logística', preco: '1.000,00', perfil: 'SIMPLES_DAS', pCbs: '', pIbs: '' },
+    { nome: 'Via Brasil Transportes', preco: '1.000,00', perfil: 'SIMPLES_HIBRIDO', pCbs: '', pIbs: '' },
   ]
 
   $('#valor').value = '1.000,00'
   $('#ufOrigem').value = 'SP'
   $('#ufDestino').value = 'BA'
   $('#ano').value = '2033'
+  $('#aliquotaCbs').value = ''
+  $('#aliquotaIbs').value = ''
 
   renderizarPerfis()
   renderizarOperacao()
@@ -713,9 +844,10 @@ function restaurar() {
 async function iniciar() {
   try {
     estado.opcoes = await carregarOpcoes()
-    atualizarMotor(estado.opcoes.motor)
+    atualizarMotor()
     renderizarPerfis()
     renderizarOperacao()
+    renderizarAtividades()
     renderizarUfs()
     renderizarAnos()
     renderizarCargas()

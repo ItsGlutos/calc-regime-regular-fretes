@@ -17,8 +17,8 @@ exibido na aba **Produto & contrato** e exportável como anexo contratual
 
 ## 1. Resposta curta
 
-O simulador já responde **"quanto do frete é tributo"** com aderência à calculadora oficial. Para ser
-produto de uma pagadora, faltam três camadas:
+O simulador já responde **"quanto do frete é tributo"** com aderência às calculadoras oficiais — do regime
+regular e do Simples Nacional. Para ser produto de uma pagadora, faltam três camadas:
 
 | Camada | Pergunta que responde | Situação |
 |---|---|---|
@@ -63,7 +63,8 @@ que está pela metade, com o próximo passo.
 | Split payment na liquidação | falta | integração com o mecanismo, conciliação da segregação e comprovantes |
 | ICMS de 4% para importados, FECP e benefícios estaduais | falta | parametrizar por UF e por natureza da carga |
 
-Já prontos: cálculo de IBS/CBS pela calculadora oficial, ICMS interestadual pela tabela do Senado,
+Já prontos: cálculo de IBS/CBS pelas calculadoras oficiais (regime regular e Simples), ICMS interestadual
+pela tabela do Senado,
 cronograma de extinção de PIS/COFINS e ICMS, e regime da pagadora (regular × Simples) no custo.
 
 ### 3.2 Documentos

@@ -9,29 +9,55 @@
 /** NBS do transporte rodoviário de carga unitizada (item de CT-e). */
 export const NBS_FRETE = '105011220'
 
-/** Perfis de transportador e a faixa de crédito transferida ao pagador. */
+/** Primeiro ano com tabelas do Simples Nacional no motor (NT 2026.005). */
+export const ANO_INICIO_SIMPLES = 2027
+
+/** Atividades do Simples Nacional aceitas para o CT-e de transporte. */
+export const ATIVIDADES_SIMPLES = [
+  {
+    id: '05',
+    rotulo: '05 — Transporte de carga intermunicipal/interestadual (Anexo III)',
+    anexo: 'III',
+  },
+]
+
+/**
+ * Perfis de transportador.
+ *
+ * `motor` diz qual calculadora apura o CBS/IBS: o regime regular ou o Simples
+ * Nacional. `requerAliquotas` marca o perfil que só tem cálculo real quando o
+ * pagador informa a linha de alíquotas efetivas do PGDAS; sem ela, o perfil cai
+ * na faixa setorial (`estimativa: true`).
+ */
 export const PERFIS = [
   {
     id: 'SIMPLES_DAS',
-    rotulo: 'Simples Nacional — DAS integral',
+    rotulo: 'Simples Nacional — CBS/IBS dentro do DAS',
     curto: 'Simples/DAS',
     min: 0.92,
     max: 4,
     ref: 2,
     estimativa: true,
-    descricao: 'Recolhe CBS/IBS dentro do DAS. Transfere só uma fração do crédito.',
-    fonte: 'Faixa setorial de 0,92% a 4% do frete.',
+    motor: 'simples',
+    requerAliquotas: true,
+    descricao:
+      'Recolhe CBS/IBS dentro do DAS. O crédito é o destaque apurado pelo motor do Simples com as alíquotas efetivas do PGDAS.',
+    fonte:
+      'Destaque do motor do Simples (atividade 05, Anexo III). Sem as alíquotas do PGDAS, faixa setorial de 0,92% a 4% do frete.',
   },
   {
     id: 'SIMPLES_HIBRIDO',
-    rotulo: 'Simples Nacional — híbrido (CBS/IBS fora do DAS)',
+    rotulo: 'Simples Nacional — híbrido (CBS/IBS no regime regular)',
     curto: 'Simples híbrido',
-    min: 9,
-    max: 9.3,
-    ref: 9.3,
-    estimativa: true,
-    descricao: 'Opta por recolher CBS/IBS no regime regular. O crédito quase alcança o regime regular.',
-    fonte: 'Faixa setorial de 9% a 9,3% do frete.',
+    min: null,
+    max: null,
+    ref: null,
+    estimativa: false,
+    motor: 'regular',
+    requerAliquotas: false,
+    descricao:
+      'Opta por recolher CBS/IBS no regime regular, fora do DAS. O CT-e destaca o tributo cheio e o crédito é integral.',
+    fonte: 'Crédito integral do destaque apurado pelo regime regular.',
   },
   {
     id: 'REGIME_REGULAR',
@@ -41,6 +67,8 @@ export const PERFIS = [
     max: null,
     ref: null,
     estimativa: false,
+    motor: 'regular',
+    requerAliquotas: false,
     descricao: 'Destaca CBS/IBS no CT-e e transfere o crédito integral ao tomador.',
     fonte: 'Crédito integral apurado pelo motor oficial.',
   },
@@ -52,6 +80,8 @@ export const PERFIS = [
     max: 4,
     ref: 1.8,
     estimativa: true,
+    motor: 'regular',
+    requerAliquotas: false,
     descricao: 'Crédito residual, próximo do que o DAS embute no preço.',
     fonte: 'Faixa setorial de 1,8% a 4% do frete.',
   },
@@ -131,6 +161,11 @@ export function perfilPorId(id) {
   return PERFIS.find((perfil) => perfil.id === id) ?? null
 }
 
+export function atividadePorId(id) {
+  const normalizada = String(id ?? '').trim()
+  return ATIVIDADES_SIMPLES.find((atividade) => atividade.id === normalizada) ?? null
+}
+
 export function ufPorSigla(sigla) {
   const normalizada = String(sigla ?? '').trim().toUpperCase()
   return UFS.find((uf) => uf.sigla === normalizada) ?? null
@@ -156,9 +191,15 @@ export function formatarNumero(valor, casas = 2) {
 /**
  * Aplica a regra de crédito do regime ao destaque apurado pelo motor.
  *
- * O destaque do motor é um teto: nenhum regime transfere mais crédito do que o
- * CBS/IBS efetivamente destacado no documento. Em B2C o pagador é o consumidor
- * final e não aproveita nada.
+ * O destaque é um teto: nenhum regime transfere mais crédito do que o CBS/IBS
+ * efetivamente destacado no documento. Em B2C o pagador é o consumidor final e
+ * não aproveita nada.
+ *
+ * `fonteCredito`:
+ * - `integral`: regime regular, Simples híbrido e Simples com apuração real —
+ *   todo o destaque vira crédito;
+ * - `simples`: destaque apurado pelo motor do Simples (também integral);
+ * - `estimativa`: faixa setorial aplicada sobre o frete, limitada ao destaque.
  *
  * @param {object} dados
  * @param {number} dados.valorFrete preço nominal do frete
@@ -166,19 +207,27 @@ export function formatarNumero(valor, casas = 2) {
  * @param {number} dados.destaque CBS + IBS apurados pelo motor
  * @param {string} dados.tipoOperacao B2B ou B2C
  * @param {number|null} [dados.taxaInformada] taxa dentro da faixa, para estimativas
+ * @param {'integral'|'simples'|'estimativa'} [dados.fonteCredito] origem da regra de crédito
  * @returns {object} crédito, percentual, custo líquido, teto, alerta e notas
  */
-export function avaliarCredito({ valorFrete, perfil, destaque, tipoOperacao, taxaInformada }) {
+export function avaliarCredito({
+  valorFrete,
+  perfil,
+  destaque,
+  tipoOperacao,
+  taxaInformada,
+  fonteCredito = perfil.estimativa ? 'estimativa' : 'integral',
+}) {
   const bruto = arredondar(valorFrete)
   const teto = arredondar(destaque)
   const tetoPercentual = bruto > 0 ? (teto / bruto) * 100 : 0
   const notas = []
 
-  let taxaAplicada
+  let taxaAplicada = null
   let creditoIdeal
   let percentualIdeal
 
-  if (perfil.estimativa) {
+  if (fonteCredito === 'estimativa') {
     taxaAplicada = Number(taxaInformada ?? perfil.ref)
     if (!Number.isFinite(taxaAplicada)) {
       throw new Error('Taxa de crédito inválida para o regime estimado.')
@@ -194,10 +243,19 @@ export function avaliarCredito({ valorFrete, perfil, destaque, tipoOperacao, tax
       `Crédito estimado pela faixa setorial do regime: ${formatarNumero(perfil.min)}% a ${formatarNumero(perfil.max)}% do frete.`,
     )
   } else {
-    taxaAplicada = null
     creditoIdeal = teto
     percentualIdeal = tetoPercentual
-    notas.push('Regime regular: o destaque de CBS/IBS do motor vira crédito integral, sem estimativa.')
+    if (fonteCredito === 'simples') {
+      notas.push(
+        'O destaque apurado pelo motor do Simples Nacional é transferido integralmente ao tomador — não há estimativa setorial.',
+      )
+    } else if (perfil.id === 'SIMPLES_HIBRIDO') {
+      notas.push(
+        'Simples híbrido: o transportador optou por recolher CBS/IBS no regime regular; o destaque cheio do CT-e vira crédito integral.',
+      )
+    } else {
+      notas.push('Regime regular: o destaque de CBS/IBS do motor vira crédito integral, sem estimativa.')
+    }
   }
 
   const limitadoAoTeto = creditoIdeal > teto + 1e-9
@@ -230,7 +288,9 @@ export function avaliarCredito({ valorFrete, perfil, destaque, tipoOperacao, tax
     creditoPerdido,
     limitadoAoTeto,
     taxaAplicada,
-    faixa: perfil.estimativa ? { min: perfil.min, max: perfil.max } : { min: tetoPercentual, max: tetoPercentual },
+    fonteCredito,
+    creditoIntegral: fonteCredito !== 'estimativa',
+    faixa: fonteCredito === 'estimativa' ? { min: perfil.min, max: perfil.max } : { min: tetoPercentual, max: tetoPercentual },
     alerta: montarAlerta({ percentual, tipoOperacao, perfil, creditoPerdido, bruto }),
     notas,
   }

@@ -34,6 +34,31 @@ Todos os caminhos começam com `http://localhost:8080/api/calculadora`. A lista 
 
 Exemplos de utilização da API estão em [docs/exemplos.md](docs/exemplos.md).
 
+### Dois motores oficiais
+
+Este fork reúne as duas calculadoras oficiais da Receita para a reforma do consumo:
+
+| Motor | Repositório | Porta | Papel |
+|---|---|---|---|
+| Regime regular | [`calculadora-rtc-regime-regular`](https://github.com/ReceitaFederal/calculadora-rtc-regime-regular) | `8080` | CBS/IBS das operações do regime regular |
+| Simples Nacional | [`calculadora-rtc-simples-nacional`](https://github.com/ReceitaFederal/calculadora-rtc-simples-nacional) | `8082` | CBS/IBS do Simples (CT-e, NF-e, NFS-e) |
+
+O código do Simples está em `simples-nacional/`, incorporado ao fork como *subtree* do repositório oficial. Os
+dois motores são aplicações Spring Boot independentes, leem o **mesmo SQLite** (`calculadora/db/calculadora-pro.db`)
+e compartilham o schema criado pelo Flyway (a base já contém as tabelas do Simples a partir da `V0071`).
+
+```powershell
+# compilar os dois motores (uma vez)
+.\mvnw.cmd -DskipTests package
+.\mvnw.cmd -f simples-nacional\pom.xml -DskipTests package
+
+# subir motores + interface
+.\run.ps1
+```
+
+O app escolhe o motor pelo perfil do transportador: regime regular e Simples híbrido usam a `8080`; Simples/DAS
+com alíquotas do PGDAS usa a `8082`.
+
 ### Simulador de frete
 
 Além dos endpoints de cálculo, este fork inclui um simulador da carga tributária do **transporte de
@@ -69,15 +94,23 @@ tributários diferentes pelo custo líquido — não pelo preço nominal.
 
 - formulário com valor do frete, perfil do transportador (Simples/DAS, Simples híbrido, regime regular,
   autônomo/MEI), tipo de operação (B2B/B2C), UFs de origem e destino e ano de referência;
+- **Simples/DAS**: alíquotas efetivas do PGDAS (CBS e IBS) informadas na tela; com elas e ano a partir de
+  2027, o crédito é apurado pelo motor do Simples (CT-e `tpDoc 57`, `CRT 1`, atividade `05`). Sem elas, vale a
+  faixa setorial estimada (0,92% a 4%);
+- **Simples híbrido**: CBS/IBS apurados pelo regime regular e creditados integralmente — não é estimativa;
 - crédito aproveitável (R$ e %), custo líquido e alerta visual quando o crédito efetivo fica abaixo de 4%;
-- comparador de 2 a 3 transportadoras ordenado por custo líquido pós-crédito;
-- memória de cálculo com a resposta bruta do motor oficial, para auditoria.
+- comparador de 2 a 3 transportadoras ordenado por custo líquido pós-crédito, com as alíquotas do PGDAS por
+  transportadora;
+- memória de cálculo com a resposta bruta do motor usado, para auditoria.
 
-Cada simulação chama `POST /api/calculadora/regime-geral`; nenhuma alíquota de CBS/IBS é recalculada na
-aplicação. O crédito do regime é aplicado sobre o destaque do motor, com as faixas de Simples, híbrido e
-autônomo/MEI sinalizadas como estimativa.
+Cada simulação chama o motor do regime escolhido: `POST /api/calculadora/regime-geral` (8080) ou
+`POST /api/calculadora/observabilidade/simples-nacional/nao-assistido` (8082). Nenhuma alíquota de CBS/IBS é
+recalculada na aplicação. O destaque do motor é o teto do crédito; apenas o Simples/DAS sem PGDAS e o
+autônomo/MEI usam faixa estimada.
 
 ```powershell
+.\mvnw.cmd -DskipTests package
+.\mvnw.cmd -f simples-nacional\pom.xml -DskipTests package
 .\run.ps1
 ```
 

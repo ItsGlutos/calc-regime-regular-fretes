@@ -5,6 +5,21 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Mantenha um Changelog](https://keepachangelog.com/pt-BR/1.1.0/),
 e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [Não lançado]
+
+### Adicionado
+
+- **Motor do Simples Nacional** (`simples-nacional/`): subtree do repositório oficial
+  `ReceitaFederal/calculadora-rtc-simples-nacional` (1.0.2), executado na porta `8082` contra o mesmo
+  SQLite do motor do regime regular. O `run.ps1` agora sobe os dois motores e a aplicação.
+- **Frete Líquido com cálculo real do Simples/DAS**: o app aceita as alíquotas efetivas do PGDAS (CBS e
+  IBS), monta o CT-e `tpDoc 57`, `CRT 1`, atividade `05` e usa o destaque do motor do Simples como
+  crédito. Sem as alíquotas, mantém a faixa setorial estimada.
+- **Simples híbrido corrigido**: o perfil passou a representar o optante que recolhe CBS/IBS no regime
+  regular; o crédito é integral, não a faixa de 9% a 9,3%.
+- Scripts `scripts/verificar-app.mjs` (runtime da interface via CDP) e `scripts/capturar-app.mjs`
+  (capturas por seletor).
+
 ## [1.7.2] - 2026-11-18
 
 ### Corrigido

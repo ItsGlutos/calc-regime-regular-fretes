@@ -33,11 +33,14 @@ calculadora/
 # execução local
 logs-app.out
 logs-app.err
+logs-simples.out
+logs-simples.err
 tmp-*.png
+tmp-*.json
+tmp-*.html
 
-# aplica��o e site
+# aplicação e site
 node_modules/
 .DS_Store
 Thumbs.db
 .env
-

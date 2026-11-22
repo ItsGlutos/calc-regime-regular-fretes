@@ -42,6 +42,8 @@ Scripts de apoio:
 | `scripts/teste-api-frete.mjs` | testes de contrato da API contra a aplicação em execução |
 | `scripts/verificar-ui.mjs` | testa cliques, periodicidade, UF, memória de cálculo e erros de JS (CDP) |
 | `scripts/capturar.mjs` | captura uma seção da página por seletor CSS |
+| `scripts/verificar-app.mjs` | testa a interface Frete Líquido (carga, comparator, PGDAS 2027, troca de ano/perfil) via CDP |
+| `scripts/capturar-app.mjs` | captura uma seção do Frete Líquido por seletor, com viewport configurável |
 
 ---
 
@@ -459,3 +461,79 @@ modelo de cálculo antes de investir na interface definitiva.
 - Importação do XML do CT-e e conciliação com a tabela de frete do contrato.
 - Integração com MDF-e, RNTRC, CIOT e com o split payment na liquidação.
 - Exportação para PDF e assinatura do anexo contratual.
+
+---
+
+## 12. Frete Líquido: o motor do Simples Nacional
+
+O fork também incorpora o repositório oficial
+[`calculadora-rtc-simples-nacional`](https://github.com/ReceitaFederal/calculadora-rtc-simples-nacional)
+em `simples-nacional/`, como subtree. Ele é o segundo motor do app **Frete Líquido**: enquanto o motor do
+regime regular apura CBS/IBS de um CT-e no regime regular, o motor do Simples apura o destaque de um
+transportador optante, com a linha de alíquotas efetivas do PGDAS.
+
+| Peça | Porta | Papel |
+|---|---|---|
+| Motor do regime regular | 8080 | CT-e do regime regular e do Simples híbrido |
+| Motor do Simples | 8082 | CT-e `tpDoc 57`, `CRT 1`, atividade `05` |
+| App Frete Líquido | 5180 | escolhe o motor, aplica a regra de crédito e monta a memória |
+
+Os dois motores leem o mesmo `calculadora/db/calculadora-pro.db`; o schema já contém as tabelas do
+Simples a partir da migração `V0071`.
+
+### Perfis e crédito
+
+| Perfil | Motor | Crédito |
+|---|---|---|
+| Regime regular | 8080 | 100% do destaque |
+| Simples híbrido (CBS/IBS no regime regular) | 8080 | 100% do destaque |
+| Simples/DAS com PGDAS | 8082 | 100% do destaque do Simples |
+| Simples/DAS sem PGDAS | 8080 (teto) | 0,92% a 4% do frete — estimativa |
+| Autônomo/MEI | 8080 (teto) | 1,8% a 4% do frete — estimativa |
+
+O Simples híbrido **não** é o DAS: o optante escolheu recolher CBS/IBS no regime regular, então o CT-e
+destaca o tributo cheio e o crédito é integral. O DAS integral usa o motor do Simples e as alíquotas do
+PGDAS; sem elas, o app usa a faixa setorial e sinaliza a estimativa.
+
+### Contrato usado
+
+`POST /api/calculadora/observabilidade/simples-nacional/nao-assistido`:
+
+```json
+{
+  "id": "frete-sn-...",
+  "versao": "1.0.0",
+  "data": "2027-06-15",
+  "tpDoc": "57",
+  "CRT": "1",
+  "aliquotasEfetivas": {
+    "anexoIII": {
+      "pCBSSN": "2.3591",
+      "pIBSSN": "0.0260",
+      "semRedistribuicaoISS": { "pCBSSN": "2.3591", "pIBSSN": "0.0260" }
+    }
+  },
+  "itens": [{
+    "numero": 1,
+    "cAtivSN": "05",
+    "cClassTrib": "000001",
+    "nbs": "105011220",
+    "baseCalculo": "1000.00",
+    "valorImpostoSeletivo": "0.00"
+  }]
+}
+```
+
+O motor devolve `objetos[0].tribCalc.vCBSSN`/`vIBSSN`, `memoriaCalculo` e `total`; o app usa o destaque
+como teto e, no perfil com PGDAS, credita 100% dele.
+
+### Rodar
+
+```powershell
+.\mvnw.cmd -DskipTests package
+.\mvnw.cmd -f simples-nacional\pom.xml -DskipTests package
+.\run.ps1
+```
+
+Aceite: frete de R$ 1.000,00, SP → BA, 2027, CBS 2,3591% + IBS 0,0260% no PGDAS → crédito de R$ 23,85 e
+custo líquido de R$ 976,15; o híbrido no regime regular (8,50% em 2027) fica em R$ 915,00.
