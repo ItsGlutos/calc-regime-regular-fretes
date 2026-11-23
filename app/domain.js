@@ -22,6 +22,36 @@ export const ATIVIDADES_SIMPLES = [
 ]
 
 /**
+ * Modalidades de regime mostradas na interface.
+ *
+ * O perfil do transportador continua sendo a unidade que o motor entende; o
+ * regime é só o agrupamento visual que deixa explícito que o Simples Nacional
+ * é uma modalidade própria, e não um detalhe do regime regular.
+ */
+export const REGIMES = [
+  {
+    id: 'SIMPLES',
+    rotulo: 'Simples Nacional',
+    sub: 'DAS com PGDAS ou híbrido',
+    descricao:
+      'Optante do Simples: o CBS/IBS pode ser recolhido dentro do DAS (com as alíquotas efetivas do PGDAS) ou no regime regular, na opção híbrida.',
+  },
+  {
+    id: 'REGULAR',
+    rotulo: 'Regime regular',
+    sub: 'Lucro Real/Presumido ou MEI',
+    descricao:
+      'Não optante do Simples: o CT-e destaca CBS/IBS no regime regular e o crédito é integral. Autônomo e MEI usam a faixa setorial estimada.',
+  },
+]
+
+/** Primeiro ano da série histórica: 2025 é o regime anterior à reforma. */
+export const ANO_REFERENCIA_REFORMA = 2025
+
+/** Horizonte do comparativo antes/depois (LC 214/2025). */
+export const ANOS_REFORMA = [2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033]
+
+/**
  * Perfis de transportador.
  *
  * `motor` diz qual calculadora apura o CBS/IBS: o regime regular ou o Simples
@@ -34,6 +64,10 @@ export const PERFIS = [
     id: 'SIMPLES_DAS',
     rotulo: 'Simples Nacional — CBS/IBS dentro do DAS',
     curto: 'Simples/DAS',
+    regime: 'SIMPLES',
+    variante: 'DAS',
+    varianteRotulo: 'CBS/IBS dentro do DAS (PGDAS)',
+    varianteHint: 'O transportador é optante e recolhe o CBS/IBS dentro do DAS.',
     min: 0.92,
     max: 4,
     ref: 2,
@@ -49,6 +83,10 @@ export const PERFIS = [
     id: 'SIMPLES_HIBRIDO',
     rotulo: 'Simples Nacional — híbrido (CBS/IBS no regime regular)',
     curto: 'Simples híbrido',
+    regime: 'SIMPLES',
+    variante: 'HIBRIDO',
+    varianteRotulo: 'CBS/IBS no regime regular (híbrido)',
+    varianteHint: 'O optante escolheu recolher o CBS/IBS fora do DAS, no regime regular.',
     min: null,
     max: null,
     ref: null,
@@ -63,6 +101,10 @@ export const PERFIS = [
     id: 'REGIME_REGULAR',
     rotulo: 'Regime regular (Lucro Real/Presumido)',
     curto: 'Regime regular',
+    regime: 'REGULAR',
+    variante: 'REGULAR',
+    varianteRotulo: 'Lucro Real/Presumido · crédito integral',
+    varianteHint: 'Destaca CBS/IBS no CT-e e transfere o crédito integral ao tomador.',
     min: null,
     max: null,
     ref: null,
@@ -76,6 +118,10 @@ export const PERFIS = [
     id: 'AUTONOMO_MEI',
     rotulo: 'Autônomo / MEI',
     curto: 'Autônomo/MEI',
+    regime: 'REGULAR',
+    variante: 'MEI',
+    varianteRotulo: 'Autônomo / MEI · estimativa setorial',
+    varianteHint: 'O crédito é uma estimativa setorial, não o destaque cheio do regime regular.',
     min: 1.8,
     max: 4,
     ref: 1.8,
@@ -159,6 +205,12 @@ export function arredondar(valor) {
 
 export function perfilPorId(id) {
   return PERFIS.find((perfil) => perfil.id === id) ?? null
+}
+
+/** Rótulo curto do ano na linha do tempo (2025 é o marco "antes da reforma"). */
+export function rotuloAnoReforma(ano) {
+  if (Number(ano) === ANO_REFERENCIA_REFORMA) return 'Antes da reforma'
+  return TABELA_TRANSICAO[Number(ano)]?.rotulo ?? 'Transição'
 }
 
 export function atividadePorId(id) {

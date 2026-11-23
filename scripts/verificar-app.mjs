@@ -123,6 +123,35 @@ const aposCenario = await avaliar(`(() => ({
   }))
 }))()`)
 
+// Linha do tempo: a projeção anual consulta o motor e pode levar mais tempo que o resultado.
+const linhaTempoCarregou = await aguardar("document.querySelector('#linhaDoTempoConteudo .timeline__kpis')", 60000)
+await esperar(300)
+
+const linhaTempo = await avaliar(`(() => ({
+  chips: [...document.querySelectorAll('#timelineChips .chip')].map((c) => c.textContent.trim()),
+  kpis: [...document.querySelectorAll('.timeline__kpis .kpi')].map((k) => k.textContent.replace(/\\s+/g, ' ').trim()),
+  linhas: document.querySelectorAll('.table--timeline tbody tr').length,
+  colunas: [...document.querySelectorAll('.table--timeline thead th')].map((th) => th.textContent.replace(/\\s+/g, ' ').trim()),
+  metricas: [...document.querySelectorAll('#timelineMetrica button')].map((b) => b.innerText.trim()),
+  grafico: Boolean(document.querySelector('.timeline__chart svg')),
+  fonte: document.querySelector('#timelineFonte')?.textContent.trim(),
+  avisos: [...document.querySelectorAll('.callout--aviso p')].map((p) => p.textContent.trim()),
+  marcos: document.querySelectorAll('.marco').length,
+  stale: !document.querySelector('#timelineStale')?.hidden
+}))()`)
+
+const trocaMetrica = await avaliar(`(() => {
+  const rotulo = () => document.querySelector('.table--timeline thead th:last-child')?.textContent.replace(/\\s+/g, ' ').trim();
+  const lidos = { inicial: rotulo() };
+  document.querySelector('#timelineMetrica [data-metrica="carga"]')?.click();
+  lidos.carga = rotulo();
+  document.querySelector('#timelineMetrica [data-metrica="credito"]')?.click();
+  lidos.credito = rotulo();
+  document.querySelector('#timelineMetrica [data-metrica="custo"]')?.click();
+  lidos.volta = rotulo();
+  return lidos;
+})()`)
+
 const captura = await enviar('Page.captureScreenshot', {
   format: 'png',
   captureBeyondViewport: true,
@@ -153,6 +182,39 @@ const estados = await avaliar(`(() => {
   };
 })()`)
 
+// Regime regular: a mesma linha do tempo precisa trocar de regime sem recarregar a página.
+await avaliar(`(() => {
+  document.querySelector('#regime [data-regime="REGULAR"]')?.click();
+  const perfil = document.querySelector('#perfil');
+  perfil.value = 'REGIME_REGULAR';
+  perfil.dispatchEvent(new Event('change', { bubbles: true }));
+  const ano = document.querySelector('#ano');
+  ano.value = '2033';
+  ano.dispatchEvent(new Event('change', { bubbles: true }));
+  document.querySelector('#calcular')?.click();
+  return true;
+})()`)
+const regularCarregou = await aguardar(
+  "document.querySelector('#timelineChips')?.textContent.includes('Regime regular') && document.querySelector('.timeline__kpis')?.textContent.includes('162,50') && document.querySelector('#resultado .net__val')?.textContent.trim() === '730,00'",
+  60000,
+)
+await esperar(300)
+
+const regular = await avaliar(`(() => {
+  const celula = (seletor) => document.querySelector(seletor)?.textContent.replace(/\\s+/g, ' ').trim() ?? null;
+  return {
+    chips: [...document.querySelectorAll('#timelineChips .chip')].map((c) => c.textContent.trim()),
+    regimeAtivo: document.querySelector('#regime [data-regime="REGULAR"]')?.getAttribute('aria-checked'),
+    kpis: [...document.querySelectorAll('.timeline__kpis .kpi')].map((k) => k.textContent.replace(/\\s+/g, ' ').trim()),
+    linhas: document.querySelectorAll('.table--timeline tbody tr').length,
+    antigos2025: celula('.table--timeline tbody tr:first-child td:nth-child(3)'),
+    carga2033: celula('.table--timeline tbody tr:last-child td:nth-child(5)'),
+    liquido2033: celula('.table--timeline tbody tr:last-child td:nth-child(7)'),
+    liquidoResultado: document.querySelector('#resultado .net__val')?.textContent.trim() ?? null,
+    erro: celula('.comparison-error'),
+  };
+})()`)
+
 console.log(
   JSON.stringify(
     {
@@ -162,7 +224,12 @@ console.log(
       inicial,
       cenario,
       aposCenario,
+      linhaTempoCarregou,
+      linhaTempo,
+      trocaMetrica,
       estados,
+      regularCarregou,
+      regular,
       erros,
       captura: destino,
     },
@@ -176,11 +243,26 @@ if (
   !carregou ||
   !comparou ||
   !cenario ||
+  !linhaTempoCarregou ||
+  !regularCarregou ||
   erros.length ||
+  linhaTempo?.linhas !== 9 ||
+  !linhaTempo?.grafico ||
+  linhaTempo?.stale ||
+  !trocaMetrica?.carga?.includes('Carga') ||
+  !trocaMetrica?.credito?.includes('Crédito') ||
   !String(estados?.badge2026 || '').includes('estimativa em 2026') ||
   !estados?.taxa2026 ||
   !estados?.simplesOcultoNoHibrido ||
-  !estados?.taxaOcultaNoHibrido
+  !estados?.taxaOcultaNoHibrido ||
+  regular?.regimeAtivo !== 'true' ||
+  regular?.linhas !== 9 ||
+  !regular?.antigos2025?.includes('R$ 162,50') ||
+  !regular?.antigos2025?.includes('ICMS R$ 70,00') ||
+  !regular?.antigos2025?.includes('PIS/COFINS R$ 92,50') ||
+  regular?.liquido2033 !== 'R$ 730,00' ||
+  regular?.liquidoResultado !== '730,00' ||
+  regular?.erro
 ) {
   process.exitCode = 1
 }

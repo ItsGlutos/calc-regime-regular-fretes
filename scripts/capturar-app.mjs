@@ -81,7 +81,13 @@ if (cenario) {
   }
 }
 
-await esperar(600)
+// A linha do tempo consulta a projeção anual do motor e pode demorar mais que o resultado.
+for (let i = 0; i < 100; i++) {
+  if (await avaliar("document.querySelector('#linhaDoTempoConteudo .timeline__kpis')")) break
+  await esperar(300)
+}
+
+await esperar(400)
 
 const caixa = await avaliar(`(() => {
   const el = document.querySelector(${JSON.stringify(seletor)});

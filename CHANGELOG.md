@@ -15,10 +15,22 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 - **Frete Líquido com cálculo real do Simples/DAS**: o app aceita as alíquotas efetivas do PGDAS (CBS e
   IBS), monta o CT-e `tpDoc 57`, `CRT 1`, atividade `05` e usa o destaque do motor do Simples como
   crédito. Sem as alíquotas, mantém a faixa setorial estimada.
+- **Frete Líquido: modalidade Simples Nacional explícita**: o formulário passa a começar pelo **regime
+  tributário** (Simples Nacional ou regime regular) e pela modalidade (Simples/DAS com PGDAS, Simples
+  híbrido, Lucro Real/Presumido ou autônomo/MEI). O painel do Simples mostra a alíquota efetiva total
+  (CBS + IBS) do PGDAS e mantém o cálculo real pelo motor do Simples.
+- **Frete Líquido: antes e depois da reforma (2025–2033)**: nova seção com linha do tempo do mesmo frete
+  nominal, gráfico, tabela e marcos da transição, alternando **custo líquido**, **crédito CBS/IBS** e
+  **carga tributária**. A carga vem da projeção oficial do frete do motor
+  (`POST /api/calculadora/frete/projecao`), com ICMS/PIS/COFINS e o CBS/IBS apurado pela calculadora; o
+  regime regular aparece como benchmark. O endpoint `POST /api/reforma` serve a série; sem a projeção no
+  motor, ele cai no CBS/IBS apurado ano a ano e avisa que os tributos antigos não estão decompostos.
 - **Simples híbrido corrigido**: o perfil passou a representar o optante que recolhe CBS/IBS no regime
   regular; o crédito é integral, não a faixa de 9% a 9,3%.
-- Scripts `scripts/verificar-app.mjs` (runtime da interface via CDP) e `scripts/capturar-app.mjs`
-  (capturas por seletor).
+- Scripts `scripts/verificar-app.mjs` (runtime da interface via CDP, agora cobrindo a linha do tempo, a
+  troca de métrica e a troca de regime) e `scripts/capturar-app.mjs` (capturas por seletor, com espera da
+  linha do tempo). Capturas atualizadas em `app/docs/` (`web-desktop.png`, `web-mobile.png` e
+  `web-reforma.png`).
 
 ## [1.7.2] - 2026-11-18
 

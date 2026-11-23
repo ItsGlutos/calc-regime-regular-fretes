@@ -186,6 +186,118 @@ export async function calcularFrete({ valorFrete, ano, uf, municipio, aliquotas 
 }
 
 /* ------------------------------------------------------------------ */
+/* Projeção oficial da carga tributária do frete (2025–2033)           */
+/* ------------------------------------------------------------------ */
+
+const cacheProjecao = new Map()
+
+const numeroOuZero = (valor) => {
+  const n = Number(valor)
+  return Number.isFinite(n) ? n : 0
+}
+
+/**
+ * Lê a projeção anual do motor do regime regular.
+ *
+ * O endpoint `/api/calculadora/frete/projecao` é o módulo oficial do frete
+ * deste motor: ele calcula o CBS/IBS de cada ano pela mesma calculadora e
+ * compõe os tributos do regime anterior (ICMS, PIS/COFINS e ISS) com o
+ * cronograma da LC 214/2025. Nada de alíquota é decidido aqui.
+ *
+ * O valor é diário (1 dia útil) para que o mesmo frete nominal atravesse todos
+ * os anos sem o efeito de dias úteis — é a leitura "antes e depois" do preço.
+ */
+export async function projetarFrete({ valorFrete, ufOrigem, ufDestino, tipoOperacao = 'INTERESTADUAL' }) {
+  const chave = [Number(valorFrete).toFixed(2), ufOrigem, ufDestino, tipoOperacao].join('|')
+  const agora = Date.now()
+  const emCache = cacheProjecao.get(chave)
+  if (emCache && agora - emCache.em < 60_000) return emCache.dados
+
+  const corpo = {
+    valorFrete: Number(valorFrete),
+    periodicidade: 'DIARIO',
+    mesReferencia: 6,
+    nbs: '105011220',
+    tipoOperacao,
+    ufOrigem,
+    ufDestino,
+    regimePisCofins: 'NAO_CUMULATIVO',
+    incluirMemoriaCalculo: false,
+  }
+
+  const { status, headers, texto, json } = await requisitar('/api/calculadora/frete/projecao', {
+    metodo: 'POST',
+    corpo,
+    timeout: 45_000,
+  })
+
+  if (headers['x-calc-app-version']) versaoObservada = headers['x-calc-app-version']
+  if (headers['x-calc-db-version']) baseObservada = headers['x-calc-db-version']
+
+  const anos = (Array.isArray(json?.anos) ? json.anos : []).map((ano) => ({
+    ano: Number(ano.ano),
+    rotulo: ano.rotulo ?? null,
+    fase: ano.fase ?? null,
+    valorFrete: numeroOuZero(ano.valorFretePeriodo),
+    icms: numeroOuZero(ano.valorIcms),
+    pis: numeroOuZero(ano.valorPis),
+    cofins: numeroOuZero(ano.valorCofins),
+    iss: numeroOuZero(ano.valorIss),
+    cbs: numeroOuZero(ano.valorCbs),
+    ibsUf: numeroOuZero(ano.valorIbsUf),
+    ibsMun: numeroOuZero(ano.valorIbsMun),
+    totalDestacado: numeroOuZero(ano.totalDestacado),
+    totalEfetivo: numeroOuZero(ano.totalEfetivo),
+    percentualTotal: numeroOuZero(ano.percentualTotal),
+    percentualCbs: numeroOuZero(ano.percentualCbs),
+    percentualIbs: numeroOuZero(ano.percentualIbsUf) + numeroOuZero(ano.percentualIbsMun),
+    percentualIcms: numeroOuZero(ano.percentualIcms),
+    percentualPis: numeroOuZero(ano.percentualPis),
+    percentualCofins: numeroOuZero(ano.percentualCofins),
+  }))
+
+  const notas = (Array.isArray(json?.notasEtapa) ? json.notasEtapa : []).map((nota) => ({
+    ano: Number(nota.ano),
+    rotulo: nota.rotulo ?? null,
+    fase: nota.fase ?? null,
+    resumo: nota.resumo ?? null,
+    comparacaoMetodoAnterior: nota.comparacaoMetodoAnterior ?? null,
+    mudancas: Array.isArray(nota.mudancas) ? nota.mudancas : [],
+    fundamento: nota.fundamento ?? null,
+    efeitoAbsoluto: nota.efeitoAbsoluto ?? null,
+    efeitoPontosPercentuais: nota.efeitoPontosPercentuais ?? null,
+    efeitoRelativo: nota.efeitoRelativo ?? null,
+  }))
+
+  const dados = {
+    status,
+    headers: {
+      aplicacao: headers['x-calc-app-version'] ?? null,
+      baseDados: headers['x-calc-db-version'] ?? null,
+    },
+    anos,
+    resumo: json?.resumo ?? null,
+    notas,
+    parametros: Array.isArray(json?.parametros) ? json.parametros : [],
+    aliquotaIcms: numeroOuZero(json?.aliquotaIcms),
+    tipoOperacao: json?.tipoOperacao ?? tipoOperacao,
+    regimePisCofins: json?.regimePisCofins ?? 'NAO_CUMULATIVO',
+    versaoBaseDados: json?.versaoBaseDados ?? null,
+    geradoEm: json?.geradoEm ?? null,
+    avisos: Array.isArray(json?.avisos) ? json.avisos : [],
+    resposta: json,
+    texto,
+  }
+
+  cacheProjecao.set(chave, { em: agora, dados })
+  if (cacheProjecao.size > 40) {
+    cacheProjecao.delete(cacheProjecao.keys().next().value)
+  }
+
+  return dados
+}
+
+/* ------------------------------------------------------------------ */
 /* Motor do Simples Nacional                                           */
 /* ------------------------------------------------------------------ */
 

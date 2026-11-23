@@ -11,11 +11,14 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import {
+  ANO_REFERENCIA_REFORMA,
   ANOS,
   ANO_INICIO_SIMPLES,
+  ANOS_REFORMA,
   ATIVIDADES_SIMPLES,
   NBS_FRETE,
   PERFIS,
+  REGIMES,
   TIPOS_OPERACAO,
   TABELA_TRANSICAO,
   UFS,
@@ -26,6 +29,7 @@ import {
   faixaTexto,
   formatarNumero,
   perfilPorId,
+  rotuloAnoReforma,
   rotuloFase,
   ufPorSigla,
 } from './domain.js'
@@ -35,6 +39,7 @@ import {
   MotorError,
   calcularFrete,
   calcularFreteSimples,
+  projetarFrete,
   verificarMotor,
   verificarMotorSimples,
 } from './engine.js'
@@ -630,6 +635,580 @@ async function comparar(entrada) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Antes e depois da reforma (2025–2033)                               */
+/* ------------------------------------------------------------------ */
+
+const ANO_FIM_SERIE = 2033
+
+function percentualDe(valor, base) {
+  const numerador = Number(valor) || 0
+  const denominador = Number(base) || 0
+  if (!denominador) return 0
+  return Number(((numerador / denominador) * 100).toFixed(4))
+}
+
+function arredondarCasas(valor, casas = 2) {
+  const n = Number(valor)
+  if (!Number.isFinite(n)) return 0
+  const fator = 10 ** casas
+  return Math.round((n + Number.EPSILON) * fator) / fator
+}
+
+/**
+ * Rede de segurança para motores sem o módulo de projeção: apura o CBS/IBS de
+ * cada ano no endpoint oficial de cálculo, sem os tributos do regime anterior.
+ */
+async function apurarCbsIbsPorAno({ dados, tabela }) {
+  const anos = ANOS_REFORMA.filter((ano) => ano >= 2026)
+  const resultados = await Promise.allSettled(
+    anos.map(async (ano) => {
+      const aliquotas = ano >= 2027 ? tabela[ano] : null
+      const calculo = await calcularFrete({
+        valorFrete: dados.valorFrete,
+        ano,
+        uf: dados.ufDestino.sigla,
+        municipio: dados.ufDestino.municipio,
+        aliquotas,
+      })
+      return { ano, calculo }
+    }),
+  )
+
+  const porAno = new Map()
+  const falhas = []
+  resultados.forEach((resultado, indice) => {
+    if (resultado.status === 'fulfilled') {
+      porAno.set(anos[indice], resultado.value.calculo)
+    } else {
+      falhas.push(anos[indice])
+    }
+  })
+  return { porAno, falhas }
+}
+
+function faseDaSerie(ano, tabela, projecao) {
+  if (ano === ANO_REFERENCIA_REFORMA) return 'REFERENCIA'
+  return tabela[ano]?.fase ?? projecao?.fase ?? 'TRANSICAO'
+}
+
+function rotuloDaSerie(ano, tabela, projecao) {
+  if (ano === ANO_REFERENCIA_REFORMA) return 'Antes da reforma'
+  return tabela[ano]?.rotulo ?? projecao?.rotulo ?? rotuloAnoReforma(ano)
+}
+
+function observacaoDoAno({ ano, modelo, percentualSimples, taxaEstimativa }) {
+  if (ano === ANO_REFERENCIA_REFORMA) {
+    return modelo === 'simples-motor' || modelo === 'hibrido'
+      ? 'Antes da reforma não havia CBS/IBS destacado: o optante recolhia tudo no DAS.'
+      : 'Regime anterior: ICMS + PIS/COFINS (não cumulativo) sobre o frete.'
+  }
+  if (ano === 2026) return 'Fase de teste: CBS 0,90% + IBS 0,10%, compensáveis com PIS/COFINS e ICMS.'
+  if (ano === 2027) {
+    if (modelo === 'simples-motor') {
+      return percentualSimples
+        ? `Alíquotas efetivas do PGDAS: ${formatarNumero(percentualSimples, 4)}% do frete.`
+        : 'CBS/IBS dentro do DAS com a linha do PGDAS informada.'
+    }
+    if (modelo === 'estimativa') return `Faixa setorial estimada em ${formatarNumero(taxaEstimativa)}% do frete.`
+    if (modelo === 'hibrido') return 'CBS cheia fora do DAS; o ICMS do optante segue no DAS.'
+    return 'PIS/COFINS extintos e CBS cheia; o ICMS segue integral até 2028.'
+  }
+  if (ano === 2033) {
+    if (modelo === 'simples-motor') return 'Regime pleno: o CBS/IBS do DAS continua sendo a única parcela transferível.'
+    if (modelo === 'estimativa') return 'Regime pleno: a faixa setorial não acompanha os 27,00% do regime regular.'
+    if (modelo === 'hibrido') return 'Regime pleno: 27,00% de CBS/IBS, sem ICMS; converge com o regime regular.'
+    return 'Regime pleno: CBS 8,50% + IBS 18,50%, sem ICMS/PIS/COFINS.'
+  }
+  return 'Transição do IBS: o ICMS cai ano a ano e o IBS sobe na mesma proporção.'
+}
+
+function notasDaSerie({ modelo, projecao, percentualSimples, taxaEstimativa }) {
+  const itemProjecao = (ano) => projecao?.notas?.find((nota) => nota.ano === ano) ?? null
+
+  if (modelo === 'regular') {
+    const anos = [2026, 2027, 2029, 2033]
+    const notas = anos
+      .map((ano) => {
+        const item = itemProjecao(ano)
+        if (!item?.resumo) return null
+        return {
+          ano,
+          titulo: item.rotulo ?? rotuloAnoReforma(ano),
+          texto: item.resumo,
+          comparacao: item.comparacaoMetodoAnterior,
+          detalhe: item.mudancas?.length ? item.mudancas : null,
+          fundamento: item.fundamento,
+        }
+      })
+      .filter(Boolean)
+    if (notas.length) return notas
+
+    return [
+      {
+        ano: 2026,
+        titulo: 'Fase de teste',
+        texto: 'CBS 0,90% + IBS 0,10%, compensáveis com PIS/COFINS e ICMS: a carga econômica ainda é a do regime anterior.',
+        comparacao: null,
+        detalhe: null,
+        fundamento: 'ADCT (EC 132/2023), art. 125.',
+      },
+      {
+        ano: 2027,
+        titulo: 'CBS cheia, IBS em teste',
+        texto: 'O PIS/COFINS sai e a CBS entra integral; o ICMS continua sendo cobrado até 2032.',
+        comparacao: null,
+        detalhe: null,
+        fundamento: 'ADCT (EC 132/2023) e LC 214/2025.',
+      },
+      {
+        ano: 2029,
+        titulo: 'Transição do IBS',
+        texto: 'O IBS sobe ano a ano e o ICMS cai na mesma proporção; no regime pleno só restam CBS e IBS.',
+        comparacao: null,
+        detalhe: null,
+        fundamento: 'ADCT (EC 132/2023), art. 128.',
+      },
+      {
+        ano: 2033,
+        titulo: 'Regime pleno',
+        texto: 'CBS 8,50% + IBS 18,50% = 27,00% do frete, sem ICMS/PIS/COFINS.',
+        comparacao: null,
+        detalhe: null,
+        fundamento: 'ADCT (EC 132/2023), arts. 128 e 129.',
+      },
+    ]
+  }
+
+  const percentual = percentualSimples ?? taxaEstimativa
+  const base =
+    modelo === 'hibrido'
+      ? [
+          {
+            ano: 2026,
+            titulo: 'Fase de teste',
+            texto: 'O CBS/IBS de 1,00% é destacado fora do DAS e compensado com PIS/COFINS e ICMS.',
+            fundamento: 'ADCT (EC 132/2023), art. 125.',
+          },
+          {
+            ano: 2027,
+            titulo: 'CBS cheia fora do DAS',
+            texto: 'O híbrido passa a destacar CBS 8,40% + IBS 0,10% e transfere 100% desse crédito; o ICMS segue no DAS.',
+            fundamento: 'LC 214/2025 — opção pelo regime regular do CBS/IBS.',
+          },
+          {
+            ano: 2029,
+            titulo: 'Transição do IBS',
+            texto: 'O IBS sobe para 1,85% e o ICMS cai 10%; no híbrido, só o CBS/IBS destacado vira crédito.',
+            fundamento: 'ADCT (EC 132/2023), art. 128.',
+          },
+          {
+            ano: 2033,
+            titulo: 'Regime pleno',
+            texto: 'CBS 8,50% + IBS 18,50%: o crédito do híbrido converge com o do regime regular, e o ICMS deixa de existir.',
+            fundamento: 'ADCT (EC 132/2023), arts. 128 e 129.',
+          },
+        ]
+      : [
+          {
+            ano: 2026,
+            titulo: 'Fase de teste',
+            texto: 'O CBS/IBS dentro do DAS é de 1,00% e compensável com PIS/COFINS e ICMS.',
+            fundamento: 'ADCT (EC 132/2023), art. 125.',
+          },
+          {
+            ano: 2027,
+            titulo: modelo === 'simples-motor' ? 'Alíquota efetiva do PGDAS' : 'Faixa setorial estimada',
+            texto:
+              modelo === 'simples-motor'
+                ? `O motor do Simples aplica a linha do PGDAS informada: ${formatarNumero(percentual, 4)}% do frete.`
+                : `Sem as alíquotas do PGDAS, a linha do tempo usa ${formatarNumero(percentual)}% do frete como faixa setorial estimada.`,
+            fundamento: 'LC 123/2006 e LC 214/2025 — CBS/IBS dentro do DAS.',
+          },
+          {
+            ano: 2029,
+            titulo: 'Transição do IBS',
+            texto: 'O ICMS cai dentro do DAS e o IBS sobe; o CBS/IBS do Simples continua na linha do PGDAS.',
+            fundamento: 'ADCT (EC 132/2023), art. 128.',
+          },
+          {
+            ano: 2033,
+            titulo: 'Regime pleno',
+            texto: `No regime pleno o crédito transferível é o CBS/IBS do DAS (${formatarNumero(percentual, 2)}%), não os 27,00% do regime regular.`,
+            fundamento: 'ADCT (EC 132/2023), arts. 128 e 129.',
+          },
+        ]
+
+  return base.map((nota) => ({
+    ...nota,
+    comparacao: null,
+    detalhe: null,
+  }))
+}
+
+async function reforma(entrada) {
+  const dados = normalizarEntrada(entrada)
+  const tabela = await carregarTabela()
+  const avisos = [...dados.avisos]
+  const perfil = dados.perfil
+  const valor = dados.valorFrete
+  const tipoOperacaoFrete = dados.ufOrigem.sigla === dados.ufDestino.sigla ? 'INTERNA' : 'INTERESTADUAL'
+
+  let projecao = null
+  let erroProjecao = null
+  try {
+    projecao = await projetarFrete({
+      valorFrete: valor,
+      ufOrigem: dados.ufOrigem.sigla,
+      ufDestino: dados.ufDestino.sigla,
+      tipoOperacao: tipoOperacaoFrete,
+    })
+  } catch (erro) {
+    erroProjecao = erro
+    avisos.push(
+      'A projeção anual do frete não está disponível neste motor. A linha do tempo usa o CBS/IBS apurado ano a ano e não decompõe ICMS/PIS/COFINS; suba o motor com .\\run.ps1 para ver a carga completa.',
+    )
+  }
+
+  const projecaoPorAno = new Map((projecao?.anos ?? []).map((ano) => [ano.ano, ano]))
+
+  let motorPorAno = new Map()
+  if (!projecao) {
+    const fallback = await apurarCbsIbsPorAno({ dados, tabela })
+    motorPorAno = fallback.porAno
+    if (fallback.falhas.length) {
+      avisos.push(
+        `Não foi possível apurar o CBS/IBS em ${fallback.falhas.join(', ')}; esses anos ficam sem valor na linha do tempo.`,
+      )
+    }
+  }
+
+  const temAliquotasSimples = Boolean(dados.aliquotaCbs && dados.aliquotaIbs)
+  const usaMotorSimples = perfil.id === 'SIMPLES_DAS' && temAliquotasSimples
+  let simples = null
+  let erroSimples = null
+  if (usaMotorSimples) {
+    try {
+      const anoMotor = Math.min(ANO_FIM_SERIE, Math.max(ANO_INICIO_SIMPLES, dados.ano))
+      simples = await calcularFreteSimples({
+        valorFrete: valor,
+        ano: anoMotor,
+        atividade: dados.atividade.id,
+        aliquotaCbs: dados.aliquotaCbs,
+        aliquotaIbs: dados.aliquotaIbs,
+      })
+    } catch (erro) {
+      erroSimples = erro
+      avisos.push(
+        `O motor do Simples não apurou a linha do PGDAS informada; a linha do tempo do Simples usa a faixa setorial estimada. (${erro.message})`,
+      )
+    }
+  }
+
+  const taxaEstimativa = Number(dados.taxaCredito ?? perfil.ref ?? 0)
+  const aliquotaInformada = Number(dados.aliquotaCbs) + Number(dados.aliquotaIbs)
+  const percentualSimples = simples
+    ? Number.isFinite(aliquotaInformada) && aliquotaInformada > 0
+      ? arredondarCasas(aliquotaInformada, 4)
+      : percentualDe(simples.destaque, valor)
+    : null
+  const modelo =
+    perfil.id === 'REGIME_REGULAR'
+      ? 'regular'
+      : perfil.id === 'SIMPLES_HIBRIDO'
+        ? 'hibrido'
+        : usaMotorSimples && simples
+          ? 'simples-motor'
+          : 'estimativa'
+
+  if (modelo === 'estimativa' && perfil.min !== null && perfil.max !== null) {
+    if (taxaEstimativa < perfil.min - 1e-9 || taxaEstimativa > perfil.max + 1e-9) {
+      throw new HttpError(
+        400,
+        `A taxa de crédito de ${formatarNumero(taxaEstimativa)}% está fora da faixa do perfil ${perfil.curto} (${formatarNumero(perfil.min)}% a ${formatarNumero(perfil.max)}%).`,
+      )
+    }
+  }
+
+  const SEM_ANTIGOS = { icms: 0, pis: 0, cofins: 0, iss: 0, total: 0 }
+
+  const anos = ANOS_REFORMA.map((ano) => {
+    const proj = projecaoPorAno.get(ano) ?? null
+    const calculoMotor = motorPorAno.get(ano) ?? null
+    const cbsIbsProjecao = proj ? arredondar(proj.cbs + proj.ibsUf + proj.ibsMun) : null
+    const cbsIbsMotor = calculoMotor ? calculoMotor.destaque : null
+
+    let antigos = SEM_ANTIGOS
+    let cbsIbs = 0
+    let carga = 0
+    let compensado = 0
+    let disponivel = true
+    let fonte = proj ? 'projecao' : 'motor'
+
+    if (modelo === 'regular') {
+      if (proj) {
+        antigos = {
+          icms: proj.icms,
+          pis: proj.pis,
+          cofins: proj.cofins,
+          iss: proj.iss,
+          total: arredondar(proj.icms + proj.pis + proj.cofins + proj.iss),
+        }
+        cbsIbs = cbsIbsProjecao ?? 0
+        carga = arredondar(proj.totalEfetivo)
+        compensado = ano === 2026 ? arredondar(proj.totalDestacado - proj.totalEfetivo) : 0
+      } else if (ano === ANO_REFERENCIA_REFORMA) {
+        antigos = null
+        disponivel = false
+        carga = 0
+      } else if (cbsIbsMotor !== null) {
+        antigos = null
+        cbsIbs = cbsIbsMotor
+        carga = cbsIbs
+      } else {
+        antigos = null
+        disponivel = false
+        carga = 0
+      }
+    } else if (modelo === 'hibrido') {
+      antigos = SEM_ANTIGOS
+      cbsIbs = ano === ANO_REFERENCIA_REFORMA ? 0 : (cbsIbsProjecao ?? cbsIbsMotor ?? 0)
+      carga = cbsIbs
+      disponivel = ano === ANO_REFERENCIA_REFORMA || proj !== null || cbsIbsMotor !== null
+    } else if (modelo === 'simples-motor') {
+      antigos = SEM_ANTIGOS
+      if (ano === ANO_REFERENCIA_REFORMA) cbsIbs = 0
+      else if (ano === 2026) cbsIbs = cbsIbsProjecao ?? cbsIbsMotor ?? arredondar(valor * 0.01)
+      else cbsIbs = simples.destaque
+      carga = cbsIbs
+      fonte = 'motor-simples'
+    } else {
+      antigos = SEM_ANTIGOS
+      if (ano === ANO_REFERENCIA_REFORMA) cbsIbs = 0
+      else if (ano === 2026) cbsIbs = arredondar((Math.min(taxaEstimativa, 1) * valor) / 100)
+      else cbsIbs = arredondar((taxaEstimativa * valor) / 100)
+      carga = cbsIbs
+      fonte = 'estimativa'
+    }
+
+    cbsIbs = arredondar(cbsIbs)
+    carga = arredondar(carga)
+
+    let credito = 0
+    if (dados.tipoOperacao === 'B2B') {
+      credito =
+        modelo === 'estimativa' ? Math.min(arredondar((taxaEstimativa * valor) / 100), cbsIbs) : cbsIbs
+    }
+
+    const custoLiquido = arredondar(valor - credito)
+
+    return {
+      ano,
+      fase: faseDaSerie(ano, tabela, proj),
+      rotulo: rotuloDaSerie(ano, tabela, proj),
+      valorFrete: valor,
+      antigos,
+      cbsIbs,
+      cbsIbsEfetivo: arredondar(cbsIbs - compensado),
+      compensado,
+      percentualCompensado: percentualDe(compensado, valor),
+      carga,
+      percentualCarga: percentualDe(carga, valor),
+      credito,
+      percentualCredito: percentualDe(credito, valor),
+      custoLiquido,
+      disponivel,
+      fonte,
+      observacao: observacaoDoAno({ ano, modelo, percentualSimples, taxaEstimativa }),
+    }
+  })
+
+  const porAno = new Map(anos.map((linha) => [linha.ano, linha]))
+  const referencia = porAno.get(ANO_REFERENCIA_REFORMA)
+  const pleno = porAno.get(ANO_FIM_SERIE) ?? anos[anos.length - 1]
+  const referenciaDisponivel = referencia?.disponivel !== false
+
+  const primeiroAumento = referenciaDisponivel
+    ? anos.find(
+        (linha) =>
+          linha.ano > ANO_REFERENCIA_REFORMA &&
+          linha.disponivel &&
+          linha.percentualCarga > (referencia?.percentualCarga ?? 0) + 0.005,
+      )
+    : null
+  const maiorCarga = [...anos]
+    .filter((linha) => linha.disponivel)
+    .sort((a, b) => b.percentualCarga - a.percentualCarga || b.ano - a.ano)[0]
+  const variacao = (deValor, paraValor, dePercentual, paraPercentual) => ({
+    absoluta: arredondar(paraValor - deValor),
+    pontos: arredondarCasas(paraPercentual - dePercentual, 4),
+    relativa: deValor ? Number((((paraValor - deValor) / deValor) * 100).toFixed(2)) : null,
+  })
+
+  const resumo = {
+    referencia: {
+      ano: ANO_REFERENCIA_REFORMA,
+      carga: referencia?.carga ?? 0,
+      percentualCarga: referencia?.percentualCarga ?? 0,
+      credito: referencia?.credito ?? 0,
+      percentualCredito: referencia?.percentualCredito ?? 0,
+      custoLiquido: referencia?.custoLiquido ?? valor,
+    },
+    regimePleno: {
+      ano: pleno.ano,
+      carga: pleno.carga,
+      percentualCarga: pleno.percentualCarga,
+      credito: pleno.credito,
+      percentualCredito: pleno.percentualCredito,
+      custoLiquido: pleno.custoLiquido,
+    },
+    primeiroAumentoCarga: primeiroAumento?.ano ?? null,
+    maiorCarga: maiorCarga
+      ? { ano: maiorCarga.ano, carga: maiorCarga.carga, percentualCarga: maiorCarga.percentualCarga }
+      : null,
+    variacaoCarga: referenciaDisponivel
+      ? variacao(
+          referencia?.carga ?? 0,
+          pleno.carga,
+          referencia?.percentualCarga ?? 0,
+          pleno.percentualCarga,
+        )
+      : null,
+    variacaoCredito: referenciaDisponivel
+      ? variacao(
+          referencia?.credito ?? 0,
+          pleno.credito,
+          referencia?.percentualCredito ?? 0,
+          pleno.percentualCredito,
+        )
+      : null,
+    variacaoCusto: referenciaDisponivel
+      ? variacao(
+          referencia?.custoLiquido ?? valor,
+          pleno.custoLiquido,
+          percentualDe(referencia?.custoLiquido ?? valor, valor),
+          percentualDe(pleno.custoLiquido, valor),
+        )
+      : null,
+  }
+
+  let benchmark = null
+  if (perfil.id !== 'REGIME_REGULAR' && perfil.id !== 'SIMPLES_HIBRIDO' && (projecao || motorPorAno.size)) {
+    benchmark = {
+      rotulo: 'Regime regular',
+      descricao: 'Mesmo frete no regime regular: CBS/IBS integral creditável.',
+      anos: ANOS_REFORMA.map((ano) => {
+        const proj = projecaoPorAno.get(ano) ?? null
+        const calculo = motorPorAno.get(ano) ?? null
+        const cbsIbs = proj
+          ? arredondar(proj.cbs + proj.ibsUf + proj.ibsMun)
+          : calculo
+            ? calculo.destaque
+            : null
+        const credito = dados.tipoOperacao === 'B2C' || cbsIbs === null ? 0 : cbsIbs
+        return {
+          ano,
+          cbsIbs: cbsIbs ?? 0,
+          percentualCarga: proj ? proj.percentualTotal : null,
+          percentualCredito: cbsIbs === null ? null : percentualDe(credito, valor),
+          custoLiquido: cbsIbs === null ? null : arredondar(valor - credito),
+        }
+      }),
+    }
+  }
+
+  if (tipoOperacaoFrete === 'INTERNA') {
+    avisos.push(
+      'Operação interna: a projeção do regime anterior usa a alíquota interna padrão de 18% do motor; o ICMS interno varia por UF.',
+    )
+  }
+  if (anos.some((linha) => linha.ano === 2026)) {
+    avisos.push(
+      dados.tipoOperacao === 'B2B'
+        ? 'Em 2026 o CBS/IBS de 1,00% é a fase de teste e é compensável com PIS/COFINS e ICMS; o crédito de 1,00% mostrado é o destaque do ano, não um crédito adicional.'
+        : 'Em 2026 o CBS/IBS de 1,00% é a fase de teste e é compensável com PIS/COFINS e ICMS; em B2C ele não vira crédito.',
+    )
+  }
+  if (dados.tipoOperacao === 'B2C') {
+    avisos.push('Em B2C o pagador é o consumidor final: o crédito é zero e o custo líquido é o preço cheio.')
+  }
+  if (perfil.id === 'SIMPLES_HIBRIDO') {
+    avisos.push(
+      'No Simples híbrido o ICMS permanece no DAS e não é destacado para crédito nesta simulação; só o CBS/IBS apurado no regime regular entra.',
+    )
+  }
+  if (perfil.id === 'AUTONOMO_MEI') {
+    avisos.push('Autônomo/MEI: a linha do tempo usa a faixa setorial estimada, não o destaque integral do regime regular.')
+  }
+  if (modelo === 'estimativa' && perfil.id === 'SIMPLES_DAS') {
+    avisos.push(
+      'Sem as duas alíquotas efetivas do PGDAS, a linha do tempo do Simples/DAS usa a faixa setorial estimada.',
+    )
+  }
+  if (!projecao) {
+    avisos.push(
+      'Sem a projeção oficial do frete, os tributos do regime anterior (ICMS/PIS/COFINS) não aparecem na linha do tempo.',
+    )
+  }
+
+  return {
+    entrada: {
+      valorFrete: valor,
+      ano: dados.ano,
+      tipoOperacao: dados.tipoOperacao,
+      ufOrigem: dados.ufOrigem.sigla,
+      ufDestino: dados.ufDestino.sigla,
+      rota: `${dados.ufOrigem.sigla} → ${dados.ufDestino.sigla}`,
+      regime: {
+        id: perfil.regime,
+        rotulo: REGIMES.find((item) => item.id === perfil.regime)?.rotulo ?? perfil.regime,
+      },
+      perfil: {
+        id: perfil.id,
+        curto: perfil.curto,
+        rotulo: perfil.rotulo,
+        varianteRotulo: perfil.varianteRotulo,
+        estimativa: perfil.estimativa,
+        fonteCredito: dados.fonteCredito,
+        modelo,
+      },
+      taxaEstimativa: modelo === 'estimativa' ? taxaEstimativa : null,
+      percentualSimples,
+      aliquotaCbs: dados.aliquotaCbs,
+      aliquotaIbs: dados.aliquotaIbs,
+      atividade: dados.atividade.id,
+      anoReferencia: ANO_REFERENCIA_REFORMA,
+      anoRegimePleno: ANO_FIM_SERIE,
+    },
+    anos,
+    resumo,
+    benchmark,
+    notas: notasDaSerie({ modelo, projecao, percentualSimples, taxaEstimativa }),
+    premissas: [
+      projecao
+        ? `Carga anual pela projeção oficial do frete (motor do regime regular): item de CT-e NBS ${NBS_FRETE}, CST 000, cClassTrib 000001, competência 06 de cada ano.`
+        : 'A projeção anual do frete não está disponível neste motor; a série mostra apenas o CBS/IBS apurado ano a ano e não decompõe ICMS/PIS/COFINS.',
+      projecao
+        ? `Tributos do regime anterior: ICMS ${tipoOperacaoFrete === 'INTERNA' ? 'interno padrão de 18%' : 'interestadual da Resolução do Senado nº 22/1989'} + PIS/COFINS não cumulativo (1,65% + 7,60%), reduzidos pelo cronograma da LC 214/2025.`
+        : 'Os tributos do regime anterior (ICMS/PIS/COFINS) não entram na carga sem a projeção; 2025 fica sem valor.',
+      'Crédito e custo líquido consideram apenas CBS/IBS, o mesmo recorte do simulador. A carga tributária inclui os tributos antigos e serve de contexto.',
+      'Valor diário (1 dia útil) para isolar o efeito das alíquotas: o mesmo preço nominal atravessa todos os anos, sem o ruído de dias úteis.',
+      'Simples/DAS: o CBS/IBS é o destaque do motor do Simples com as alíquotas do PGDAS; sem elas (e para autônomo/MEI), vale a faixa setorial estimada.',
+      'As alíquotas de 2027 em diante são as de referência do motor e podem ser fixadas anualmente; a projeção é uma simulação, não a apuração fiscal.',
+    ],
+    avisos,
+    fonte: {
+      projecao: Boolean(projecao),
+      motorRegular: projecao ? 'projeção oficial do frete' : 'motor oficial ano a ano',
+      motorSimples: usaMotorSimples && simples ? 'motor do Simples Nacional' : null,
+      versaoBaseDados: projecao?.versaoBaseDados ?? estado.motor.baseDados ?? null,
+      versaoApi: projecao?.headers?.aplicacao ?? estado.motor.versao ?? null,
+      erroProjecao: erroProjecao?.message ?? null,
+      erroSimples: erroSimples?.message ?? null,
+    },
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* HTTP                                                                */
 /* ------------------------------------------------------------------ */
 
@@ -705,9 +1284,12 @@ async function opcoes() {
       ...perfil,
       faixa: faixaTexto(perfil),
     })),
+    regimes: REGIMES,
     tiposOperacao: TIPOS_OPERACAO,
     atividadesSimples: ATIVIDADES_SIMPLES,
     anoInicioSimples: ANO_INICIO_SIMPLES,
+    anoReferencia: ANO_REFERENCIA_REFORMA,
+    anosReforma: ANOS_REFORMA,
     ufs: UFS,
     anos: ANOS.map((ano) => ({
       ano,
@@ -773,6 +1355,11 @@ const rotas = {
   'POST /api/simular': async (req) => {
     const corpo = await lerCorpo(req)
     return { status: 200, corpo: await simular(corpo) }
+  },
+
+  'POST /api/reforma': async (req) => {
+    const corpo = await lerCorpo(req)
+    return { status: 200, corpo: await reforma(corpo) }
   },
 
   'POST /api/comparar': async (req) => {

@@ -35,9 +35,17 @@ logs-app.out
 logs-app.err
 logs-simples.out
 logs-simples.err
+logs-node.out
+logs-node.err
+logs-node-fallback.out
+logs-node-fallback.err
+logs-proxy.out
+logs-proxy.err
 tmp-*.png
 tmp-*.json
 tmp-*.html
+tmp-*.mjs
+tmp-edge-profile/
 
 # aplicação e site
 node_modules/

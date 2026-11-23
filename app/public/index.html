@@ -110,15 +110,21 @@
             <p class="hint" id="valorHint">Preço nominal cobrado pela transportadora.</p>
           </div>
 
+          <div class="field field--fieldset">
+            <span class="label" id="regimeLabel">Regime tributário</span>
+            <div class="regime" role="radiogroup" aria-labelledby="regimeLabel" id="regime"></div>
+            <p class="hint" id="regimeHint"></p>
+          </div>
+
           <div class="field">
-            <label for="perfil">Perfil do transportador</label>
+            <label for="perfil">Modalidade</label>
             <select id="perfil" name="perfil"></select>
             <p class="hint" id="perfilHint"></p>
           </div>
 
           <div class="field field--simples" id="simplesWrap" hidden>
             <div class="field__row">
-              <span class="label">Alíquotas efetivas do PGDAS</span>
+              <span class="label label--simples">CBS/IBS dentro do DAS</span>
               <span class="badge-soft" id="simplesFonte" aria-live="polite">estimativa</span>
             </div>
             <div class="field-grid">
@@ -146,6 +152,13 @@
                   aria-describedby="simplesHint"
                 />
               </div>
+            </div>
+            <div class="simples-total" id="simplesTotal" hidden>
+              <span>
+                Alíquota efetiva total
+                <small id="simplesTotalHint">CBS + IBS do PGDAS</small>
+              </span>
+              <strong id="simplesTotalValor">—</strong>
             </div>
             <div class="field">
               <label for="atividade">Atividade no Simples</label>
@@ -216,6 +229,42 @@
           </div>
         </section>
       </div>
+
+      <section class="card timeline" id="linhaDoTempo" aria-labelledby="linhaTempoTitulo" aria-busy="true">
+        <div class="card__head timeline__head">
+          <div>
+            <p class="eyebrow-sm">Reforma tributária · 2025–2033</p>
+            <h2 id="linhaTempoTitulo">Antes e depois da reforma</h2>
+            <p class="card__sub">
+              O mesmo frete, ano a ano: carga tributária, crédito e custo líquido do pagador.
+            </p>
+          </div>
+          <div class="timeline__chips" id="timelineChips"></div>
+        </div>
+
+        <div class="timeline__toolbar">
+          <div
+            class="segmented segmented--3"
+            role="radiogroup"
+            aria-label="Métrica da linha do tempo"
+            id="timelineMetrica"
+          ></div>
+          <span class="timeline__fonte" id="timelineFonte">calculando…</span>
+        </div>
+
+        <p class="stale-note" id="timelineStale" hidden>
+          Os dados do frete mudaram — clique em Calcular custo líquido para atualizar a linha do tempo.
+        </p>
+
+        <div id="linhaDoTempoConteudo">
+          <div class="timeline__skeleton" aria-hidden="true">
+            <div class="skeleton skeleton--line w-30"></div>
+            <div class="skeleton skeleton--kpis"></div>
+            <div class="skeleton skeleton--line w-60"></div>
+            <div class="skeleton skeleton--block"></div>
+          </div>
+        </div>
+      </section>
 
       <section class="card comparator" aria-labelledby="comparadorTitulo">
         <div class="card__head">

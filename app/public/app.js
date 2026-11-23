@@ -25,6 +25,7 @@ const ICONE = {
 
 const estado = {
   opcoes: null,
+  regime: 'SIMPLES',
   perfil: 'SIMPLES_DAS',
   operacao: 'B2B',
   cargas: [
@@ -33,6 +34,9 @@ const estado = {
   ],
   ultimaSimulacao: null,
   ultimaComparacao: null,
+  timeline: null,
+  timelineMetrica: 'custo',
+  timelineSeq: 0,
 }
 
 /* ------------------------------------------------------------------ */
@@ -61,18 +65,40 @@ async function carregarOpcoes() {
   return resposta.json()
 }
 
+function renderizarRegimes() {
+  const alvo = $('#regime')
+  if (!alvo) return
+  alvo.innerHTML = estado.opcoes.regimes
+    .map(
+      (regime) => `
+      <button
+        type="button"
+        role="radio"
+        class="regime__option"
+        data-regime="${regime.id}"
+        aria-checked="${regime.id === estado.regime}"
+      >
+        <span class="regime__title">${esc(regime.rotulo)}</span>
+        <span class="regime__sub">${esc(regime.sub)}</span>
+      </button>`,
+    )
+    .join('')
+
+  const atual = estado.opcoes.regimes.find((regime) => regime.id === estado.regime)
+  $('#regimeHint').textContent = atual?.descricao ?? ''
+}
+
 function renderizarPerfis() {
   const alvo = $('#perfil')
-  alvo.innerHTML = estado.opcoes.perfis
-    .map((perfil) => {
-      const legenda = perfil.requerAliquotas
-        ? 'PGDAS ou estimativa'
-        : perfil.estimativa
-          ? perfil.faixa
-          : 'crédito integral'
-      return `<option value="${perfil.id}">${esc(perfil.curto)} · ${esc(legenda)}</option>`
-    })
+  const perfis = estado.opcoes.perfis.filter((perfil) => perfil.regime === estado.regime)
+
+  alvo.innerHTML = perfis
+    .map((perfil) => `<option value="${perfil.id}">${esc(perfil.varianteRotulo)}</option>`)
     .join('')
+
+  if (!perfis.some((perfil) => perfil.id === estado.perfil)) {
+    estado.perfil = perfis[0]?.id ?? estado.perfil
+  }
   alvo.value = estado.perfil
 }
 
@@ -128,12 +154,15 @@ function atualizarPerfil() {
   const perfil = estado.opcoes.perfis.find((item) => item.id === estado.perfil)
   if (!perfil) return
 
+  const regime = estado.opcoes.regimes.find((item) => item.id === estado.regime)
+  $('#regimeHint').textContent = regime?.descricao ?? ''
+
   const ehSimples = perfil.id === 'SIMPLES_DAS'
   $('#simplesWrap').hidden = !ehSimples
 
   $('#perfilHint').textContent = ehSimples
-    ? `${perfil.descricao} Informe as alíquotas do PGDAS abaixo para o cálculo real; sem elas, vale a faixa estimada.`
-    : perfil.descricao
+    ? `${perfil.varianteHint} Informe as alíquotas do PGDAS abaixo para o cálculo real; sem elas, vale a faixa estimada.`
+    : perfil.varianteHint
 
   const ano = Number($('#ano')?.value ?? 2033)
   const anoInicio = estado.opcoes?.anoInicioSimples ?? 2027
@@ -163,6 +192,23 @@ function temAliquotasSimples() {
   return Boolean($('#aliquotaCbs')?.value.trim() && $('#aliquotaIbs')?.value.trim())
 }
 
+function atualizarTotalSimples() {
+  const caixa = $('#simplesTotal')
+  if (!caixa) return
+  const cbs = numeroDeTexto($('#aliquotaCbs')?.value)
+  const ibs = numeroDeTexto($('#aliquotaIbs')?.value)
+  const preenchidas = Number(Number.isFinite(cbs)) + Number(Number.isFinite(ibs))
+
+  if (preenchidas === 2) {
+    caixa.hidden = false
+    $('#simplesTotalValor').textContent = pct(cbs + ibs, 4)
+    $('#simplesTotalHint').textContent = `CBS ${pct(cbs, 4)} + IBS ${pct(ibs, 4)}`
+  } else {
+    caixa.hidden = true
+    $('#simplesTotalHint').textContent = 'Alíquotas efetivas do PGDAS'
+  }
+}
+
 function atualizarFonteSimples() {
   const cbs = $('#aliquotaCbs').value.trim()
   const ibs = $('#aliquotaIbs').value.trim()
@@ -180,6 +226,7 @@ function atualizarFonteSimples() {
           ? 'preencha as duas'
           : 'estimativa'
   $('#taxaWrap').hidden = real
+  atualizarTotalSimples()
 
   if (!real) {
     const perfil = estado.opcoes?.perfis.find((item) => item.id === 'SIMPLES_DAS')
@@ -295,6 +342,7 @@ async function post(url, corpo) {
 async function simular() {
   const botao = $('#calcular')
   const painel = $('#resultado')
+  const entrada = lerEntrada()
 
   botao.classList.add('is-loading')
   botao.disabled = true
@@ -303,8 +351,10 @@ async function simular() {
 
   if (!painel.querySelector('.result__head')) mostrarEsqueleto(painel)
 
+  carregarTimeline(entrada)
+
   try {
-    const dados = await post('/api/simular', lerEntrada())
+    const dados = await post('/api/simular', entrada)
     estado.ultimaSimulacao = dados
     renderizarResultado(dados)
   } catch (erro) {
@@ -525,6 +575,7 @@ function marcarDesatualizado(desatualizado) {
   if (!nota) return
   nota.hidden = !desatualizado
   alvo?.classList.toggle('is-stale', Boolean(desatualizado))
+  if (desatualizado) marcarTimelineDesatualizado(true)
 }
 
 async function comparar() {
@@ -634,7 +685,7 @@ function renderizarComparacao(dados) {
       </div>
 
       <div class="table-wrap">
-        <table class="table">
+        <table class="table table--ranking">
           <caption class="sr-only">Transportadoras ordenadas por custo líquido pós-crédito</caption>
           <thead>
             <tr>
@@ -657,6 +708,498 @@ function renderizarComparacao(dados) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Antes e depois da reforma                                           */
+/* ------------------------------------------------------------------ */
+
+const sinalNumero = (valor, formatador = (v) => brl(v)) => {
+  const n = Number(valor) || 0
+  if (Math.abs(n) < 0.005) return formatador(0)
+  return `${n > 0 ? '+' : '−'} ${formatador(Math.abs(n))}`
+}
+
+const sinalPontos = (valor) => {
+  const n = Number(valor) || 0
+  if (Math.abs(n) < 0.00005) return '0,00 p.p.'
+  return `${n > 0 ? '+' : '−'} ${numero(Math.abs(n))} p.p.`
+}
+
+const METRICAS = [
+  {
+    id: 'custo',
+    rotulo: 'Custo líquido',
+    curto: 'Custo',
+    valor: (linha) => linha.custoLiquido,
+    percentual: false,
+  },
+  {
+    id: 'credito',
+    rotulo: 'Crédito CBS/IBS',
+    curto: 'Crédito',
+    valor: (linha) => linha.credito,
+    percentual: true,
+  },
+  {
+    id: 'carga',
+    rotulo: 'Carga tributária',
+    curto: 'Carga',
+    valor: (linha) => linha.carga,
+    percentual: true,
+  },
+]
+
+const metricaAtual = () =>
+  METRICAS.find((metrica) => metrica.id === estado.timelineMetrica) ?? METRICAS[0]
+
+function renderizarMetricaTimeline() {
+  const alvo = $('#timelineMetrica')
+  if (!alvo) return
+  alvo.innerHTML = METRICAS.map(
+    (metrica) =>
+      `<button type="button" role="radio" aria-checked="${metrica.id === estado.timelineMetrica}" data-metrica="${metrica.id}" title="${metrica.rotulo}"><span class="metrica__longa">${metrica.rotulo}</span><span class="metrica__curta">${metrica.curto}</span></button>`,
+  ).join('')
+}
+
+async function carregarTimeline(entrada = lerEntrada()) {
+  const painel = $('#linhaDoTempo')
+  if (!painel) return
+  const seq = ++estado.timelineSeq
+  painel.setAttribute('aria-busy', 'true')
+  painel.classList.add('is-loading')
+
+  try {
+    const dados = await post('/api/reforma', entrada)
+    if (seq !== estado.timelineSeq) return
+    estado.timeline = dados
+    renderizarTimeline(dados)
+    marcarTimelineDesatualizado(false)
+  } catch (erro) {
+    if (seq !== estado.timelineSeq) return
+    estado.timeline = null
+    renderizarTimelineErro(erro)
+  } finally {
+    if (seq === estado.timelineSeq) {
+      painel.setAttribute('aria-busy', 'false')
+      painel.classList.remove('is-loading')
+    }
+  }
+}
+
+function renderizarTimelineErro(erro) {
+  const conteudo = $('#linhaDoTempoConteudo')
+  if (!conteudo) return
+  $('#timelineChips').innerHTML = ''
+  $('#timelineFonte').textContent = 'sem dados'
+  conteudo.innerHTML = `
+    <div class="comparison-error">
+      <strong>Não foi possível montar a linha do tempo.</strong>
+      <p>${esc(erro.message)}</p>
+      <button class="btn btn--ghost" type="button" data-retry-timeline>Tentar de novo</button>
+    </div>`
+}
+
+function renderizarTimeline(dados) {
+  const conteudo = $('#linhaDoTempoConteudo')
+  if (!conteudo) return
+  const metrica = metricaAtual()
+  const { entrada } = dados
+
+  $('#timelineChips').innerHTML = `
+    <span class="chip">${esc(entrada.regime.rotulo)}</span>
+    <span class="chip">${esc(entrada.perfil.varianteRotulo ?? entrada.perfil.curto)}</span>
+    <span class="chip">${esc(entrada.tipoOperacao)}</span>
+    <span class="chip chip--year">${esc(entrada.rota)}</span>`
+
+  const partes = [dados.fonte.projecao ? 'projeção oficial do frete' : 'motor oficial ano a ano']
+  if (dados.fonte.motorSimples) partes.push('motor do Simples')
+  if (dados.fonte.versaoBaseDados) partes.push(`base ${dados.fonte.versaoBaseDados}`)
+  $('#timelineFonte').textContent = partes.join(' · ')
+
+  conteudo.innerHTML = `
+    ${kpisTimeline(dados)}
+    <div class="timeline__chart-head">
+      ${legendaTimeline(dados, metrica)}
+      <span class="timeline__eixo">${metrica.id === 'custo' ? 'R$ do frete' : '% do frete'}</span>
+    </div>
+    <div class="timeline__chart-wrap">
+      <div class="timeline__chart">${grafico(dados, metrica)}</div>
+    </div>
+    <p class="timeline__scroll">Deslize o gráfico para o lado para ver todos os anos.</p>
+    ${tabelaTimeline(dados, metrica)}
+    ${avisosTimeline(dados)}
+    ${notasTimeline(dados)}
+    <div class="timeline__foot">
+      <p class="table-note">
+        Crédito e custo líquido consideram só CBS/IBS — o mesmo recorte do simulador. A carga inclui os
+        tributos do regime anterior e serve de contexto.
+      </p>
+      ${premissasTimeline(dados)}
+    </div>`
+}
+
+function kpisTimeline(dados) {
+  const { resumo, benchmark } = dados
+  const referencia = resumo.referencia
+  const pleno = resumo.regimePleno
+  const benchPleno = benchmark?.anos?.find((linha) => linha.ano === pleno.ano)
+  const referenciaDisponivel = dados.anos[0]?.disponivel !== false
+  const delta = resumo.variacaoCarga
+  const tom = !delta ? 'neutral' : delta.absoluta > 0 ? 'up' : delta.absoluta < 0 ? 'down' : 'neutral'
+  const creditoSub =
+    benchPleno && benchPleno.percentualCredito !== null
+      ? `${pct(pleno.percentualCredito)} do frete · regular ${pct(benchPleno.percentualCredito)}`
+      : `${pct(pleno.percentualCredito)} do frete`
+
+  return `<div class="timeline__kpis">
+    <div class="kpi">
+      <span class="kpi__label">Carga em ${referencia.ano}</span>
+      <strong class="kpi__valor">${referenciaDisponivel ? brl(referencia.carga) : '—'}</strong>
+      <span class="kpi__sub">${referenciaDisponivel ? `${pct(referencia.percentualCarga)} do frete` : 'sem projeção'} · antes da reforma</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi__label">Carga em ${pleno.ano}</span>
+      <strong class="kpi__valor">${brl(pleno.carga)}</strong>
+      <span class="kpi__sub">${pct(pleno.percentualCarga)} do frete · regime pleno</span>
+    </div>
+    <div class="kpi kpi--${tom}">
+      <span class="kpi__label">Variação da carga</span>
+      <strong class="kpi__valor">${delta ? sinalNumero(delta.absoluta) : '—'}</strong>
+      <span class="kpi__sub">${delta ? `${sinalPontos(delta.pontos)}${delta.relativa !== null ? ` · ${sinalNumero(delta.relativa, (valor) => `${numero(valor)}%`)}` : ''}` : 'sem projeção de 2025'}</span>
+    </div>
+    <div class="kpi kpi--credit">
+      <span class="kpi__label">Crédito em ${pleno.ano}</span>
+      <strong class="kpi__valor">${brl(pleno.credito)}</strong>
+      <span class="kpi__sub">${creditoSub}</span>
+    </div>
+  </div>`
+}
+
+function legendaTimeline(dados, metrica) {
+  const itens = []
+  if (metrica.id === 'carga') {
+    if (dados.entrada.perfil.modelo === 'regular') {
+      itens.push({ cor: '#b9c4d4', rotulo: 'Tributos antigos' })
+    }
+    itens.push({ cor: '#0b5fa5', rotulo: 'CBS/IBS' })
+    if ((dados.anos[0]?.percentualCarga ?? 0) > 0) {
+      itens.push({ traco: 'ref', rotulo: 'carga em 2025' })
+    }
+  } else if (metrica.id === 'credito') {
+    itens.push({ cor: '#0f7a55', rotulo: 'Seu regime' })
+  } else {
+    itens.push({ cor: '#0f172a', rotulo: 'Seu regime' })
+    itens.push({ traco: 'ref', rotulo: 'preço de 2025' })
+  }
+  const temBenchmark =
+    Boolean(dados.benchmark) &&
+    (metrica.id !== 'carga' || dados.benchmark.anos.some((linha) => typeof linha.percentualCarga === 'number'))
+  if (temBenchmark) itens.push({ traco: 'benchmark', rotulo: 'Regime regular' })
+
+  return `<div class="timeline__legend">${itens
+    .map(
+      (item) =>
+        `<span class="legenda"><i class="${item.traco ? `legenda__traco legenda__traco--${item.traco}` : ''}" ${item.cor ? `style="background:${item.cor}"` : ''}></i>${item.rotulo}</span>`,
+    )
+    .join('')}</div>`
+}
+
+function escalaPercentual(maximo) {
+  if (maximo <= 2) return { max: 2, passo: 0.5 }
+  if (maximo <= 3) return { max: 3, passo: 1 }
+  if (maximo <= 4) return { max: 4, passo: 1 }
+  if (maximo <= 5) return { max: 5, passo: 1 }
+  if (maximo <= 10) return { max: 10, passo: 2 }
+  if (maximo <= 15) return { max: 15, passo: 5 }
+  if (maximo <= 30) return { max: 30, passo: 10 }
+  return { max: Math.ceil(maximo / 10) * 10, passo: 10 }
+}
+
+function passoBonito(valor) {
+  const base = 10 ** Math.floor(Math.log10(Math.max(valor, 1)))
+  for (const fator of [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) {
+    if (valor <= base * fator) return base * fator
+  }
+  return base * 10
+}
+
+function grafico(dados, metrica) {
+  const largura = 940
+  const altura = 320
+  const margem = { topo: 48, direita: 20, baixo: 54, esquerda: 64 }
+  const anos = dados.anos
+  const n = anos.length
+  const larguraPlot = largura - margem.esquerda - margem.direita
+  const alturaPlot = altura - margem.topo - margem.baixo
+  const passo = larguraPlot / n
+  const cx = (indice) => margem.esquerda + passo * (indice + 0.5)
+  const valorDe = (linha) =>
+    metrica.id === 'carga'
+      ? linha.percentualCarga
+      : metrica.id === 'credito'
+        ? linha.percentualCredito
+        : linha.custoLiquido
+
+  const valores = anos.map(valorDe)
+  const benchmark = (dados.benchmark?.anos ?? [])
+    .map((linha) =>
+      metrica.id === 'carga'
+        ? linha.percentualCarga
+        : metrica.id === 'credito'
+          ? linha.percentualCredito
+          : linha.custoLiquido,
+    )
+    .filter((valor) => typeof valor === 'number' && Number.isFinite(valor))
+  const teto = Math.max(0, ...valores, ...benchmark, metrica.id === 'custo' ? dados.entrada.valorFrete : 0)
+  const escala =
+    metrica.id === 'custo'
+      ? (() => {
+          const p = passoBonito(teto / 4)
+          return { max: p * 4, passo: p }
+        })()
+      : escalaPercentual(teto)
+  const y = (valor) => margem.topo + alturaPlot - (valor / escala.max) * alturaPlot
+
+  const ticks = []
+  for (let valor = 0; valor <= escala.max + 1e-9; valor += escala.passo) {
+    ticks.push(Number(valor.toFixed(4)))
+  }
+  const rotuloTick = (valor) =>
+    metrica.id === 'custo' ? `R$ ${numero(valor, 0)}` : `${numero(valor, escala.passo < 1 ? 1 : 0)}%`
+
+  const grade = ticks
+    .map(
+      (valor) => `
+      <line x1="${margem.esquerda}" y1="${y(valor)}" x2="${largura - margem.direita}" y2="${y(valor)}" stroke="#e9edf3" stroke-width="1"/>
+      <text x="${margem.esquerda - 12}" y="${y(valor) + 4}" text-anchor="end" class="chart__tick">${esc(rotuloTick(valor))}</text>`,
+    )
+    .join('')
+
+  const xAntes = margem.esquerda
+  const xDepois = cx(1) - passo / 2
+  const faixas = `
+      <rect x="${xAntes}" y="${margem.topo}" width="${xDepois - xAntes}" height="${alturaPlot}" fill="#f1f3f7"/>
+      <rect x="${xDepois}" y="${margem.topo}" width="${largura - margem.direita - xDepois}" height="${alturaPlot}" fill="rgba(11,95,165,.04)"/>
+      <text x="${xAntes + 7}" y="${margem.topo - 26}" class="chart__banda">antes</text>
+      <text x="${xDepois + 8}" y="${margem.topo - 26}" class="chart__banda chart__banda--depois">depois da reforma</text>`
+
+  const eixoAnos = anos
+    .map((linha, indice) => {
+      const atual = linha.ano === dados.entrada.ano
+      return `
+      <text x="${cx(indice)}" y="${altura - 26}" text-anchor="middle" class="chart__ano ${linha.ano === 2025 ? 'is-antes' : ''} ${atual ? 'is-atual' : ''}">${linha.ano}</text>
+      ${linha.ano === 2025 ? `<text x="${cx(indice)}" y="${altura - 12}" text-anchor="middle" class="chart__sub">antes</text>` : ''}
+      ${linha.ano === 2033 ? `<text x="${cx(indice)}" y="${altura - 12}" text-anchor="middle" class="chart__sub">pleno</text>` : ''}
+      ${atual && linha.ano !== 2025 ? `<circle cx="${cx(indice)}" cy="${altura - 8}" r="2" fill="#0b5fa5"/>` : ''}`
+    })
+    .join('')
+
+  let referencia = ''
+  if (metrica.id === 'carga') {
+    const valor = anos[0].percentualCarga
+    referencia = `<line x1="${margem.esquerda}" y1="${y(valor)}" x2="${largura - margem.direita}" y2="${y(valor)}" stroke="#9aa6b8" stroke-width="1" stroke-dasharray="4 4"/>`
+  } else if (metrica.id === 'custo') {
+    const valor = anos[0].custoLiquido
+    referencia = `<line x1="${margem.esquerda}" y1="${y(valor)}" x2="${largura - margem.direita}" y2="${y(valor)}" stroke="#9aa6b8" stroke-width="1" stroke-dasharray="4 4"/>`
+  }
+
+  const tooltip = (linha) =>
+    `${linha.ano} · carga ${brl(linha.carga)} (${pct(linha.percentualCarga)}) · CBS/IBS ${brl(linha.cbsIbs)} · crédito ${brl(linha.credito)} · líquido ${brl(linha.custoLiquido)}`
+
+  let serie = ''
+  if (metrica.id === 'carga') {
+    const barras = anos
+      .map((linha, indice) => {
+        if (!linha.disponivel) return ''
+        const antigos = ((linha.antigos?.total ?? 0) / linha.valorFrete) * 100
+        const cbs = ((linha.cbsIbsEfetivo ?? 0) / linha.valorFrete) * 100
+        const larguraBarra = Math.min(48, passo * 0.52)
+        const base = y(0)
+        const alturaAntigos = (antigos / escala.max) * alturaPlot
+        const alturaCbs = (cbs / escala.max) * alturaPlot
+        return `<g>
+        <rect x="${cx(indice) - larguraBarra / 2}" y="${base - alturaAntigos}" width="${larguraBarra}" height="${alturaAntigos}" rx="3" fill="#b9c4d4"><title>${esc(tooltip(linha))}</title></rect>
+        <rect x="${cx(indice) - larguraBarra / 2}" y="${base - alturaAntigos - alturaCbs}" width="${larguraBarra}" height="${alturaCbs}" rx="3" fill="#0b5fa5"><title>${esc(tooltip(linha))}</title></rect>
+        <text x="${cx(indice)}" y="${base - alturaAntigos - alturaCbs - 7}" text-anchor="middle" class="chart__valor">${pct(linha.percentualCarga)}</text>
+        ${linha.compensado > 0 ? `<text x="${cx(indice)}" y="${base - alturaAntigos - alturaCbs - 20}" text-anchor="middle" class="chart__nota">1% compensável</text>` : ''}
+      </g>`
+      })
+      .join('')
+
+    const pontosBenchmark = (dados.benchmark?.anos ?? [])
+      .map((linha, indice) =>
+        linha.percentualCarga === null || linha.percentualCarga === undefined
+          ? null
+          : `${cx(indice)},${y(linha.percentualCarga)}`,
+      )
+      .filter(Boolean)
+    const linhaBenchmark = pontosBenchmark.length
+      ? `<polyline points="${pontosBenchmark.join(' ')}" fill="none" stroke="#0b5fa5" stroke-width="2" stroke-dasharray="5 5" opacity=".55"/>`
+      : ''
+    serie = `${barras}${linhaBenchmark}`
+  } else {
+    const cor = metrica.id === 'credito' ? '#0f7a55' : '#0f172a'
+    const pontos = anos
+      .map((linha, indice) => (linha.disponivel ? `${cx(indice)},${y(valorDe(linha))}` : null))
+      .filter(Boolean)
+    const marcadores = anos
+      .map((linha, indice) => {
+        if (!linha.disponivel) return ''
+        return `
+      <circle cx="${cx(indice)}" cy="${y(valorDe(linha))}" r="4" fill="#fff" stroke="${cor}" stroke-width="2.4"><title>${esc(tooltip(linha))}</title></circle>
+      <text x="${cx(indice)}" y="${y(valorDe(linha)) - 11}" text-anchor="middle" class="chart__valor">${metrica.id === 'custo' ? numero(valorDe(linha), 0) : pct(valorDe(linha), 2)}</text>`
+      })
+      .join('')
+    const pontosBenchmark = (dados.benchmark?.anos ?? [])
+      .map((linha, indice) => {
+        const valor = metrica.id === 'credito' ? linha.percentualCredito : linha.custoLiquido
+        return valor === null || valor === undefined ? null : `${cx(indice)},${y(valor)}`
+      })
+      .filter(Boolean)
+    const linhaBenchmark = pontosBenchmark.length
+      ? `<polyline points="${pontosBenchmark.join(' ')}" fill="none" stroke="#0b5fa5" stroke-width="2" stroke-dasharray="5 5" opacity=".55"/>`
+      : ''
+    serie = `<polyline points="${pontos.join(' ')}" fill="none" stroke="${cor}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>${marcadores}${linhaBenchmark}`
+  }
+
+  const formatarExtremo = (linha) =>
+    !linha.disponivel
+      ? 'sem projeção'
+      : metrica.id === 'custo'
+        ? brl(valorDe(linha))
+        : `${pct(valorDe(linha))} do frete`
+  const aria = `Linha do tempo de ${metrica.rotulo.toLowerCase()} do frete de ${brl(dados.entrada.valorFrete)}: de ${anos[0].ano} (${formatarExtremo(anos[0])}) a ${anos[anos.length - 1].ano} (${formatarExtremo(anos[anos.length - 1])}). A tabela abaixo traz todos os anos.`
+
+  return `<svg viewBox="0 0 ${largura} ${altura}" role="img" aria-label="${esc(aria)}" class="chart">
+      <title>${esc(metrica.rotulo)} do frete de ${anos[0].ano} a ${anos[anos.length - 1].ano}</title>
+      <desc>${esc(aria)}</desc>
+      ${faixas}${grade}${referencia}${serie}${eixoAnos}
+    </svg>`
+}
+
+function tabelaTimeline(dados, metrica) {
+  const { anos, entrada } = dados
+  const referencia = anos[0]
+  const modelo = entrada.perfil.modelo
+  const referenciaDisponivel = referencia.disponivel !== false
+
+  const linhas = anos
+    .map((linha) => {
+      const indisponivel = !linha.disponivel
+      const dash = '<span class="cell-dash">—</span>'
+      const delta = metrica.valor(linha) - metrica.valor(referencia)
+      const deltaPercentual =
+        metrica.id === 'carga'
+          ? linha.percentualCarga - referencia.percentualCarga
+          : linha.percentualCredito - referencia.percentualCredito
+      const deltaTexto =
+        indisponivel || !referenciaDisponivel || linha.ano === referencia.ano
+          ? dash
+          : `${sinalNumero(delta)}${metrica.percentual ? `<small>${sinalPontos(deltaPercentual)}</small>` : ''}`
+
+      let antigos
+      if (indisponivel) {
+        antigos = dash
+      } else if (modelo === 'regular') {
+        if (!linha.antigos) antigos = dash
+        else if (linha.antigos.total <= 0) antigos = `${dash}<small>extintos</small>`
+        else
+          antigos = `${brl(linha.antigos.total)}<small>ICMS ${brl(linha.antigos.icms)} + PIS/COFINS ${brl(linha.antigos.pis + linha.antigos.cofins)}</small>`
+      } else if (modelo === 'hibrido') {
+        antigos = `${dash}<small>ICMS no DAS</small>`
+      } else {
+        antigos = `${dash}<small>no DAS</small>`
+      }
+
+      const cbs = indisponivel
+        ? dash
+        : linha.compensado > 0
+          ? `${brl(linha.cbsIbs)}<small class="cell-tag">${pct(linha.percentualCompensado)} compensável</small>`
+          : `${brl(linha.cbsIbs)}<small>${pct((linha.cbsIbs / linha.valorFrete) * 100)}</small>`
+
+      return `<tr class="${linha.ano === 2025 ? 'is-reference' : ''} ${linha.ano === entrada.ano ? 'is-current' : ''} ${indisponivel ? 'is-unavailable' : ''}"${linha.observacao ? ` title="${esc(linha.observacao)}"` : ''}>
+      <th scope="row" class="cell-ano">${linha.ano}${linha.ano === 2025 ? '<small>antes</small>' : ''}</th>
+      <td class="col-fase">${esc(linha.rotulo)}</td>
+      <td class="num col-antigos">${antigos}</td>
+      <td class="num col-cbs">${cbs}</td>
+      <td class="num col-carga">${indisponivel ? dash : `${brl(linha.carga)}<small>${pct(linha.percentualCarga)}</small>`}</td>
+      <td class="num col-credito">${indisponivel ? dash : `${brl(linha.credito)}<small>${pct(linha.percentualCredito)}</small>`}</td>
+      <td class="num cell-net">${indisponivel ? dash : brl(linha.custoLiquido)}</td>
+      <td class="num col-delta">${deltaTexto}</td>
+    </tr>`
+    })
+    .join('')
+
+  return `<div class="table-wrap">
+    <table class="table table--timeline">
+      <caption class="sr-only">
+        Carga tributária, crédito de CBS/IBS e custo líquido do frete por ano, de ${anos[0].ano} a
+        ${anos[anos.length - 1].ano}.
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Ano</th>
+          <th scope="col" class="col-fase">Fase</th>
+          <th scope="col" class="num col-antigos">Tributos antigos</th>
+          <th scope="col" class="num col-cbs">CBS/IBS</th>
+          <th scope="col" class="num col-carga">Carga</th>
+          <th scope="col" class="num col-credito">Crédito</th>
+          <th scope="col" class="num">Custo líquido</th>
+          <th scope="col" class="num col-delta">Δ ${metrica.curto} vs ${referencia.ano}</th>
+        </tr>
+      </thead>
+      <tbody>${linhas}</tbody>
+    </table>
+  </div>`
+}
+
+function avisosTimeline(dados) {
+  if (!Array.isArray(dados.avisos) || !dados.avisos.length) return ''
+  return `<div class="callout callout--aviso">
+    ${ICONE.info}
+    <div>
+      <strong>Como ler esta série</strong>
+      ${dados.avisos.map((aviso) => `<p>${esc(aviso)}</p>`).join('')}
+    </div>
+  </div>`
+}
+
+function notasTimeline(dados) {
+  if (!Array.isArray(dados.notas) || !dados.notas.length) return ''
+  return `<div class="timeline__marcos">
+    <h3 class="timeline__subtitulo">Marcos da transição</h3>
+    <div class="marcos">
+      ${dados.notas
+        .map(
+          (nota) => `
+        <article class="marco">
+          <span class="marco__ano">${nota.ano}</span>
+          <h4>${esc(nota.titulo)}</h4>
+          <p>${esc(nota.texto)}</p>
+          ${nota.comparacao ? `<details><summary>Comparação com 2025</summary><p>${esc(nota.comparacao)}</p></details>` : ''}
+          ${nota.detalhe ? `<details><summary>O que muda no ano</summary><ul>${nota.detalhe.map((item) => `<li>${esc(item)}</li>`).join('')}</ul></details>` : ''}
+          ${nota.fundamento ? `<p class="marco__base">${esc(nota.fundamento)}</p>` : ''}
+        </article>`,
+        )
+        .join('')}
+    </div>
+  </div>`
+}
+
+function premissasTimeline(dados) {
+  return `<details class="premissas">
+    <summary>Premissas e limites da linha do tempo</summary>
+    <ul>${dados.premissas.map((premissa) => `<li>${esc(premissa)}</li>`).join('')}</ul>
+  </details>`
+}
+
+function marcarTimelineDesatualizado(desatualizado) {
+  const nota = $('#timelineStale')
+  const conteudo = $('#linhaDoTempoConteudo')
+  if (!nota) return
+  nota.hidden = !desatualizado
+  conteudo?.classList.toggle('is-stale', Boolean(desatualizado))
+}
+
+/* ------------------------------------------------------------------ */
 /* Eventos                                                             */
 /* ------------------------------------------------------------------ */
 
@@ -669,6 +1212,20 @@ function ligarEventos() {
   $('#perfil').addEventListener('change', (evento) => {
     estado.perfil = evento.target.value
     atualizarPerfil()
+    marcarDesatualizado(true)
+  })
+
+  $('#regime').addEventListener('click', (evento) => {
+    const botao = evento.target.closest('[data-regime]')
+    if (!botao || botao.dataset.regime === estado.regime) return
+    estado.regime = botao.dataset.regime
+    const primeiro = estado.opcoes.perfis.find((perfil) => perfil.regime === estado.regime)
+    if (primeiro) estado.perfil = primeiro.id
+    renderizarRegimes()
+    renderizarPerfis()
+    atualizarPerfil()
+    atualizarAno()
+    marcarDesatualizado(true)
   })
 
   $('#operacao').addEventListener('click', (evento) => {
@@ -683,7 +1240,10 @@ function ligarEventos() {
     const valor = Number(evento.target.value)
     $('#taxaOut').textContent = pct(valor)
     evento.target.setAttribute('aria-valuetext', `${numero(valor)}% do frete`)
+    marcarDesatualizado(true)
   })
+
+  $('#valor').addEventListener('input', () => marcarDesatualizado(true))
 
   $('#valor').addEventListener('blur', (evento) => {
     const valor = numeroDeTexto(evento.target.value)
@@ -752,6 +1312,14 @@ function ligarEventos() {
 
   $('#comparar').addEventListener('click', comparar)
 
+  $('#timelineMetrica').addEventListener('click', (evento) => {
+    const botao = evento.target.closest('[data-metrica]')
+    if (!botao) return
+    estado.timelineMetrica = botao.dataset.metrica
+    renderizarMetricaTimeline()
+    if (estado.timeline) renderizarTimeline(estado.timeline)
+  })
+
   $('#cenarioAceite').addEventListener('click', () => {
     estado.cargas = [
       { nome: 'Rota Sul Logística', preco: '1.000,00', perfil: 'SIMPLES_DAS', pCbs: '2,3591', pIbs: '0,0260' },
@@ -759,9 +1327,11 @@ function ligarEventos() {
     ]
     $('#valor').value = '1.000,00'
     $('#ano').value = '2027'
+    estado.regime = 'SIMPLES'
     estado.perfil = 'SIMPLES_DAS'
     $('#aliquotaCbs').value = '2,3591'
     $('#aliquotaIbs').value = '0,0260'
+    renderizarRegimes()
     renderizarPerfis()
     atualizarPerfil()
     atualizarAno()
@@ -785,6 +1355,12 @@ function ligarEventos() {
   })
 
   document.addEventListener('click', (evento) => {
+    const retryTimeline = evento.target.closest('[data-retry-timeline]')
+    if (retryTimeline) {
+      carregarTimeline()
+      return
+    }
+
     const copiarSim = evento.target.closest('[data-copiar-sim]')
     if (copiarSim && estado.ultimaSimulacao) {
       copiarTexto(JSON.stringify(estado.ultimaSimulacao.motor.resposta, null, 2), copiarSim)
@@ -812,6 +1388,7 @@ async function copiarTexto(texto, botao) {
 }
 
 function restaurar() {
+  estado.regime = 'SIMPLES'
   estado.perfil = 'SIMPLES_DAS'
   estado.operacao = 'B2B'
   estado.cargas = [
@@ -826,12 +1403,14 @@ function restaurar() {
   $('#aliquotaCbs').value = ''
   $('#aliquotaIbs').value = ''
 
+  renderizarRegimes()
   renderizarPerfis()
   renderizarOperacao()
   renderizarCargas()
   atualizarPerfil()
   atualizarAno()
   marcarDesatualizado(false)
+  marcarTimelineDesatualizado(false)
 
   simular()
   comparar()
@@ -845,12 +1424,14 @@ async function iniciar() {
   try {
     estado.opcoes = await carregarOpcoes()
     atualizarMotor()
+    renderizarRegimes()
     renderizarPerfis()
     renderizarOperacao()
     renderizarAtividades()
     renderizarUfs()
     renderizarAnos()
     renderizarCargas()
+    renderizarMetricaTimeline()
     atualizarPerfil()
     atualizarAno()
     ligarEventos()

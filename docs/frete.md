@@ -537,3 +537,53 @@ como teto e, no perfil com PGDAS, credita 100% dele.
 
 Aceite: frete de R$ 1.000,00, SP → BA, 2027, CBS 2,3591% + IBS 0,0260% no PGDAS → crédito de R$ 23,85 e
 custo líquido de R$ 976,15; o híbrido no regime regular (8,50% em 2027) fica em R$ 915,00.
+
+### Modalidade Simples Nacional na interface
+
+O formulário do Frete Líquido começa pelo **regime tributário**, e não pelo perfil: **Simples Nacional**
+ou **regime regular**. Dentro do Simples há duas modalidades — o CBS/IBS **dentro do DAS** (com as
+alíquotas efetivas do PGDAS) e o **híbrido** (CBS/IBS no regime regular) —, e no regime regular há o
+Lucro Real/Presumido e o autônomo/MEI. O painel do Simples exibe CBS e IBS informados, a **alíquota efetiva
+total** e a atividade (Anexo III); sem as alíquotas, a faixa setorial de 0,92% a 4% é sinalizada como
+estimativa.
+
+![Regime e modalidade no Frete Líquido](../app/docs/web-desktop.png)
+
+### Antes e depois da reforma, ano a ano
+
+Abaixo do resultado, a seção **Antes e depois da reforma** mostra o mesmo frete nominal de 2025 a 2033
+com três leituras alternáveis: **custo líquido**, **crédito de CBS/IBS** e **carga tributária**. Cada ano
+traz a composição (tributos antigos + CBS/IBS), o crédito, o custo líquido e a variação contra 2025; o
+gráfico marca o período "antes" (2025), a transição e o regime pleno (2033), e o regime regular aparece
+como benchmark quando a leitura é de outro regime.
+
+A **carga** vem da projeção oficial do frete do motor do regime regular
+(`POST /api/calculadora/frete/projecao`), que apura o CBS/IBS pela mesma calculadora do regime geral e
+compõe ICMS, PIS/COFINS (não cumulativo) e ISS com o cronograma da LC 214/2025. O app não calcula CBS/IBS
+nem recria a tabela: se o motor em execução não expuser a projeção, a linha do tempo devolve a série só de
+CBS/IBS, marca 2025 como indisponível e explica o motivo.
+
+O recorte é explícito: a **carga** inclui todos os tributos do documento; **crédito e custo líquido**
+consideram só CBS/IBS, o mesmo recorte do simulador. Em B2C o crédito é zero.
+
+Para R$ 1.000,00, SP → BA:
+
+| Ano | Carga no regime regular | Crédito CBS/IBS regular | Crédito Simples/DAS (PGDAS 2027) |
+|---|---|---|---|
+| 2025 (antes) | R$ 162,50 (16,25%) | R$ 0,00 | R$ 0,00 |
+| 2026 (teste) | R$ 162,50 (16,25%) | R$ 10,00 (1,00%) | R$ 10,00 (1,00%) |
+| 2027 | R$ 155,00 (15,50%) | R$ 85,00 (8,50%) | R$ 23,85 (2,39%) |
+| 2029 | R$ 166,50 (16,65%) | R$ 103,50 (10,35%) | R$ 23,85 (2,39%) |
+| 2033 | R$ 270,00 (27,00%) | R$ 270,00 (27,00%) | R$ 23,85 (2,39%) |
+
+O primeiro ano com carga acima de 2025 é **2029**; o regime pleno chega a 27,00%. No Simples/DAS o crédito
+transferível é o CBS/IBS do DAS (2,39% no exemplo), não os 27% do regime regular — a linha do tempo mostra
+essa diferença contra o benchmark e um bloco de marcos com o fundamento de cada etapa.
+
+![Antes e depois da reforma](../app/docs/web-reforma.png)
+
+O endpoint `POST /api/reforma` recebe a mesma entrada de `/api/simular` e devolve `anos[]` (2025–2033) com
+`antigos`, `cbsIbs`, `carga`, `credito`, `custoLiquido` e percentuais, mais `resumo`, `benchmark`, `notas`,
+`premissas`, `avisos` e a procedência (`fonte`). A interface alterna as leituras sem nova chamada; a
+verificação de runtime (`scripts/verificar-app.mjs`) cobre a linha do tempo, a troca de métrica e a troca
+de regime.

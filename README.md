@@ -92,20 +92,25 @@ CT-e como crédito apropriável e o custo líquido (frete − crédito), com a m
 Interface web local, sem build step, para quem **paga** o frete comparar transportadoras de regimes
 tributários diferentes pelo custo líquido — não pelo preço nominal.
 
-- formulário com valor do frete, perfil do transportador (Simples/DAS, Simples híbrido, regime regular,
-  autônomo/MEI), tipo de operação (B2B/B2C), UFs de origem e destino e ano de referência;
-- **Simples/DAS**: alíquotas efetivas do PGDAS (CBS e IBS) informadas na tela; com elas e ano a partir de
-  2027, o crédito é apurado pelo motor do Simples (CT-e `tpDoc 57`, `CRT 1`, atividade `05`). Sem elas, vale a
-  faixa setorial estimada (0,92% a 4%);
+- formulário começa pelo **regime tributário** (Simples Nacional ou regime regular) e pela modalidade
+  (Simples/DAS com PGDAS, Simples híbrido, Lucro Real/Presumido ou autônomo/MEI), com valor do frete, tipo
+  de operação (B2B/B2C), UFs de origem e destino e ano de referência;
+- **Simples/DAS**: alíquotas efetivas do PGDAS (CBS e IBS) informadas na tela, com a alíquota efetiva total;
+  com elas e ano a partir de 2027, o crédito é apurado pelo motor do Simples (CT-e `tpDoc 57`, `CRT 1`,
+  atividade `05`). Sem elas, vale a faixa setorial estimada (0,92% a 4%);
 - **Simples híbrido**: CBS/IBS apurados pelo regime regular e creditados integralmente — não é estimativa;
 - crédito aproveitável (R$ e %), custo líquido e alerta visual quando o crédito efetivo fica abaixo de 4%;
+- **antes e depois da reforma (2025–2033)**: linha do tempo com a carga tributária (ICMS/PIS/COFINS +
+  CBS/IBS) e o crédito/custo líquido de cada ano, alternando entre as três leituras e comparando com o
+  benchmark do regime regular;
 - comparador de 2 a 3 transportadoras ordenado por custo líquido pós-crédito, com as alíquotas do PGDAS por
   transportadora;
 - memória de cálculo com a resposta bruta do motor usado, para auditoria.
 
 Cada simulação chama o motor do regime escolhido: `POST /api/calculadora/regime-geral` (8080) ou
-`POST /api/calculadora/observabilidade/simples-nacional/nao-assistido` (8082). Nenhuma alíquota de CBS/IBS é
-recalculada na aplicação. O destaque do motor é o teto do crédito; apenas o Simples/DAS sem PGDAS e o
+`POST /api/calculadora/observabilidade/simples-nacional/nao-assistido` (8082). A linha do tempo usa a
+projeção oficial do frete (`POST /api/calculadora/frete/projecao`, 8080). Nenhuma alíquota de CBS/IBS é
+recalculada na aplicação: o destaque do motor é o teto do crédito; apenas o Simples/DAS sem PGDAS e o
 autônomo/MEI usam faixa estimada.
 
 ```powershell
@@ -120,6 +125,8 @@ Interface local: `http://127.0.0.1:5180` · site do projeto:
 Detalhes e API em [app/README.md](app/README.md) · arquitetura em [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ![Frete Líquido](app/docs/web-desktop.png)
+
+![Antes e depois da reforma](app/docs/web-reforma.png)
 
 ---
 
