@@ -19,6 +19,7 @@ import {
   NBS_FRETE,
   PERFIS,
   REGIMES,
+  REGIMES_PAGADORA,
   TIPOS_OPERACAO,
   TABELA_TRANSICAO,
   UFS,
@@ -29,10 +30,12 @@ import {
   faixaTexto,
   formatarNumero,
   perfilPorId,
+  regimePagadoraPorId,
   rotuloAnoReforma,
   rotuloFase,
   ufPorSigla,
 } from './domain.js'
+import { construirHorizonte } from './pagador.js'
 import {
   MOTOR_URL,
   MOTOR_SIMPLES_URL,
@@ -40,6 +43,7 @@ import {
   calcularFrete,
   calcularFreteSimples,
   projetarFrete,
+  taxasDoFretePorAno,
   verificarMotor,
   verificarMotorSimples,
 } from './engine.js'
@@ -128,6 +132,14 @@ function normalizarEntrada(entrada) {
     throw new HttpError(400, `Perfil de transportador desconhecido. Use ${PERFIS.map((p) => p.id).join(', ')}.`)
   }
 
+  const regimePagadora = regimePagadoraPorId(entrada.regimePagadora ?? REGIMES_PAGADORA[0].id)
+  if (!regimePagadora) {
+    throw new HttpError(
+      400,
+      `Regime da pagadora desconhecido. Use ${REGIMES_PAGADORA.map((regime) => regime.id).join(', ')}.`,
+    )
+  }
+
   const tipoOperacao = String(entrada.tipoOperacao ?? 'B2B').trim().toUpperCase()
   if (!['B2B', 'B2C'].includes(tipoOperacao)) {
     throw new HttpError(400, 'Tipo de operação inválido. Use B2B ou B2C.')
@@ -197,6 +209,7 @@ function normalizarEntrada(entrada) {
     valorFrete,
     ano,
     perfil,
+    regimePagadora,
     tipoOperacao,
     ufOrigem,
     ufDestino,
@@ -287,6 +300,7 @@ async function simular(entrada) {
       destaque: motor.destaque,
       tipoOperacao: dados.tipoOperacao,
       taxaInformada: dados.taxaCredito,
+      ano: dados.ano,
       fonteCredito: dados.fonteCredito,
     })
   } catch (erro) {
@@ -309,6 +323,40 @@ async function simular(entrada) {
   const aliquotaIbs =
     motor.fonte === 'simples-nacional' ? motor.aliquotaIbs : motor.aliquotaIbsUf + motor.aliquotaIbsMun
   const aliquotaTotal = motor.aliquotaCbs + aliquotaIbs
+
+  // Crédito dos tributos do regime anterior (ICMS e PIS/COFINS) que o pagador
+  // ainda credita no ano. Só existe no regime regular e em B2B: o transportador
+  // optante do Simples recolhe ICMS/PIS/COFINS no DAS e não os destaca no CT-e.
+  const tipoOperacaoFrete = dados.ufOrigem.sigla === dados.ufDestino.sigla ? 'INTERNA' : 'INTERESTADUAL'
+  let creditoIcms = 0
+  let creditoPisCofins = 0
+  let fonteAntigos = null
+  if (dados.perfil.id === 'REGIME_REGULAR' && dados.tipoOperacao === 'B2B') {
+    try {
+      const taxas = await taxasDoFretePorAno({
+        ufOrigem: dados.ufOrigem.sigla,
+        ufDestino: dados.ufDestino.sigla,
+        tipoOperacao: tipoOperacaoFrete,
+      })
+      const doAno = taxas.porAno.get(dados.ano)
+      if (doAno) {
+        fonteAntigos = taxas.versaoBaseDados ?? null
+        creditoIcms = arredondar((dados.valorFrete * doAno.icms) / 100)
+        creditoPisCofins = dados.regimePagadora.creditaPisCofins
+          ? arredondar((dados.valorFrete * (doAno.pis + doAno.cofins)) / 100)
+          : 0
+      }
+    } catch (erro) {
+      dados.avisos.push(
+        `Não foi possível somar o crédito de ICMS/PIS/COFINS da projeção do frete (${erro.message}); o cartão mostra só o CBS/IBS.`,
+      )
+    }
+  }
+  const creditoAntigos = arredondar(creditoIcms + creditoPisCofins)
+  const creditoTotal = arredondar(avaliacao.credito + creditoAntigos)
+  const custoTotal = arredondar(dados.valorFrete - creditoTotal)
+  const percentualCreditoTotal = dados.valorFrete ? Number(((creditoTotal / dados.valorFrete) * 100).toFixed(4)) : 0
+  const percentualCustoTotal = dados.valorFrete ? Number(((custoTotal / dados.valorFrete) * 100).toFixed(4)) : 0
 
   return {
     entrada: {
@@ -379,9 +427,22 @@ async function simular(entrada) {
       },
     },
     resultado: {
-      credito: avaliacao.credito,
-      percentualCredito: avaliacao.percentualCredito,
-      custoLiquido: avaliacao.custoLiquido,
+      credito: creditoTotal,
+      creditoCbsIbs: avaliacao.credito,
+      creditoAntigos: {
+        icms: creditoIcms,
+        pisCofins: creditoPisCofins,
+        total: creditoAntigos,
+        fonte: fonteAntigos,
+      },
+      creditoTotal,
+      percentualCreditoTotal,
+      percentualCreditoCbsIbs: avaliacao.percentualCredito,
+      custoTotal,
+      percentualCustoTotal,
+      percentualCredito: percentualCreditoTotal,
+      custoLiquido: custoTotal,
+      custoLiquidoCbsIbs: avaliacao.custoLiquido,
       creditoPerdido: avaliacao.creditoPerdido,
       limitadoAoTeto: avaliacao.limitadoAoTeto,
       fonteCredito: avaliacao.fonteCredito,
@@ -390,13 +451,35 @@ async function simular(entrada) {
       alerta: avaliacao.alerta,
       notas: avaliacao.notas,
     },
-    memoria: montarMemoria({ dados, motor, avaliacao, aliquotas, percentualDestaque, aliquotaIbs }),
+    memoria: montarMemoria({
+      dados,
+      motor,
+      avaliacao,
+      aliquotas,
+      percentualDestaque,
+      aliquotaIbs,
+      creditoIcms,
+      creditoPisCofins,
+      creditoTotal,
+      custoTotal,
+    }),
     premissas: montarPremissas({ dados, motor, aliquotas, avaliacao }),
     avisos: dados.avisos,
   }
 }
 
-function montarMemoria({ dados, motor, avaliacao, aliquotas, percentualDestaque, aliquotaIbs }) {
+function montarMemoria({
+  dados,
+  motor,
+  avaliacao,
+  aliquotas,
+  percentualDestaque,
+  aliquotaIbs,
+  creditoIcms = 0,
+  creditoPisCofins = 0,
+  creditoTotal = 0,
+  custoTotal = 0,
+}) {
   const passos = [
     {
       rotulo: 'Preço nominal do frete',
@@ -441,13 +524,19 @@ function montarMemoria({ dados, motor, avaliacao, aliquotas, percentualDestaque,
     passos.push({
       rotulo: 'Crédito do Simples híbrido',
       valor: brl(avaliacao.credito),
-      nota: 'O transportador optou por recolher CBS/IBS no regime regular; o destaque cheio do CT-e é creditado integralmente.',
+      nota:
+        Number(dados.ano) === 2026
+          ? 'Em 2026 o destaque de 1,00% é compensado pelo transportador e não gera crédito ao adquirente (art. 348 da LC 214/2025); o ICMS e o PIS/COFINS do optante ficam no DAS.'
+          : 'O transportador optou por recolher CBS/IBS no regime regular; o destaque cheio do CT-e é creditado integralmente. O ICMS e o PIS/COFINS ficam no DAS.',
     })
   } else if (avaliacao.fonteCredito === 'integral') {
     passos.push({
       rotulo: 'Crédito do regime regular',
       valor: brl(avaliacao.credito),
-      nota: 'O destaque do motor é transferido integralmente ao tomador.',
+      nota:
+        Number(dados.ano) === 2026
+          ? 'Em 2026 o CBS/IBS de 1,00% é compensado pelo transportador e não gera crédito ao adquirente (art. 348 da LC 214/2025); o crédito do ano é ICMS + PIS/COFINS.'
+          : 'O destaque do motor é transferido integralmente ao tomador.',
     })
   } else {
     passos.push({
@@ -470,10 +559,18 @@ function montarMemoria({ dados, motor, avaliacao, aliquotas, percentualDestaque,
           : 'Todo o destaque do documento é aproveitado pelo pagador.',
   })
 
+  if (creditoIcms > 0 || creditoPisCofins > 0) {
+    passos.push({
+      rotulo: `Crédito de ICMS e PIS/COFINS · ${dados.ano}`,
+      valor: brl(arredondar(creditoIcms + creditoPisCofins)),
+      nota: `${creditoIcms > 0 ? `ICMS ${brl(creditoIcms)}` : ''}${creditoIcms > 0 && creditoPisCofins > 0 ? ' + ' : ''}${creditoPisCofins > 0 ? `PIS/COFINS ${brl(creditoPisCofins)}` : ''} — tributos do regime anterior destacados no CT-e e creditados pelo pagador. ${dados.regimePagadora.id === 'CUMULATIVO' ? 'No Lucro Presumido não há crédito de PIS/COFINS.' : 'PIS/COFINS não cumulativo (1,65% + 7,60%).'}`,
+    })
+  }
+
   passos.push({
-    rotulo: 'Custo líquido pós-crédito',
-    valor: brl(avaliacao.custoLiquido),
-    nota: `${brl(dados.valorFrete)} − ${brl(avaliacao.credito)} de crédito. É o número que compara transportadoras.`,
+    rotulo: 'Custo líquido total',
+    valor: brl(custoTotal),
+    nota: `${brl(dados.valorFrete)} − ${brl(creditoTotal)} de crédito total (CBS/IBS ${brl(avaliacao.credito)}${creditoIcms > 0 || creditoPisCofins > 0 ? ` + ICMS/PIS/COFINS ${brl(arredondar(creditoIcms + creditoPisCofins))}` : ''}). É o número que compara transportadoras.`,
     destaque: true,
   })
 
@@ -503,8 +600,13 @@ function montarPremissas({ dados, motor, aliquotas, avaliacao }) {
     `Rota ${dados.ufOrigem.sigla} → ${dados.ufDestino.sigla}; o IBS municipal usa o município de referência ${dados.ufDestino.nome} (IBGE ${dados.ufDestino.municipio}).`,
   )
   lista.push(
-    'O crédito do pagador é limitado ao CBS/IBS efetivamente destacado no documento: o que excede o destaque não é creditável.',
+    'Crédito do pagador = CBS/IBS destacado (a partir de 2027) + ICMS e PIS/COFINS do documento no regime regular; cada parcela é limitada ao tributo destacado.',
   )
+  if (Number(dados.ano) === 2026) {
+    lista.push(
+      'Em 2026 o CBS/IBS de 1,00% é compensado pelo transportador e não gera crédito ao adquirente (LC 214/2025, art. 348, I); o crédito do ano é ICMS + PIS/COFINS.',
+    )
+  }
 
   if (avaliacao.fonteCredito === 'estimativa') {
     lista.push(
@@ -553,6 +655,7 @@ async function comparar(entrada) {
   const base = {
     ano: entrada.ano ?? 2033,
     tipoOperacao: entrada.tipoOperacao ?? 'B2B',
+    regimePagadora: entrada.regimePagadora ?? REGIMES_PAGADORA[0].id,
     ufOrigem: entrada.ufOrigem ?? 'SP',
     ufDestino: entrada.ufDestino ?? 'BA',
   }
@@ -574,13 +677,13 @@ async function comparar(entrada) {
   )
 
   const ordenadas = [...avaliadas].sort((a, b) => {
-    const diferenca = a.simulacao.resultado.custoLiquido - b.simulacao.resultado.custoLiquido
+    const diferenca = a.simulacao.resultado.custoTotal - b.simulacao.resultado.custoTotal
     if (Math.abs(diferenca) > 0.005) return diferenca
     return a.simulacao.entrada.valorFrete - b.simulacao.entrada.valorFrete
   })
 
-  const menorLiquido = ordenadas[0].simulacao.resultado.custoLiquido
-  const maiorLiquido = ordenadas[ordenadas.length - 1].simulacao.resultado.custoLiquido
+  const menorLiquido = ordenadas[0].simulacao.resultado.custoTotal
+  const maiorLiquido = ordenadas[ordenadas.length - 1].simulacao.resultado.custoTotal
 
   const ranking = ordenadas.map((item, indice) => {
     const simulacao = item.simulacao
@@ -591,8 +694,13 @@ async function comparar(entrada) {
       valorFrete: simulacao.entrada.valorFrete,
       credito: simulacao.resultado.credito,
       percentualCredito: simulacao.resultado.percentualCredito,
+      creditoTotal: simulacao.resultado.creditoTotal,
+      percentualCreditoTotal: simulacao.resultado.percentualCreditoTotal,
+      percentualCreditoCbsIbs: simulacao.resultado.percentualCreditoCbsIbs,
+      creditoAntigos: simulacao.resultado.creditoAntigos,
       custoLiquido: simulacao.resultado.custoLiquido,
-      diferencaParaMelhor: arredondar(simulacao.resultado.custoLiquido - menorLiquido),
+      custoTotal: simulacao.resultado.custoTotal,
+      diferencaParaMelhor: arredondar(simulacao.resultado.custoTotal - menorLiquido),
       fonteCredito: simulacao.resultado.fonteCredito,
       creditoIntegral: simulacao.resultado.creditoIntegral,
       alerta: simulacao.resultado.alerta,
@@ -610,9 +718,9 @@ async function comparar(entrada) {
 
   let resumo
   if (precoIgual) {
-    resumo = `Os ${ranking.length} fretes custam ${brl(precos[0])} no nominal. No líquido, ${vencedor.nome} sai por ${brl(vencedor.custoLiquido)} — ${brl(economia)} a menos que ${ranking[ranking.length - 1].nome}.`
+    resumo = `Os ${ranking.length} fretes custam ${brl(precos[0])} no nominal. Depois de todo o crédito (ICMS, PIS/COFINS e CBS/IBS), ${vencedor.nome} sai por ${brl(vencedor.custoTotal)} — ${brl(economia)} a menos que ${ranking[ranking.length - 1].nome}.`
   } else {
-    resumo = `${vencedor.nome} tem o menor custo líquido: ${brl(vencedor.custoLiquido)}, ${brl(economia)} abaixo do pior cenário no líquido.`
+    resumo = `${vencedor.nome} tem o menor custo líquido total: ${brl(vencedor.custoTotal)}, ${brl(economia)} abaixo do pior cenário.`
   }
 
   return {
@@ -971,20 +1079,18 @@ async function reforma(entrada) {
       }
     } else if (modelo === 'hibrido') {
       antigos = SEM_ANTIGOS
-      cbsIbs = ano === ANO_REFERENCIA_REFORMA ? 0 : (cbsIbsProjecao ?? cbsIbsMotor ?? 0)
+      cbsIbs = ano === ANO_REFERENCIA_REFORMA || ano === 2026 ? 0 : (cbsIbsProjecao ?? cbsIbsMotor ?? 0)
       carga = cbsIbs
       disponivel = ano === ANO_REFERENCIA_REFORMA || proj !== null || cbsIbsMotor !== null
     } else if (modelo === 'simples-motor') {
       antigos = SEM_ANTIGOS
-      if (ano === ANO_REFERENCIA_REFORMA) cbsIbs = 0
-      else if (ano === 2026) cbsIbs = cbsIbsProjecao ?? cbsIbsMotor ?? arredondar(valor * 0.01)
+      if (ano === ANO_REFERENCIA_REFORMA || ano === 2026) cbsIbs = 0
       else cbsIbs = simples.destaque
       carga = cbsIbs
       fonte = 'motor-simples'
     } else {
       antigos = SEM_ANTIGOS
-      if (ano === ANO_REFERENCIA_REFORMA) cbsIbs = 0
-      else if (ano === 2026) cbsIbs = arredondar((Math.min(taxaEstimativa, 1) * valor) / 100)
+      if (ano === ANO_REFERENCIA_REFORMA || ano === 2026) cbsIbs = 0
       else cbsIbs = arredondar((taxaEstimativa * valor) / 100)
       carga = cbsIbs
       fonte = 'estimativa'
@@ -999,7 +1105,24 @@ async function reforma(entrada) {
         modelo === 'estimativa' ? Math.min(arredondar((taxaEstimativa * valor) / 100), cbsIbs) : cbsIbs
     }
 
-    const custoLiquido = arredondar(valor - credito)
+    // 2026: o CBS/IBS destacado é compensado pelo transportador (art. 348, I)
+    // e, no Simples, as alíquotas nem se aplicam (art. 348, III, "c").
+    if (ano === 2026) credito = 0
+
+    // O crédito do pagador soma os tributos do regime anterior que ainda
+    // existem no ano — só no regime regular, que é quem os destaca no CT-e.
+    let creditoIcms = 0
+    let creditoPisCofins = 0
+    if (modelo === 'regular' && proj && dados.tipoOperacao === 'B2B') {
+      creditoIcms = arredondar((valor * proj.percentualIcms) / 100)
+      creditoPisCofins = dados.regimePagadora.creditaPisCofins
+        ? arredondar((valor * (proj.percentualPis + proj.percentualCofins)) / 100)
+        : 0
+    }
+    const creditoAntigosTotal = arredondar(creditoIcms + creditoPisCofins)
+    const creditoTotal = arredondar(credito + creditoAntigosTotal)
+
+    const custoLiquido = arredondar(valor - creditoTotal)
 
     return {
       ano,
@@ -1013,8 +1136,14 @@ async function reforma(entrada) {
       percentualCompensado: percentualDe(compensado, valor),
       carga,
       percentualCarga: percentualDe(carga, valor),
-      credito,
-      percentualCredito: percentualDe(credito, valor),
+      credito: creditoTotal,
+      creditoCbsIbs: credito,
+      creditoAntigos: {
+        total: creditoAntigosTotal,
+        icms: creditoIcms,
+        pisCofins: creditoPisCofins,
+      },
+      percentualCredito: percentualDe(creditoTotal, valor),
       custoLiquido,
       disponivel,
       fonte,
@@ -1095,7 +1224,7 @@ async function reforma(entrada) {
   if (perfil.id !== 'REGIME_REGULAR' && perfil.id !== 'SIMPLES_HIBRIDO' && (projecao || motorPorAno.size)) {
     benchmark = {
       rotulo: 'Regime regular',
-      descricao: 'Mesmo frete no regime regular: CBS/IBS integral creditável.',
+      descricao: 'Mesmo frete no regime regular: ICMS + PIS/COFINS + CBS/IBS integral creditável.',
       anos: ANOS_REFORMA.map((ano) => {
         const proj = projecaoPorAno.get(ano) ?? null
         const calculo = motorPorAno.get(ano) ?? null
@@ -1104,7 +1233,16 @@ async function reforma(entrada) {
           : calculo
             ? calculo.destaque
             : null
-        const credito = dados.tipoOperacao === 'B2C' || cbsIbs === null ? 0 : cbsIbs
+        const creditoCbsIbs = ano >= 2027 && cbsIbs !== null ? cbsIbs : 0
+        const icms = proj ? arredondar((valor * proj.percentualIcms) / 100) : 0
+        const pisCofins =
+          proj && dados.regimePagadora.creditaPisCofins
+            ? arredondar((valor * (proj.percentualPis + proj.percentualCofins)) / 100)
+            : 0
+        const credito =
+          dados.tipoOperacao === 'B2C' || cbsIbs === null
+            ? 0
+            : arredondar(creditoCbsIbs + icms + pisCofins)
         return {
           ano,
           cbsIbs: cbsIbs ?? 0,
@@ -1123,9 +1261,7 @@ async function reforma(entrada) {
   }
   if (anos.some((linha) => linha.ano === 2026)) {
     avisos.push(
-      dados.tipoOperacao === 'B2B'
-        ? 'Em 2026 o CBS/IBS de 1,00% é a fase de teste e é compensável com PIS/COFINS e ICMS; o crédito de 1,00% mostrado é o destaque do ano, não um crédito adicional.'
-        : 'Em 2026 o CBS/IBS de 1,00% é a fase de teste e é compensável com PIS/COFINS e ICMS; em B2C ele não vira crédito.',
+      'Em 2026 o CBS/IBS de 1,00% é fase de teste e compensado pelo transportador: não entra no crédito do pagador. O crédito de 2026 é ICMS + PIS/COFINS.',
     )
   }
   if (dados.tipoOperacao === 'B2C') {
@@ -1190,7 +1326,7 @@ async function reforma(entrada) {
       projecao
         ? `Tributos do regime anterior: ICMS ${tipoOperacaoFrete === 'INTERNA' ? 'interno padrão de 18%' : 'interestadual da Resolução do Senado nº 22/1989'} + PIS/COFINS não cumulativo (1,65% + 7,60%), reduzidos pelo cronograma da LC 214/2025.`
         : 'Os tributos do regime anterior (ICMS/PIS/COFINS) não entram na carga sem a projeção; 2025 fica sem valor.',
-      'Crédito e custo líquido consideram apenas CBS/IBS, o mesmo recorte do simulador. A carga tributária inclui os tributos antigos e serve de contexto.',
+      'Crédito do pagador = CBS/IBS (2027 em diante) + ICMS e PIS/COFINS do documento no regime regular; o custo líquido desconta esse total. A carga soma todos os tributos do documento e serve de contexto.',
       'Valor diário (1 dia útil) para isolar o efeito das alíquotas: o mesmo preço nominal atravessa todos os anos, sem o ruído de dias úteis.',
       'Simples/DAS: o CBS/IBS é o destaque do motor do Simples com as alíquotas do PGDAS; sem elas (e para autônomo/MEI), vale a faixa setorial estimada.',
       'As alíquotas de 2027 em diante são as de referência do motor e podem ser fixadas anualmente; a projeção é uma simulação, não a apuração fiscal.',
@@ -1204,6 +1340,191 @@ async function reforma(entrada) {
       versaoApi: projecao?.headers?.aplicacao ?? estado.motor.versao ?? null,
       erroProjecao: erroProjecao?.message ?? null,
       erroSimples: erroSimples?.message ?? null,
+    },
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Horizonte do pagador: hoje → amanhã                                 */
+/* ------------------------------------------------------------------ */
+
+const ANO_FIM_HORIZONTE = 2033
+
+/**
+ * A pergunta do pagador: "hoje pago X bruto e Y líquido; amanhã, quanto pago,
+ * quanto eu deveria pagar e como me ajustar?".
+ *
+ * A carga e os tributos de cada ano vêm da projeção oficial do frete; o crédito
+ * total (ICMS + PIS/COFINS + CBS/IBS) segue a regra de `creditosDoPagador`; o
+ * resto é aritmética de cenário (preço congelado × repasse, benchmark e teto).
+ */
+async function pagador(entrada) {
+  const dados = normalizarEntrada(entrada)
+  const perfil = dados.perfil
+  const valor = dados.valorFrete
+  const tipoOperacaoFrete = dados.ufOrigem.sigla === dados.ufDestino.sigla ? 'INTERNA' : 'INTERESTADUAL'
+  const avisos = [...dados.avisos]
+
+  let projecao
+  try {
+    projecao = await projetarFrete({
+      valorFrete: valor,
+      ufOrigem: dados.ufOrigem.sigla,
+      ufDestino: dados.ufDestino.sigla,
+      tipoOperacao: tipoOperacaoFrete,
+    })
+  } catch (erro) {
+    throw new HttpError(
+      503,
+      `A visão de hoje até 2033 precisa da projeção anual do frete do motor oficial e ela não respondeu (${erro.message}). Suba o motor do regime regular com .\\run.ps1 e tente de novo.`,
+    )
+  }
+
+  const anoHoje = Math.min(ANO_FIM_HORIZONTE, Math.max(2026, new Date().getFullYear()))
+
+  // A alíquota do Simples/DAS é a do PGDAS informado; sem ela, vale a faixa setorial.
+  let taxaSimples2027 = Number(dados.taxaCredito ?? perfil.ref ?? 0)
+  if (perfil.id === 'SIMPLES_DAS' && dados.aliquotaCbs && dados.aliquotaIbs) {
+    try {
+      const simples = await calcularFreteSimples({
+        valorFrete: valor,
+        ano: Math.max(ANO_INICIO_SIMPLES, anoHoje),
+        atividade: dados.atividade.id,
+        aliquotaCbs: dados.aliquotaCbs,
+        aliquotaIbs: dados.aliquotaIbs,
+      })
+      taxaSimples2027 = percentualDe(simples.destaque, valor)
+    } catch (erro) {
+      avisos.push(
+        `O motor do Simples não apurou a linha do PGDAS informada; a visão do Simples usa a faixa setorial de ${pct(taxaSimples2027)}. (${erro.message})`,
+      )
+    }
+  }
+  if (perfil.id === 'SIMPLES_DAS' && !dados.aliquotaCbs) {
+    avisos.push(
+      'Sem as alíquotas efetivas do PGDAS, o crédito do Simples/DAS é a faixa setorial estimada — não é o destaque real do DAS.',
+    )
+  }
+  if (perfil.id === 'AUTONOMO_MEI') {
+    avisos.push('Autônomo/MEI: o crédito é a faixa setorial estimada, não o destaque do regime regular.')
+  }
+  if (perfil.id === 'SIMPLES_HIBRIDO') {
+    avisos.push(
+      'Simples híbrido: ICMS e PIS/COFINS continuam no DAS e não são destacados no CT-e — só o CBS/IBS apurado no regime regular vira crédito.',
+    )
+  }
+  if (dados.regimePagadora.id === 'CUMULATIVO') {
+    avisos.push(
+      'Lucro Presumido: o PIS/COFINS cumulativo não gera crédito sobre o frete; o crédito total é ICMS + CBS/IBS.',
+    )
+  }
+
+  const taxaSimples = (ano) => {
+    if (perfil.id !== 'SIMPLES_DAS' && perfil.id !== 'AUTONOMO_MEI') return 0
+    if (Number(ano) <= 2025) return 0
+    if (Number(ano) === 2026) return Math.min(taxaSimples2027, 1)
+    return taxaSimples2027
+  }
+
+  const serie = projecao.anos
+    .filter((ano) => ano.ano >= 2026 && ano.ano <= ANO_FIM_HORIZONTE)
+    .map((ano) => ({
+      ano: ano.ano,
+      carga: ano.percentualTotal,
+      percentuais: {
+        icms: ano.percentualIcms,
+        pis: ano.percentualPis,
+        cofins: ano.percentualCofins,
+        cbs: ano.percentualCbs,
+        ibs: ano.percentualIbs,
+      },
+    }))
+
+  const horizonte = construirHorizonte({
+    valorFrete: valor,
+    perfil,
+    regimePagadora: dados.regimePagadora,
+    tipoOperacao: dados.tipoOperacao,
+    anoHoje,
+    serie,
+    taxaSimples,
+  })
+
+  if (tipoOperacaoFrete === 'INTERNA') {
+    avisos.push(
+      'Operação interna: a projeção do regime anterior usa a alíquota interna padrão de 18% do motor; o ICMS interno varia por UF.',
+    )
+  }
+  if (dados.tipoOperacao === 'B2C') {
+    avisos.push('B2C: o pagador é o consumidor final; o crédito é zero em todos os anos e o custo é o preço cheio.')
+  }
+  if (anoHoje < 2027) {
+    avisos.push(
+      'Em 2026 o CBS/IBS de 1,00% é fase de teste, compensado pelo transportador: ele não entra no crédito do pagador.',
+    )
+  }
+
+  return {
+    entrada: {
+      valorFrete: valor,
+      anoHoje,
+      primeiroAno: anoHoje,
+      ultimoAno: ANO_FIM_HORIZONTE,
+      perfil: {
+        id: perfil.id,
+        rotulo: perfil.rotulo,
+        curto: perfil.curto,
+        regime: perfil.regime,
+        estimativa: perfil.estimativa,
+      },
+      regimePagadora: {
+        id: dados.regimePagadora.id,
+        rotulo: dados.regimePagadora.rotulo,
+        curto: dados.regimePagadora.curto,
+        creditaPisCofins: Boolean(dados.regimePagadora.creditaPisCofins),
+        descricao: dados.regimePagadora.descricao,
+      },
+      tipoOperacao: dados.tipoOperacao,
+      ufOrigem: dados.ufOrigem.sigla,
+      ufDestino: dados.ufDestino.sigla,
+      rota: `${dados.ufOrigem.sigla} → ${dados.ufDestino.sigla}`,
+      aliquotaCbs: dados.aliquotaCbs,
+      aliquotaIbs: dados.aliquotaIbs,
+      taxaSimples: perfil.id === 'SIMPLES_DAS' || perfil.id === 'AUTONOMO_MEI' ? taxaSimples2027 : null,
+      anual: 12,
+    },
+    ...horizonte,
+    notas: (projecao.notas ?? [])
+      .filter((nota) => nota.ano >= anoHoje)
+      .map((nota) => ({
+        ano: nota.ano,
+        titulo: nota.rotulo ?? rotuloAnoReforma(nota.ano),
+        resumo: nota.resumo,
+        mudancas: nota.mudancas,
+        comparacao: nota.comparacaoMetodoAnterior,
+        fundamento: nota.fundamento,
+      })),
+    premissas: [
+      'Carga e tributos de cada ano vêm da projeção oficial do frete (motor do regime regular): o CBS/IBS é apurado pela mesma calculadora e o ICMS/PIS/COFINS é composto pelo cronograma da LC 214/2025.',
+      'O valor informado é o frete do período (tratado como mês); o volume de serviço é mantido constante, sem o efeito de dias úteis que a projeção aplica ao valor do período.',
+      'Crédito total do pagador = ICMS + PIS/COFINS (até 2026) + CBS/IBS (2027 em diante), conforme o regime do transportador e o regime da pagadora.',
+      'Repasse integral: preço_novo = preço_hoje × (1 − carga_hoje) ÷ (1 − carga_ano), que preserva a receita líquida do transportador. É um cenário, não uma cláusula contratual.',
+      'Benchmark: o mesmo valor nominal com um transportador do regime regular, que transfere 100% do CBS/IBS destacado.',
+      perfil.estimativa
+        ? 'Perfil estimado: sem o destaque no CT-e, a faixa setorial é uma estimativa do simulador. O crédito real é o tributo destacado (LC 214/2025, art. 47, §2º, I); no autônomo/MEI é crédito presumido a definir em ato conjunto (art. 169).'
+        : null,
+      'As alíquotas de 2027 a 2033 são as de referência (premissa): a LC 214/2025 manda o Senado fixar a alíquota de referência a cada ano (arts. 18 e 349).',
+      'Anual = 12 × o valor do período.',
+      'Simulação para planejamento e negociação; não substitui a apuração fiscal.',
+    ].filter(Boolean),
+    avisos,
+    fonte: {
+      projecao: true,
+      motor: 'projeção oficial do frete (regime regular)',
+      versaoBaseDados: projecao.versaoBaseDados ?? estado.motor.baseDados ?? null,
+      versaoApi: projecao.headers?.aplicacao ?? estado.motor.versao ?? null,
+      aliquotaIcms: projecao.aliquotaIcms,
+      geradoEm: new Date().toISOString(),
     },
   }
 }
@@ -1285,6 +1606,7 @@ async function opcoes() {
       faixa: faixaTexto(perfil),
     })),
     regimes: REGIMES,
+    regimesPagadora: REGIMES_PAGADORA,
     tiposOperacao: TIPOS_OPERACAO,
     atividadesSimples: ATIVIDADES_SIMPLES,
     anoInicioSimples: ANO_INICIO_SIMPLES,
@@ -1360,6 +1682,11 @@ const rotas = {
   'POST /api/reforma': async (req) => {
     const corpo = await lerCorpo(req)
     return { status: 200, corpo: await reforma(corpo) }
+  },
+
+  'POST /api/pagador': async (req) => {
+    const corpo = await lerCorpo(req)
+    return { status: 200, corpo: await pagador(corpo) }
   },
 
   'POST /api/comparar': async (req) => {

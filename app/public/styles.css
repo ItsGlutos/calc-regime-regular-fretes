@@ -2654,3 +2654,513 @@ select {
   vertical-align: 1px;
 }
 
+
+/* ------------------------------------------------------- hoje → amanhã */
+
+.horizonte {
+  margin-top: 24px;
+  padding: 24px 26px 22px;
+}
+
+.horizonte__head {
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.horizonte__head h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.horizonte__head .eyebrow-sm {
+  margin-bottom: 4px;
+}
+
+.horizonte__cenario {
+  min-width: 232px;
+}
+
+.horizonte__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 18px;
+}
+
+.horizonte__frase {
+  margin-top: 16px;
+  max-width: 92ch;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.horizonte__frase b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.horizonte__kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.result__nota {
+  margin-top: 10px;
+  max-width: 40ch;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.result__nota a {
+  color: var(--blue);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(11, 95, 165, 0.25);
+}
+
+.result__nota a:hover {
+  border-bottom-color: var(--blue);
+}
+
+.deveria {
+  margin-top: 20px;
+  padding: 18px 20px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+
+.deveria--alerta {
+  border-color: var(--amber-line);
+  background: var(--amber-050);
+}
+
+.deveria--ok {
+  border-color: #cfe8dc;
+  background: var(--green-050);
+}
+
+.deveria__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.deveria__veredito {
+  margin-top: 6px;
+  max-width: 88ch;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.deveria__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.deveria__grid > div {
+  display: grid;
+  gap: 2px;
+  padding: 11px 13px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.deveria__grid span {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.deveria__grid strong {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.deveria__grid small {
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.deveria__grid .is-alerta strong {
+  color: var(--amber);
+}
+
+.deveria__grid .is-ok strong {
+  color: var(--green);
+}
+
+.deveria__nota {
+  margin-top: 12px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.deveria__regra {
+  margin-top: 12px;
+  border-top: 1px dashed rgba(15, 23, 42, 0.12);
+  padding-top: 10px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.deveria__regra summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.deveria__regra p {
+  margin-top: 6px;
+  line-height: 1.55;
+}
+
+.horizonte__tabela-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 26px;
+}
+
+.horizonte__tabela-head h3 {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.horizonte__fonte {
+  max-width: 52ch;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--faint);
+  text-align: right;
+}
+
+.table--horizonte {
+  min-width: 720px;
+}
+
+.table--horizonte td small {
+  display: block;
+  margin-top: 1px;
+  font-family: var(--font-sans);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--faint);
+  white-space: normal;
+}
+
+.table--horizonte tr.is-current td {
+  background: var(--blue-050);
+}
+
+.table--horizonte tr.is-marco td {
+  border-bottom-color: #cfd8e6;
+}
+
+.table--horizonte .is-alta {
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.table--horizonte .is-baixa {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.table--horizonte .cell-dash {
+  color: var(--faint);
+}
+
+.ajustes {
+  margin-top: 26px;
+}
+
+.ajustes__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ajustes__head h3 {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ajustes__lista {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  list-style: none;
+  padding: 0;
+}
+
+.ajuste {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 14px;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.ajuste__tag {
+  align-self: start;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  background: #eef1f6;
+  color: #46536b;
+}
+
+.ajuste__tag--renegociar {
+  background: var(--amber-050);
+  color: var(--amber);
+}
+
+.ajuste__tag--caixa {
+  background: var(--blue-050);
+  color: var(--blue);
+}
+
+.ajuste__tag--regime {
+  background: var(--green-050);
+  color: var(--green);
+}
+
+.ajuste__tag--contrato {
+  background: #f3eefb;
+  color: #5b3a9e;
+}
+
+.ajuste__tag--calendario,
+.ajuste__tag--b2c {
+  background: #eef1f6;
+  color: #46536b;
+}
+
+.ajuste__corpo strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ajuste__corpo p {
+  margin-top: 3px;
+  max-width: 96ch;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.ajuste__impacto {
+  display: inline-block;
+  margin-top: 7px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f3f5f9;
+  font-size: 10px;
+  font-weight: 600;
+  color: #46536b;
+}
+
+.horizonte__detalhe {
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.horizonte__detalhe summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.horizonte__detalhe ul {
+  margin-top: 10px;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.horizonte__detalhe li {
+  line-height: 1.6;
+}
+
+.notas-ano {
+  list-style: none;
+  padding-left: 0 !important;
+}
+
+.notas-ano li {
+  padding: 9px 0;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.notas-ano li:last-child {
+  border-bottom: 0;
+}
+
+.notas-ano strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.notas-ano p {
+  margin-top: 3px;
+}
+
+.fonte-nota {
+  display: block;
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: var(--faint);
+}
+
+.horizonte__rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid #edf0f5;
+  font-size: 10.5px;
+  color: var(--faint);
+}
+
+@media (max-width: 1080px) {
+  .horizonte__kpis,
+  .deveria__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .horizonte {
+    padding: 20px 16px 18px;
+  }
+
+  .horizonte__head h2 {
+    font-size: 19px;
+  }
+
+  .horizonte__cenario {
+    width: 100%;
+  }
+
+  .horizonte__tabela-head {
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+  }
+
+  .horizonte__fonte {
+    text-align: left;
+  }
+
+  .ajuste {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .ajuste__tag {
+    justify-self: start;
+  }
+
+  .deveria__head {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 760px) {
+  .table--horizonte {
+    min-width: 0;
+  }
+
+  .table--horizonte thead {
+    display: none;
+  }
+
+  .table--horizonte tbody tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 14px;
+    padding: 13px 0;
+    border-bottom: 1px solid #edf0f5;
+  }
+
+  .table--horizonte tbody td,
+  .table--horizonte tbody td.num {
+    display: block;
+    padding: 0;
+    border: 0;
+    text-align: left;
+  }
+
+  .table--horizonte tbody td::before {
+    content: attr(data-rotulo);
+    display: block;
+    margin-bottom: 1px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  .table--horizonte .cell-ano {
+    grid-column: 1 / -1;
+    font-size: 14px;
+  }
+
+  .table--horizonte .cell-ano small {
+    display: inline;
+    margin-left: 6px;
+  }
+
+  .table--horizonte .cell-credito {
+    grid-column: 1 / -1;
+  }
+
+  .table--horizonte tbody tr.is-current {
+    background: var(--blue-050);
+    border-radius: 10px;
+    padding: 13px 12px;
+  }
+}

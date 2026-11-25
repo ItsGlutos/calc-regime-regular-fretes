@@ -28,6 +28,7 @@ const estado = {
   regime: 'SIMPLES',
   perfil: 'SIMPLES_DAS',
   operacao: 'B2B',
+  regimePagadora: 'NAO_CUMULATIVO',
   cargas: [
     { nome: 'Rota Sul Logística', preco: '1.000,00', perfil: 'SIMPLES_DAS', pCbs: '', pIbs: '' },
     { nome: 'Via Brasil Transportes', preco: '1.000,00', perfil: 'SIMPLES_HIBRIDO', pCbs: '', pIbs: '' },
@@ -37,6 +38,9 @@ const estado = {
   timeline: null,
   timelineMetrica: 'custo',
   timelineSeq: 0,
+  horizonte: null,
+  horizonteCenario: 'congelado',
+  horizonteSeq: 0,
 }
 
 /* ------------------------------------------------------------------ */
@@ -121,6 +125,30 @@ function renderizarOperacao() {
     .join('')
   const atual = estado.opcoes.tiposOperacao.find((tipo) => tipo.id === estado.operacao)
   $('#operacaoHint').textContent = atual?.descricao ?? ''
+  atualizarPagadora()
+}
+
+function renderizarRegimePagadora() {
+  const alvo = $('#regimePagadora')
+  if (!alvo || !estado.opcoes.regimesPagadora) return
+  alvo.innerHTML = estado.opcoes.regimesPagadora
+    .map((regime) => `<option value="${regime.id}">${esc(regime.rotulo)}</option>`)
+    .join('')
+  alvo.value = estado.regimePagadora
+  atualizarPagadora()
+}
+
+function atualizarPagadora() {
+  const alvo = $('#regimePagadora')
+  const dica = $('#regimePagadoraHint')
+  if (!alvo) return
+  const regime = estado.opcoes?.regimesPagadora?.find((item) => item.id === estado.regimePagadora)
+  const b2c = estado.operacao === 'B2C'
+  alvo.disabled = b2c
+  alvo.value = estado.regimePagadora
+  dica.textContent = b2c
+    ? 'Operação B2C: o pagador é o consumidor final e não aproveita crédito. O regime da sua empresa não muda o custo.'
+    : (regime?.descricao ?? '') + ' Define o crédito total que você recupera do CT-e.'
 }
 
 function renderizarUfs() {
@@ -250,17 +278,21 @@ function atualizarAno() {
   if (!item) return
 
   $('#headDestaque').textContent = pct(item.aliquota.total)
-  $('#headDestaqueSub').textContent = `CBS ${numero(item.aliquota.cbs)} + IBS ${numero(item.aliquota.ibsUf + item.aliquota.ibsMun)}`
+  $('#headDestaqueSub').textContent = `CBS ${numero(item.aliquota.cbs)} + IBS ${numero(item.aliquota.ibsUf + item.aliquota.ibsMun)}${ano >= 2027 ? ' · premissa' : ''}`
 
   const dicas = {
-    TESTE: 'Fase de teste: 1% destacado e compensável. Os regimes ainda não se diferenciam no crédito.',
-    CBS_PLENA: 'CBS cheia e IBS ainda em teste. A diferença entre regimes começa a aparecer.',
-    TRANSICAO_IBS: 'IBS cresce e o ICMS cai na mesma proporção. O crédito do frete aumenta ano a ano.',
-    REGIME_PLENO: 'Regime pleno: CBS 8,50% + IBS 18,50%. É o cenário que compara de verdade os regimes.',
+    TESTE:
+      'Fase de teste: 1% destacado no CT-e e compensado pelo transportador; não há crédito de CBS/IBS. O crédito do ano é ICMS + PIS/COFINS.',
+    CBS_PLENA:
+      'CBS cheia e IBS ainda em teste. A diferença entre regimes começa a aparecer. Alíquotas de referência (premissa): o Senado fixa a alíquota a cada ano.',
+    TRANSICAO_IBS:
+      'IBS cresce e o ICMS cai na mesma proporção. O crédito do frete aumenta ano a ano. Alíquotas de referência (premissa).',
+    REGIME_PLENO:
+      'Regime pleno: CBS 8,50% + IBS 18,50% (premissa de referência). É o cenário que compara de verdade os regimes.',
   }
   const simplesIndisponivel =
     estado.perfil === 'SIMPLES_DAS' && ano < estado.opcoes.anoInicioSimples
-      ? ` O Motor do Simples só tem tabelas a partir de ${estado.opcoes.anoInicioSimples}; neste ano o crédito do Simples/DAS usa a faixa estimada.`
+      ? ` O Motor do Simples só tem tabelas a partir de ${estado.opcoes.anoInicioSimples}; neste ano não há crédito de CBS/IBS do Simples (LC 214/2025, art. 348, III, "c").`
       : ''
   $('#anoHint').textContent = `${dicas[item.fase] ?? ''}${simplesIndisponivel}`
   if (estado.perfil === 'SIMPLES_DAS') atualizarFonteSimples()
@@ -317,6 +349,7 @@ function lerEntrada() {
   return {
     valorFrete: $('#valor').value,
     perfil: estado.perfil,
+    regimePagadora: estado.regimePagadora,
     tipoOperacao: estado.operacao,
     ufOrigem: $('#ufOrigem').value,
     ufDestino: $('#ufDestino').value,
@@ -352,6 +385,7 @@ async function simular() {
   if (!painel.querySelector('.result__head')) mostrarEsqueleto(painel)
 
   carregarTimeline(entrada)
+  carregarHorizonte(entrada)
 
   try {
     const dados = await post('/api/simular', entrada)
@@ -420,7 +454,7 @@ function renderizarResultado(dados) {
 
   const niveis = { atencao: 'warn', ok: 'ok', neutro: 'neutral' }
   const icone = resultado.alerta.nivel === 'atencao' ? ICONE.alerta : resultado.alerta.nivel === 'ok' ? ICONE.ok : ICONE.neutro
-  const cobertura = Math.max(0, Math.min(100, resultado.percentualCredito))
+  const coberturaTotal = Math.max(0, Math.min(100, resultado.percentualCreditoTotal))
   const creditoPerdido = resultado.creditoPerdido
   const fonte = entrada.perfil.fonteCredito
   const chipFonte =
@@ -450,30 +484,34 @@ function renderizarResultado(dados) {
 
     <div class="result__main">
       <div>
-        <span class="result__label">Custo líquido pós-crédito</span>
+        <span class="result__label">Custo líquido total</span>
         <div class="net">
           <span class="net__cur">R$</span>
-          <span class="net__val">${numero(resultado.custoLiquido)}</span>
+          <span class="net__val">${numero(resultado.custoTotal)}</span>
         </div>
         <p class="result__sub">
-          de <b>${brl(entrada.valorFrete)}</b> nominais · crédito de <b>${brl(resultado.credito)}</b>
-          ${resultado.limitadoAoTeto ? ' · limitado ao destaque do ano' : ''}
+          de <b>${brl(entrada.valorFrete)}</b> nominais · crédito de <b>${brl(resultado.creditoTotal)}</b>
+          (CBS/IBS ${brl(resultado.creditoCbsIbs)}${resultado.creditoAntigos.total > 0 ? ` + ICMS/PIS/COFINS ${brl(resultado.creditoAntigos.total)}` : ''})
+        </p>
+        <p class="result__nota">
+          Soma ICMS, PIS/COFINS e CBS/IBS creditados no ano. A trajetória até 2033 e o preço que você deveria
+          pagar estão em <a href="#hojeAmanha">Seu frete ao longo da reforma</a>.
         </p>
       </div>
       <dl class="metrics">
-        <div><dt>Crédito aproveitável</dt><dd>${brl(resultado.credito)} <span class="metric-pct">${pct(resultado.percentualCredito)}</span></dd></div>
+        <div><dt>Crédito total</dt><dd>${brl(resultado.creditoTotal)} <span class="metric-pct">${pct(resultado.percentualCreditoTotal)}</span></dd></div>
         <div><dt>CBS/IBS destacado</dt><dd>${brl(motor.destaque)}</dd></div>
-        <div><dt>Crédito não aproveitado</dt><dd class="${creditoPerdido > 0 ? 'neg' : ''}">${brl(creditoPerdido)}</dd></div>
+        <div><dt>ICMS + PIS/COFINS</dt><dd>${brl(resultado.creditoAntigos.total)}</dd></div>
       </dl>
     </div>
 
     <div class="split">
-      <div class="split__bar" role="img" aria-label="${pct(cobertura)} do frete volta como crédito">
-        ${cobertura > 0 ? `<span style="width:${cobertura}%"></span>` : ''}
+      <div class="split__bar" role="img" aria-label="${pct(coberturaTotal)} do frete volta como crédito">
+        ${coberturaTotal > 0 ? `<span style="width:${coberturaTotal}%"></span>` : ''}
       </div>
       <div class="split__legend">
-        <span>${cobertura > 0 ? `${pct(cobertura)} volta como crédito` : 'sem crédito nesta operação'}</span>
-        <span>${pct(100 - cobertura)} fica no custo</span>
+        <span>${coberturaTotal > 0 ? `${pct(coberturaTotal)} volta como crédito` : 'sem crédito nesta operação'}</span>
+        <span>${pct(100 - coberturaTotal)} fica no custo</span>
       </div>
     </div>
 
@@ -576,6 +614,7 @@ function marcarDesatualizado(desatualizado) {
   nota.hidden = !desatualizado
   alvo?.classList.toggle('is-stale', Boolean(desatualizado))
   if (desatualizado) marcarTimelineDesatualizado(true)
+  marcarHorizonteDesatualizado(desatualizado)
 }
 
 async function comparar() {
@@ -598,6 +637,7 @@ async function comparar() {
       })),
       ano: Number($('#ano').value),
       tipoOperacao: estado.operacao,
+      regimePagadora: estado.regimePagadora,
       ufOrigem: $('#ufOrigem').value,
       ufDestino: $('#ufDestino').value,
     })
@@ -631,10 +671,10 @@ function renderizarComparacao(dados) {
         <td>${esc(item.perfil.curto)}</td>
         <td class="num">${brl(item.valorFrete)}</td>
         <td class="num">
-          ${item.alerta.nivel === 'atencao' ? `<span class="alert-dot" title="Crédito de ${pct(item.percentualCredito)}, abaixo de 4%"></span>` : ''}
-          ${pct(item.percentualCredito)}
+          ${item.alerta.nivel === 'atencao' ? `<span class="alert-dot" title="Crédito de CBS/IBS abaixo de 4% do frete"></span>` : ''}
+          ${pct(item.percentualCreditoTotal)}
         </td>
-        <td class="num cell-net">${brl(item.custoLiquido)}</td>
+        <td class="num cell-net">${brl(item.custoTotal)}</td>
         <td class="num delta">${indice === 0 ? '—' : `+ ${brl(item.diferencaParaMelhor)}`}</td>
         <td>
           <button class="audit-toggle" type="button" data-auditar="${indice}" aria-expanded="false" aria-label="Auditar ${esc(item.nome)}" title="Ver memória de cálculo">
@@ -663,14 +703,14 @@ function renderizarComparacao(dados) {
     observacoes.push(`
       <div class="callout">
         ${ICONE.info}
-        <p><strong>Mesmo preço nominal de ${brl(campeao.valorFrete)}.</strong> A diferença de ${brl(economia)} no líquido vem só do crédito do regime: ${esc(campeao.nome)} transfere ${pct(campeao.percentualCredito)} contra ${pct(ranking[ranking.length - 1].percentualCredito)} de ${esc(ranking[ranking.length - 1].nome)}.</p>
+        <p><strong>Mesmo preço nominal de ${brl(campeao.valorFrete)}.</strong> A diferença de ${brl(economia)} no líquido vem do crédito total do regime: ${esc(campeao.nome)} credita ${pct(campeao.percentualCreditoTotal)} (CBS/IBS ${pct(campeao.percentualCreditoCbsIbs ?? 0)} + ICMS/PIS/COFINS) contra ${pct(ranking[ranking.length - 1].percentualCreditoTotal)} de ${esc(ranking[ranking.length - 1].nome)}.</p>
       </div>`)
   }
   if (menorPreco.nome !== campeao.nome) {
     observacoes.push(`
       <div class="callout">
         ${ICONE.info}
-        <p><strong>O menor preço nominal não é o menor custo líquido.</strong> ${esc(menorPreco.nome)} cobra ${brl(menorPreco.valorFrete)}, mas ${esc(campeao.nome)} custa ${brl(menorPreco.custoLiquido - campeao.custoLiquido)} menos depois do crédito.</p>
+        <p><strong>O menor preço nominal não é o menor custo líquido.</strong> ${esc(menorPreco.nome)} cobra ${brl(menorPreco.valorFrete)}, mas ${esc(campeao.nome)} custa ${brl(menorPreco.custoTotal - campeao.custoTotal)} menos depois do crédito.</p>
       </div>`)
   }
 
@@ -678,7 +718,7 @@ function renderizarComparacao(dados) {
     <div class="ranking">
       <div class="ranking__head">
         <div>
-          <span class="eyebrow-sm">Ranking por custo líquido</span>
+          <span class="eyebrow-sm">Ranking por custo líquido total</span>
           <p class="ranking__resumo">${esc(resumo)}</p>
         </div>
         <span class="chip chip--best">vencedor · ${esc(vencedor)}</span>
@@ -686,14 +726,14 @@ function renderizarComparacao(dados) {
 
       <div class="table-wrap">
         <table class="table table--ranking">
-          <caption class="sr-only">Transportadoras ordenadas por custo líquido pós-crédito</caption>
+          <caption class="sr-only">Transportadoras ordenadas por custo líquido depois do crédito total</caption>
           <thead>
             <tr>
               <th scope="col">#</th>
               <th scope="col">Transportadora</th>
               <th scope="col">Regime</th>
               <th scope="col" class="num">Preço nominal</th>
-              <th scope="col" class="num">Crédito</th>
+              <th scope="col" class="num">Crédito total</th>
               <th scope="col" class="num">Custo líquido</th>
               <th scope="col" class="num">Δ</th>
               <th scope="col"><span class="sr-only">Auditoria</span></th>
@@ -702,7 +742,7 @@ function renderizarComparacao(dados) {
           <tbody>${linhas}</tbody>
         </table>
       </div>
-      <p class="table-note">Simples/DAS: cálculo real pelo Motor do Simples quando as alíquotas do PGDAS são informadas; sem elas, faixa setorial estimada. Simples híbrido e regime regular: crédito integral do destaque apurado pelo regime regular.</p>
+      <p class="table-note">Crédito total = CBS/IBS do destaque + ICMS e PIS/COFINS quando o transportador os destaca no CT-e (só o regime regular). Simples/DAS: cálculo real pelo Motor do Simples quando as alíquotas do PGDAS são informadas; sem elas, faixa setorial estimada. Simples híbrido: só o CBS/IBS destacado no regime regular vira crédito — o ICMS fica no DAS.</p>
       ${observacoes.join('')}
     </div>`
 }
@@ -726,14 +766,14 @@ const sinalPontos = (valor) => {
 const METRICAS = [
   {
     id: 'custo',
-    rotulo: 'Custo líquido',
+    rotulo: 'Custo líquido total',
     curto: 'Custo',
     valor: (linha) => linha.custoLiquido,
     percentual: false,
   },
   {
     id: 'credito',
-    rotulo: 'Crédito CBS/IBS',
+    rotulo: 'Crédito total',
     curto: 'Crédito',
     valor: (linha) => linha.credito,
     percentual: true,
@@ -829,21 +869,28 @@ function renderizarTimeline(dados) {
     ${notasTimeline(dados)}
     <div class="timeline__foot">
       <p class="table-note">
-        Crédito e custo líquido consideram só CBS/IBS — o mesmo recorte do simulador. A carga inclui os
-        tributos do regime anterior e serve de contexto.
+        Crédito total = CBS/IBS destacado (2027 em diante) + ICMS e PIS/COFINS do documento no regime regular. A
+        carga soma todos os tributos do documento e serve de contexto.
       </p>
+      ${
+        entrada.perfil.modelo === 'regular'
+          ? ''
+          : '<p class="table-note">No Simples, o CBS/IBS da coluna é a parcela destacada no DAS; o ICMS e o PIS/COFINS ficam dentro do DAS e não aparecem decompostos.</p>'
+      }
       ${premissasTimeline(dados)}
     </div>`
 }
 
 function kpisTimeline(dados) {
-  const { resumo, benchmark } = dados
+  const { resumo, benchmark, entrada } = dados
   const referencia = resumo.referencia
   const pleno = resumo.regimePleno
   const benchPleno = benchmark?.anos?.find((linha) => linha.ano === pleno.ano)
   const referenciaDisponivel = dados.anos[0]?.disponivel !== false
   const delta = resumo.variacaoCarga
   const tom = !delta ? 'neutral' : delta.absoluta > 0 ? 'up' : delta.absoluta < 0 ? 'down' : 'neutral'
+  const ehRegular = entrada?.perfil?.modelo === 'regular'
+  const rotuloCarga = ehRegular ? 'Carga' : 'CBS/IBS'
   const creditoSub =
     benchPleno && benchPleno.percentualCredito !== null
       ? `${pct(pleno.percentualCredito)} do frete · regular ${pct(benchPleno.percentualCredito)}`
@@ -851,22 +898,22 @@ function kpisTimeline(dados) {
 
   return `<div class="timeline__kpis">
     <div class="kpi">
-      <span class="kpi__label">Carga em ${referencia.ano}</span>
+      <span class="kpi__label">${rotuloCarga} em ${referencia.ano}</span>
       <strong class="kpi__valor">${referenciaDisponivel ? brl(referencia.carga) : '—'}</strong>
       <span class="kpi__sub">${referenciaDisponivel ? `${pct(referencia.percentualCarga)} do frete` : 'sem projeção'} · antes da reforma</span>
     </div>
     <div class="kpi">
-      <span class="kpi__label">Carga em ${pleno.ano}</span>
+      <span class="kpi__label">${rotuloCarga} em ${pleno.ano}</span>
       <strong class="kpi__valor">${brl(pleno.carga)}</strong>
       <span class="kpi__sub">${pct(pleno.percentualCarga)} do frete · regime pleno</span>
     </div>
     <div class="kpi kpi--${tom}">
-      <span class="kpi__label">Variação da carga</span>
+      <span class="kpi__label">Variação do ${rotuloCarga.toLowerCase()}</span>
       <strong class="kpi__valor">${delta ? sinalNumero(delta.absoluta) : '—'}</strong>
       <span class="kpi__sub">${delta ? `${sinalPontos(delta.pontos)}${delta.relativa !== null ? ` · ${sinalNumero(delta.relativa, (valor) => `${numero(valor)}%`)}` : ''}` : 'sem projeção de 2025'}</span>
     </div>
     <div class="kpi kpi--credit">
-      <span class="kpi__label">Crédito em ${pleno.ano}</span>
+      <span class="kpi__label">Crédito total em ${pleno.ano}</span>
       <strong class="kpi__valor">${brl(pleno.credito)}</strong>
       <span class="kpi__sub">${creditoSub}</span>
     </div>
@@ -1002,7 +1049,7 @@ function grafico(dados, metrica) {
   }
 
   const tooltip = (linha) =>
-    `${linha.ano} · carga ${brl(linha.carga)} (${pct(linha.percentualCarga)}) · CBS/IBS ${brl(linha.cbsIbs)} · crédito ${brl(linha.credito)} · líquido ${brl(linha.custoLiquido)}`
+    `${linha.ano} · carga ${brl(linha.carga)} (${pct(linha.percentualCarga)}) · CBS/IBS ${brl(linha.cbsIbs)} · crédito total ${brl(linha.credito)} (CBS/IBS ${brl(linha.creditoCbsIbs ?? 0)}${linha.creditoAntigos?.total > 0 ? ` + ICMS/PIS/COFINS ${brl(linha.creditoAntigos.total)}` : ''}) · líquido ${brl(linha.custoLiquido)}`
 
   let serie = ''
   if (metrica.id === 'carga') {
@@ -1115,13 +1162,17 @@ function tabelaTimeline(dados, metrica) {
           ? `${brl(linha.cbsIbs)}<small class="cell-tag">${pct(linha.percentualCompensado)} compensável</small>`
           : `${brl(linha.cbsIbs)}<small>${pct((linha.cbsIbs / linha.valorFrete) * 100)}</small>`
 
+      const credito = indisponivel
+        ? dash
+        : `${brl(linha.credito)}<small>${pct(linha.percentualCredito)}${linha.creditoAntigos?.total > 0 ? ` · ICMS/PIS/COFINS ${brl(linha.creditoAntigos.total)}` : ''}</small>`
+
       return `<tr class="${linha.ano === 2025 ? 'is-reference' : ''} ${linha.ano === entrada.ano ? 'is-current' : ''} ${indisponivel ? 'is-unavailable' : ''}"${linha.observacao ? ` title="${esc(linha.observacao)}"` : ''}>
       <th scope="row" class="cell-ano">${linha.ano}${linha.ano === 2025 ? '<small>antes</small>' : ''}</th>
       <td class="col-fase">${esc(linha.rotulo)}</td>
       <td class="num col-antigos">${antigos}</td>
       <td class="num col-cbs">${cbs}</td>
       <td class="num col-carga">${indisponivel ? dash : `${brl(linha.carga)}<small>${pct(linha.percentualCarga)}</small>`}</td>
-      <td class="num col-credito">${indisponivel ? dash : `${brl(linha.credito)}<small>${pct(linha.percentualCredito)}</small>`}</td>
+      <td class="num col-credito">${credito}</td>
       <td class="num cell-net">${indisponivel ? dash : brl(linha.custoLiquido)}</td>
       <td class="num col-delta">${deltaTexto}</td>
     </tr>`
@@ -1131,7 +1182,7 @@ function tabelaTimeline(dados, metrica) {
   return `<div class="table-wrap">
     <table class="table table--timeline">
       <caption class="sr-only">
-        Carga tributária, crédito de CBS/IBS e custo líquido do frete por ano, de ${anos[0].ano} a
+        Carga tributária, crédito total e custo líquido do frete por ano, de ${anos[0].ano} a
         ${anos[anos.length - 1].ano}.
       </caption>
       <thead>
@@ -1141,7 +1192,7 @@ function tabelaTimeline(dados, metrica) {
           <th scope="col" class="num col-antigos">Tributos antigos</th>
           <th scope="col" class="num col-cbs">CBS/IBS</th>
           <th scope="col" class="num col-carga">Carga</th>
-          <th scope="col" class="num col-credito">Crédito</th>
+          <th scope="col" class="num col-credito">Crédito total</th>
           <th scope="col" class="num">Custo líquido</th>
           <th scope="col" class="num col-delta">Δ ${metrica.curto} vs ${referencia.ano}</th>
         </tr>
@@ -1200,6 +1251,397 @@ function marcarTimelineDesatualizado(desatualizado) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Hoje → amanhã: o horizonte do pagador                               */
+/* ------------------------------------------------------------------ */
+
+const CENARIOS = {
+  congelado: {
+    rotulo: 'Preço de hoje',
+    nota: 'O preço do contrato não muda: o que varia é a alíquota e o crédito que você aproveita.',
+  },
+  repasse: {
+    rotulo: 'Com repasse',
+    nota: 'O transportador preserva a receita líquida e repassa a carga ao preço: preço_novo = preço_hoje × (1 − carga_hoje) ÷ (1 − carga_ano).',
+  },
+}
+
+function cenarioDaLinha(linha, cenario) {
+  if (!linha?.disponivel) return null
+  if (cenario === 'repasse') {
+    return {
+      bruto: linha.repasse.bruto,
+      credito: linha.repasse.credito,
+      liquido: linha.repasse.liquido,
+      variacao: linha.variacao?.liquidoRepasse ?? 0,
+    }
+  }
+  return {
+    bruto: linha.bruto,
+    credito: linha.credito.total,
+    liquido: linha.liquido,
+    variacao: linha.variacao?.liquido ?? 0,
+  }
+}
+
+function composicaoCredito(linha, cenario) {
+  const base = cenario === 'repasse' ? linha.repasse.bruto : linha.bruto
+  const partes = []
+  if (linha.credito.percentualIcms > 0) partes.push(`ICMS ${brl((base * linha.credito.percentualIcms) / 100)}`)
+  if (linha.credito.percentualPisCofins > 0) {
+    partes.push(`PIS/COFINS ${brl((base * linha.credito.percentualPisCofins) / 100)}`)
+  }
+  if (linha.credito.percentualCbsIbs > 0) {
+    partes.push(`CBS/IBS ${brl((base * linha.credito.percentualCbsIbs) / 100)}`)
+  }
+  return partes
+}
+
+function textoVariacao(valor) {
+  const n = Number(valor) || 0
+  if (Math.abs(n) < 0.005) return 'igual a hoje'
+  return `${sinalNumero(n)} vs hoje`
+}
+
+async function carregarHorizonte(entrada = lerEntrada()) {
+  const painel = $('#hojeAmanha')
+  if (!painel) return
+  const seq = ++estado.horizonteSeq
+  painel.setAttribute('aria-busy', 'true')
+  painel.classList.add('is-loading')
+
+  try {
+    const dados = await post('/api/pagador', entrada)
+    if (seq !== estado.horizonteSeq) return
+    estado.horizonte = dados
+    renderizarHorizonte(dados)
+  } catch (erro) {
+    if (seq !== estado.horizonteSeq) return
+    estado.horizonte = null
+    renderizarHorizonteErro(erro)
+  } finally {
+    if (seq === estado.horizonteSeq) {
+      painel.setAttribute('aria-busy', 'false')
+      painel.classList.remove('is-loading')
+    }
+  }
+}
+
+function renderizarHorizonteErro(erro) {
+  const conteudo = $('#horizonteConteudo')
+  if (!conteudo) return
+  conteudo.innerHTML = `
+    <div class="comparison-error">
+      <strong>Não foi possível montar a visão de hoje até 2033.</strong>
+      <p>${esc(erro.message)}</p>
+      <button class="btn btn--ghost" type="button" data-retry-horizonte>Tentar de novo</button>
+    </div>`
+}
+
+function renderizarHorizonte(dados) {
+  const conteudo = $('#horizonteConteudo')
+  if (!conteudo) return
+  const { entrada, hoje, resumo, deveria } = dados
+  if (!hoje) {
+    renderizarHorizonteErro({ message: 'O ano de hoje não está na projeção do motor.' })
+    return
+  }
+
+  const cenario = estado.horizonteCenario
+  const pleno = resumo?.pleno ?? null
+  const proximo = resumo?.proximo ?? null
+  const anual = entrada.anual ?? 12
+  const cenarioHoje = cenarioDaLinha(hoje, cenario)
+  const cenarioPleno = pleno ? cenarioDaLinha(pleno, cenario) : null
+  const cenarioProximo = proximo ? cenarioDaLinha(proximo, cenario) : null
+
+  const fonte = [
+    'projeção oficial do frete',
+    dados.fonte?.versaoBaseDados ? `base ${dados.fonte.versaoBaseDados}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
+  const kpi = (rotulo, linha, cenarioLinha, sub) => `
+    <div class="kpi">
+      <span class="kpi__label">${esc(rotulo)}</span>
+      <span class="kpi__valor">${brl(cenarioLinha.liquido)}</span>
+      <span class="kpi__sub">${sub}</span>
+    </div>`
+
+  const deltaClasse = (valor) => (valor > 0.005 ? 'is-alta' : valor < -0.005 ? 'is-baixa' : '')
+
+  const fraseHoje = composicaoCredito(hoje, cenario)
+  const fraseCredito = fraseHoje.length ? `de crédito (${fraseHoje.join(' + ')})` : 'sem crédito'
+  const fraseRecupera =
+    hoje.credito.total > 0
+      ? `e recupera <b>${brl(hoje.credito.total)}</b> ${fraseCredito}`
+      : 'e não recupera crédito'
+
+  const linhasTabela = dados.anos
+    .filter((linha) => linha.disponivel)
+    .map((linha) => {
+      const c = cenarioDaLinha(linha, cenario)
+      const composicao = composicaoCredito(linha, cenario)
+      const marcos = []
+      if (linha.ano === hoje.ano) marcos.push('hoje')
+      if (linha.ano === 2027) marcos.push('CBS cheia')
+      if (linha.ano === resumo?.primeiroAumentoCarga) marcos.push('1º aumento')
+      if (linha.ano === 2033) marcos.push('regime pleno')
+      const classes = [
+        linha.ano === hoje.ano ? 'is-current' : '',
+        linha.ano === 2027 || linha.ano === 2029 || linha.ano === 2033 ? 'is-marco' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')
+      const variacao =
+        linha.ano === hoje.ano
+          ? '<span class="cell-dash">—</span>'
+          : Math.abs(c.variacao) < 0.005
+            ? '<span class="cell-dash">= hoje</span>'
+            : `<span class="${deltaClasse(c.variacao)}">${sinalNumero(c.variacao)}</span>`
+      return `
+        <tr class="${classes}">
+          <td class="cell-ano" data-rotulo="Ano">${linha.ano}<small>${esc(marcos.join(' · '))}</small></td>
+          <td class="num" data-rotulo="Carga do serviço">${pct(linha.percentualCarga)}</td>
+          <td class="num" data-rotulo="Bruto">${brl(c.bruto)}</td>
+          <td class="num cell-credito" data-rotulo="Crédito">${brl(c.credito)}${composicao.length ? `<small>${esc(composicao.join(' · '))}</small>` : ''}</td>
+          <td class="num cell-net" data-rotulo="Custo líquido">${brl(c.liquido)}</td>
+          <td class="num" data-rotulo="vs hoje (líquido)">${variacao}</td>
+        </tr>`
+    })
+    .join('')
+
+  const kpiProximo = proximo && cenarioProximo
+    ? kpi(
+        `${proximo.ano} · ${proximo.rotulo}`,
+        proximo,
+        cenarioProximo,
+        `crédito de ${pct(proximo.credito.percentual)} · ${textoVariacao(cenarioProximo.variacao)}`,
+      )
+    : ''
+
+  const kpiPleno = pleno && cenarioPleno
+    ? kpi(
+        `2033 · regime pleno`,
+        pleno,
+        cenarioPleno,
+        `crédito de ${pct(pleno.credito.percentual)} · ${textoVariacao(cenarioPleno.variacao)}`,
+      )
+    : ''
+
+  const deveriaHTML = (() => {
+    const d = deveria?.hoje
+    if (!d) return ''
+    const teto = d.precoEquivalente
+    const gap = d.economia
+    const pior = gap > 0.005
+    const ehRegular = entrada.perfil.id === 'REGIME_REGULAR'
+    const grade = ehRegular
+      ? `
+        <div>
+          <span>Custo líquido hoje</span>
+          <strong>${brl(hoje.liquido)}</strong>
+          <small>crédito de ${pct(hoje.credito.percentual)}</small>
+        </div>
+        <div>
+          <span>Em 2033 · preço de hoje</span>
+          <strong>${brl(pleno.liquido)}</strong>
+          <small>crédito de ${pct(pleno.credito.percentual)}</small>
+        </div>
+        <div class="is-ok">
+          <span>Em 2033 · com repasse</span>
+          <strong>${brl(pleno.repasse.liquido)}</strong>
+          <small>desembolso de ${brl(pleno.repasse.bruto)}</small>
+        </div>`
+      : `
+        <div>
+          <span>Seu custo líquido</span>
+          <strong>${brl(d.liquido)}</strong>
+          <small>crédito de ${pct(d.percentualCredito)}</small>
+        </div>
+        <div>
+          <span>Regime regular, mesmo valor</span>
+          <strong>${brl(d.benchmark.liquido)}</strong>
+          <small>crédito de ${pct(d.benchmark.percentualCredito)}</small>
+        </div>
+        <div class="${pior ? 'is-alerta' : 'is-ok'}">
+          <span>Preço-teto no seu regime</span>
+          <strong>${teto === null ? '—' : brl(teto)}</strong>
+          <small>${d.percentualPreco === null ? 'sem crédito' : `${pct(d.percentualPreco)} do valor atual`}</small>
+        </div>`
+    return `
+      <div class="deveria ${pior ? 'deveria--alerta' : 'deveria--ok'}">
+        <div class="deveria__head">
+          <div>
+            <p class="eyebrow-sm">Quanto você deveria pagar</p>
+            <p class="deveria__veredito">${esc(d.veredito)}</p>
+          </div>
+          <span class="chip chip--soft">${d.ano}</span>
+        </div>
+        <div class="deveria__grid">${grade}</div>
+        ${
+          !ehRegular && deveria.pleno && deveria.pleno.precoEquivalente !== null
+            ? `<p class="deveria__nota">Em 2033 o preço-teto cai para <b>${brl(deveria.pleno.precoEquivalente)}</b> (${pct(deveria.pleno.percentualPreco)} do valor atual): o crédito do seu regime não acompanha a alta da carga.</p>`
+            : ''
+        }
+        <details class="deveria__regra">
+          <summary>Como o teto é calculado</summary>
+          <p>${esc(deveria.formula)}</p>
+          <p>${esc(deveria.regra)}</p>
+        </details>
+      </div>`
+  })()
+
+  const ajustesHTML = (dados.ajustes ?? [])
+    .map(
+      (ajuste) => `
+      <li class="ajuste">
+        <span class="ajuste__tag ajuste__tag--${esc(ajuste.tipo)}">${esc(rotuloAjuste(ajuste.tipo))}</span>
+        <div class="ajuste__corpo">
+          <strong>${esc(ajuste.titulo)}</strong>
+          <p>${esc(ajuste.texto)}</p>
+          ${
+            ajuste.impacto
+              ? `<span class="ajuste__impacto">${brl(ajuste.impacto.valor)} · ${esc(ajuste.impacto.rotulo)} · ${brl(ajuste.impacto.anual)} por ano</span>`
+              : ''
+          }
+        </div>
+      </li>`,
+    )
+    .join('')
+
+  const notasHTML = (dados.notas ?? [])
+    .map(
+      (nota) => `
+      <li>
+        <strong>${nota.ano} · ${esc(nota.titulo)}</strong>
+        <p>${esc(nota.resumo ?? '')}</p>
+        ${nota.fundamento ? `<span class="fonte-nota">${esc(nota.fundamento)}</span>` : ''}
+      </li>`,
+    )
+    .join('')
+
+  conteudo.innerHTML = `
+    <div class="horizonte__chips">
+      <span class="chip">${esc(entrada.perfil.curto)}</span>
+      <span class="chip">${esc(entrada.regimePagadora.curto)}</span>
+      <span class="chip">${esc(entrada.tipoOperacao)}</span>
+      <span class="chip chip--year">${esc(entrada.rota)}</span>
+      ${entrada.perfil.estimativa ? '<span class="chip">crédito estimado</span>' : ''}
+      <span class="chip chip--soft">${esc(fonte)}</span>
+    </div>
+
+    <p class="horizonte__frase">
+      Hoje você paga <b>${brl(hoje.bruto)}</b> ${fraseRecupera}:
+      o custo líquido é <b>${brl(hoje.liquido)}</b> (${pct(hoje.percentualLiquido)} do preço).
+      Em 2033, com o preço de hoje, ${pleno ? `o crédito chega a ${pct(pleno.credito.percentual)} e o custo líquido a <b>${brl(pleno.liquido)}</b>` : 'a série não chega ao regime pleno'}.
+    </p>
+
+    <div class="horizonte__kpis">
+      ${kpi(`Hoje · ${hoje.ano}`, hoje, cenarioHoje, `bruto ${brl(cenarioHoje.bruto)} · crédito ${brl(cenarioHoje.credito)}`)}
+      ${kpiProximo}
+      ${kpiPleno}
+    </div>
+
+    ${deveriaHTML}
+
+    <div class="horizonte__tabela-head">
+      <h3>Ano a ano · ${esc(CENARIOS[cenario].rotulo)}</h3>
+      <span class="horizonte__fonte">${esc(CENARIOS[cenario].nota)}</span>
+    </div>
+    <div class="table-wrap">
+      <table class="table table--horizonte" aria-label="Desembolso, crédito e custo líquido do frete por ano">
+        <thead>
+          <tr>
+            <th>Ano</th>
+            <th class="num">Carga do serviço</th>
+            <th class="num">Bruto</th>
+            <th class="num">Crédito</th>
+            <th class="num">Custo líquido</th>
+            <th class="num">vs hoje (líquido)</th>
+          </tr>
+        </thead>
+        <tbody>${linhasTabela}</tbody>
+      </table>
+    </div>
+    <p class="table-note">
+      Carga do serviço = tributos que incidem sobre o frete no regime regular (ICMS/PIS/COFINS + CBS/IBS), a mesma
+      referência do repasse. No Simples/DAS parte dessa carga fica dentro do DAS e não aparece destacada.
+      Crédito = ICMS + PIS/COFINS (até 2026) + CBS/IBS (2027 em diante), conforme o regime do transportador e o da
+      pagadora. Anual = ${anual} × o valor do período.
+    </p>
+
+    ${
+      ajustesHTML
+        ? `<div class="ajustes">
+            <div class="ajustes__head">
+              <h3>Como se ajustar</h3>
+              <span class="chip chip--soft">${dados.ajustes.length} ${dados.ajustes.length === 1 ? 'ação' : 'ações'}</span>
+            </div>
+            <ul class="ajustes__lista">${ajustesHTML}</ul>
+          </div>`
+        : ''
+    }
+
+    ${
+      notasHTML
+        ? `<details class="horizonte__detalhe">
+            <summary>O que muda em cada ano — leitura do motor</summary>
+            <ul class="notas-ano">${notasHTML}</ul>
+          </details>`
+        : ''
+    }
+
+    <details class="horizonte__detalhe">
+      <summary>Premissas e limites desta leitura</summary>
+      <ul>${(dados.premissas ?? []).map((premissa) => `<li>${esc(premissa)}</li>`).join('')}</ul>
+    </details>
+
+    ${
+      (dados.avisos ?? []).length
+        ? `<div class="callout callout--aviso">${ICONE.alerta}<div>${dados.avisos
+            .map((aviso) => `<p>${esc(aviso)}</p>`)
+            .join('')}</div></div>`
+        : ''
+    }
+
+    <div class="horizonte__rodape">
+      <span>Fonte: ${esc(fonte)}</span>
+      <span>${cenario === 'repasse' ? 'Desembolso com repasse integral' : 'Desembolso com o preço de hoje'} · anual = ${anual} períodos</span>
+    </div>`
+
+  marcarHorizonteDesatualizado(false)
+  atualizarCenarioHorizonte()
+}
+
+function rotuloAjuste(tipo) {
+  return (
+    {
+      renegociar: 'Renegociar',
+      caixa: 'Caixa',
+      contrato: 'Contrato',
+      regime: 'Regime',
+      calendario: 'Calendário',
+      b2c: 'Sem crédito',
+    }[tipo] ?? 'Ajuste'
+  )
+}
+
+function atualizarCenarioHorizonte() {
+  const alvo = $('#horizonteCenario')
+  if (!alvo) return
+  alvo.querySelectorAll('[data-cenario]').forEach((botao) => {
+    botao.setAttribute('aria-checked', String(botao.dataset.cenario === estado.horizonteCenario))
+  })
+}
+
+function marcarHorizonteDesatualizado(desatualizado) {
+  const nota = $('#horizonteStale')
+  if (!nota) return
+  nota.hidden = !desatualizado
+}
+
+/* ------------------------------------------------------------------ */
 /* Eventos                                                             */
 /* ------------------------------------------------------------------ */
 
@@ -1255,6 +1697,19 @@ function ligarEventos() {
   $('#ano').addEventListener('change', () => {
     atualizarAno()
     marcarDesatualizado(true)
+  })
+
+  $('#regimePagadora').addEventListener('change', (evento) => {
+    estado.regimePagadora = evento.target.value
+    marcarDesatualizado(true)
+  })
+
+  $('#horizonteCenario').addEventListener('click', (evento) => {
+    const botao = evento.target.closest('[data-cenario]')
+    if (!botao || botao.dataset.cenario === estado.horizonteCenario) return
+    estado.horizonteCenario = botao.dataset.cenario
+    atualizarCenarioHorizonte()
+    if (estado.horizonte) renderizarHorizonte(estado.horizonte)
   })
 
   $('#ufOrigem').addEventListener('change', () => marcarDesatualizado(true))
@@ -1361,6 +1816,12 @@ function ligarEventos() {
       return
     }
 
+    const retryHorizonte = evento.target.closest('[data-retry-horizonte]')
+    if (retryHorizonte) {
+      carregarHorizonte()
+      return
+    }
+
     const copiarSim = evento.target.closest('[data-copiar-sim]')
     if (copiarSim && estado.ultimaSimulacao) {
       copiarTexto(JSON.stringify(estado.ultimaSimulacao.motor.resposta, null, 2), copiarSim)
@@ -1391,6 +1852,8 @@ function restaurar() {
   estado.regime = 'SIMPLES'
   estado.perfil = 'SIMPLES_DAS'
   estado.operacao = 'B2B'
+  estado.regimePagadora = 'NAO_CUMULATIVO'
+  estado.horizonteCenario = 'congelado'
   estado.cargas = [
     { nome: 'Rota Sul Logística', preco: '1.000,00', perfil: 'SIMPLES_DAS', pCbs: '', pIbs: '' },
     { nome: 'Via Brasil Transportes', preco: '1.000,00', perfil: 'SIMPLES_HIBRIDO', pCbs: '', pIbs: '' },
@@ -1406,11 +1869,14 @@ function restaurar() {
   renderizarRegimes()
   renderizarPerfis()
   renderizarOperacao()
+  renderizarRegimePagadora()
   renderizarCargas()
   atualizarPerfil()
   atualizarAno()
+  atualizarCenarioHorizonte()
   marcarDesatualizado(false)
   marcarTimelineDesatualizado(false)
+  marcarHorizonteDesatualizado(false)
 
   simular()
   comparar()
@@ -1427,6 +1893,7 @@ async function iniciar() {
     renderizarRegimes()
     renderizarPerfis()
     renderizarOperacao()
+    renderizarRegimePagadora()
     renderizarAtividades()
     renderizarUfs()
     renderizarAnos()

@@ -55,11 +55,12 @@
     <main id="conteudo" class="wrap">
       <section class="page-head">
         <div class="page-head__copy">
-          <p class="eyebrow"><span class="eyebrow__rule" aria-hidden="true"></span>Simulador do pagador · CBS/IBS</p>
-          <h1>O frete mais barato<br />nem sempre é <span class="mark">o mais barato</span>.</h1>
+          <p class="eyebrow"><span class="eyebrow__rule" aria-hidden="true"></span>Simulador do pagador de frete · 2026–2033</p>
+          <h1>Quanto você paga de frete hoje<br />— e quanto vai pagar <span class="mark">até 2033</span>.</h1>
           <p class="lede">
-            Desconte o crédito de CBS/IBS que você realmente aproveita. O que sobra é o custo líquido — o número
-            que compara transportadoras de regimes tributários diferentes.
+            Informe o frete bruto que você paga. A ferramenta mostra o desembolso e o custo líquido depois do
+            crédito de ICMS, PIS/COFINS e CBS/IBS em cada ano, quanto você deveria pagar em cada regime e o que
+            fazer para se ajustar.
           </p>
         </div>
         <dl class="facts">
@@ -69,9 +70,9 @@
             <small id="headDestaqueSub">CBS 8,50 + IBS 18,50</small>
           </div>
           <div class="fact">
-            <dt>Regra do crédito</dt>
+            <dt>Crédito do pagador</dt>
             <dd>Destaque → crédito</dd>
-            <small>limitado ao CBS/IBS do documento</small>
+            <small id="headCreditoSub">ICMS + PIS/COFINS + CBS/IBS</small>
           </div>
         </dl>
       </section>
@@ -190,6 +191,12 @@
             <p class="hint" id="operacaoHint"></p>
           </div>
 
+          <div class="field" id="pagadoraWrap">
+            <label for="regimePagadora">Sua empresa — regime de crédito</label>
+            <select id="regimePagadora" name="regimePagadora"></select>
+            <p class="hint" id="regimePagadoraHint"></p>
+          </div>
+
           <div class="field-grid">
             <div class="field">
               <label for="ufOrigem">UF origem</label>
@@ -229,6 +236,35 @@
           </div>
         </section>
       </div>
+
+      <section class="card horizonte" id="hojeAmanha" aria-labelledby="horizonteTitulo" aria-busy="true">
+        <div class="card__head horizonte__head">
+          <div>
+            <p class="eyebrow-sm">Hoje → amanhã · crédito total do pagador</p>
+            <h2 id="horizonteTitulo">Seu frete ao longo da reforma</h2>
+            <p class="card__sub">O que você desembolsa, quanto recupera de crédito e quanto deveria pagar — ano a ano.</p>
+          </div>
+          <div class="segmented horizonte__cenario" id="horizonteCenario" role="radiogroup" aria-label="Cenário do preço do frete">
+            <button type="button" role="radio" data-cenario="congelado" aria-checked="true" title="O preço do contrato não muda">
+              Preço de hoje
+            </button>
+            <button type="button" role="radio" data-cenario="repasse" aria-checked="false" title="O transportador repassa a carga tributária ao preço">
+              Com repasse
+            </button>
+          </div>
+        </div>
+        <p class="stale-note" id="horizonteStale" hidden>
+          Os dados do frete mudaram — clique em Calcular custo líquido para atualizar a projeção.
+        </p>
+        <div id="horizonteConteudo">
+          <div class="skeleton-wrap" aria-hidden="true">
+            <div class="skeleton skeleton--line w-30"></div>
+            <div class="skeleton skeleton--kpis"></div>
+            <div class="skeleton skeleton--line w-60"></div>
+            <div class="skeleton skeleton--block"></div>
+          </div>
+        </div>
+      </section>
 
       <section class="card timeline" id="linhaDoTempo" aria-labelledby="linhaTempoTitulo" aria-busy="true">
         <div class="card__head timeline__head">
@@ -271,7 +307,7 @@
           <div>
             <h2 id="comparadorTitulo">Comparador de transportadoras</h2>
             <p class="card__sub">
-              Mesmo trecho, preços e regimes diferentes. A ordem é pelo custo líquido — não pelo nominal.
+              Mesmo trecho, preços e regimes diferentes. A ordem é pelo custo líquido total — não pelo nominal.
             </p>
           </div>
           <span class="chip chip--soft">2 a 3 transportadoras</span>
@@ -288,13 +324,13 @@
 
         <div class="comparator__actions">
           <button class="btn btn--primary" type="button" id="comparar">
-            <span>Comparar custo líquido</span>
+            <span>Comparar custo total</span>
             <svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
               <path d="M4 18V9M10 18V5M16 18v-6M22 18H2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
             </svg>
           </button>
           <button class="btn btn--ghost" type="button" id="cenarioAceite">Cenário do aceite · PGDAS 2027</button>
-          <span class="comparator__hint">O vencedor é o menor custo líquido pós-crédito.</span>
+          <span class="comparator__hint">O vencedor é o menor custo líquido depois de todo o crédito.</span>
         </div>
 
         <p class="stale-note" id="staleNote" hidden>Dados do frete ou do comparador foram alterados — clique em Comparar para atualizar o ranking.</p>

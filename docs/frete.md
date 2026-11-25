@@ -485,11 +485,17 @@ Simples a partir da migração `V0071`.
 
 | Perfil | Motor | Crédito |
 |---|---|---|
-| Regime regular | 8080 | 100% do destaque |
-| Simples híbrido (CBS/IBS no regime regular) | 8080 | 100% do destaque |
-| Simples/DAS com PGDAS | 8082 | 100% do destaque do Simples |
+| Regime regular | 8080 | ICMS + PIS/COFINS (até 2026) + CBS/IBS (2027 em diante) |
+| Simples híbrido (CBS/IBS no regime regular) | 8080 | CBS/IBS destacado (2027 em diante); ICMS/PIS/COFINS ficam no DAS |
+| Simples/DAS com PGDAS | 8082 | destaque do Simples (CBS/IBS do DAS) |
 | Simples/DAS sem PGDAS | 8080 (teto) | 0,92% a 4% do frete — estimativa |
-| Autônomo/MEI | 8080 (teto) | 1,8% a 4% do frete — estimativa |
+| Autônomo/MEI | 8080 (teto) | 1,8% a 4% do frete — estimativa (crédito presumido do art. 169 da LC 214/2025, a definir em ato conjunto) |
+
+O crédito do pagador é o **conjunto dos tributos destacados no CT-e e ainda vigentes no ano**: até 2026, ICMS
++ PIS/COFINS no regime regular; de 2027 em diante, ICMS + CBS/IBS (e só CBS/IBS em 2033). Em 2026 não há
+crédito de CBS/IBS para o adquirente: o destaque de 1,00% é compensado pelo próprio transportador
+(LC 214/2025, art. 348, I; no Simples, art. 348, III, "c"). Por isso o custo líquido de 2025 e 2026 é
+**83,75%** do preço, e não o preço cheio.
 
 O Simples híbrido **não** é o DAS: o optante escolheu recolher CBS/IBS no regime regular, então o CT-e
 destaca o tributo cheio e o crédito é integral. O DAS integral usa o motor do Simples e as alíquotas do
@@ -536,7 +542,8 @@ como teto e, no perfil com PGDAS, credita 100% dele.
 ```
 
 Aceite: frete de R$ 1.000,00, SP → BA, 2027, CBS 2,3591% + IBS 0,0260% no PGDAS → crédito de R$ 23,85 e
-custo líquido de R$ 976,15; o híbrido no regime regular (8,50% em 2027) fica em R$ 915,00.
+custo líquido de R$ 976,15; o híbrido (só CBS/IBS destacado) fica em R$ 915,00; o regime regular, com
+ICMS + CBS/IBS, fica em R$ 845,00.
 
 ### Modalidade Simples Nacional na interface
 
@@ -552,7 +559,7 @@ estimativa.
 ### Antes e depois da reforma, ano a ano
 
 Abaixo do resultado, a seção **Antes e depois da reforma** mostra o mesmo frete nominal de 2025 a 2033
-com três leituras alternáveis: **custo líquido**, **crédito de CBS/IBS** e **carga tributária**. Cada ano
+com três leituras alternáveis: **custo líquido total**, **crédito total** e **carga tributária**. Cada ano
 traz a composição (tributos antigos + CBS/IBS), o crédito, o custo líquido e a variação contra 2025; o
 gráfico marca o período "antes" (2025), a transição e o regime pleno (2033), e o regime regular aparece
 como benchmark quando a leitura é de outro regime.
@@ -563,22 +570,23 @@ compõe ICMS, PIS/COFINS (não cumulativo) e ISS com o cronograma da LC 214/2025
 nem recria a tabela: se o motor em execução não expuser a projeção, a linha do tempo devolve a série só de
 CBS/IBS, marca 2025 como indisponível e explica o motivo.
 
-O recorte é explícito: a **carga** inclui todos os tributos do documento; **crédito e custo líquido**
-consideram só CBS/IBS, o mesmo recorte do simulador. Em B2C o crédito é zero.
+O recorte é explícito: a **carga** inclui todos os tributos do documento; **crédito e custo líquido** somam
+CBS/IBS + ICMS + PIS/COFINS (quando destacados). Em B2C o crédito é zero.
 
 Para R$ 1.000,00, SP → BA:
 
-| Ano | Carga no regime regular | Crédito CBS/IBS regular | Crédito Simples/DAS (PGDAS 2027) |
-|---|---|---|---|
-| 2025 (antes) | R$ 162,50 (16,25%) | R$ 0,00 | R$ 0,00 |
-| 2026 (teste) | R$ 162,50 (16,25%) | R$ 10,00 (1,00%) | R$ 10,00 (1,00%) |
-| 2027 | R$ 155,00 (15,50%) | R$ 85,00 (8,50%) | R$ 23,85 (2,39%) |
-| 2029 | R$ 166,50 (16,65%) | R$ 103,50 (10,35%) | R$ 23,85 (2,39%) |
-| 2033 | R$ 270,00 (27,00%) | R$ 270,00 (27,00%) | R$ 23,85 (2,39%) |
+| Ano | Carga no regime regular | Crédito total do regime regular | Custo líquido do regime regular | Crédito Simples/DAS (PGDAS 2027) |
+|---|---|---|---|---|
+| 2025 (antes) | R$ 162,50 (16,25%) | R$ 162,50 (16,25%) | R$ 837,50 | R$ 0,00 |
+| 2026 (teste) | R$ 162,50 (16,25%) | R$ 162,50 (16,25%) | R$ 837,50 | R$ 0,00 |
+| 2027 | R$ 155,00 (15,50%) | R$ 155,00 (15,50%) | **R$ 845,00** | R$ 23,85 (2,39%) |
+| 2029 | R$ 166,50 (16,65%) | R$ 166,50 (16,65%) | R$ 833,50 | R$ 23,85 (2,39%) |
+| 2033 | R$ 270,00 (27,00%) | R$ 270,00 (27,00%) | R$ 730,00 | R$ 23,85 (2,39%) |
 
-O primeiro ano com carga acima de 2025 é **2029**; o regime pleno chega a 27,00%. No Simples/DAS o crédito
-transferível é o CBS/IBS do DAS (2,39% no exemplo), não os 27% do regime regular — a linha do tempo mostra
-essa diferença contra o benchmark e um bloco de marcos com o fundamento de cada etapa.
+O primeiro ano com **custo líquido acima de hoje** é **2027** (R$ 837,50 → R$ 845,00): o PIS/COFINS de 9,25%
+sai e a CBS entra em 8,40%, reduzindo o crédito em 0,75 p.p. antes de voltar a subir. O primeiro ano com
+**carga** acima de 2025 é 2029. No Simples/DAS o crédito transferível é o CBS/IBS do DAS (2,39% no exemplo),
+não os 27,00% do regime regular — a linha do tempo mostra essa diferença contra o benchmark.
 
 ![Antes e depois da reforma](../app/docs/web-reforma.png)
 
@@ -587,3 +595,56 @@ O endpoint `POST /api/reforma` recebe a mesma entrada de `/api/simular` e devolv
 `premissas`, `avisos` e a procedência (`fonte`). A interface alterna as leituras sem nova chamada; a
 verificação de runtime (`scripts/verificar-app.mjs`) cobre a linha do tempo, a troca de métrica e a troca
 de regime.
+
+---
+
+## 13. Hoje → amanhã: o horizonte do pagador
+
+`POST /api/pagador` responde à pergunta central de quem paga: **hoje pago X bruto e Y líquido; amanhã,
+quanto pago, quanto eu deveria pagar e como me ajustar?**
+
+A entrada é a mesma de `/api/simular` (`valorFrete`, `perfil`, `regimePagadora`, `tipoOperacao`,
+`ufOrigem`, `ufDestino`, `aliquotaCbs?`, `aliquotaIbs?`). A saída tem cinco blocos:
+
+| Bloco | Conteúdo |
+|---|---|
+| `hoje` | bruto, crédito total decomposto (ICMS, PIS/COFINS, CBS/IBS), custo líquido e carga do ano corrente |
+| `anos[]` | de hoje a 2033: bruto, crédito, líquido com o **preço de hoje**; `repasse` com o preço que preserva a receita líquida do transportador; `benchmark` do regime regular; `equivalente` (preço-teto); e a variação contra hoje |
+| `resumo` | hoje, próximo marco, regime pleno, primeiro ano com carga acima de hoje e as variações |
+| `deveria` | o benchmark do regime regular no mesmo valor e o **preço-teto** do regime atual, com o veredito |
+| `ajustes[]` | ações com número: renegociar até o teto, caixa do repasse, cláusula de reajuste, troca de regime e calendário |
+
+### As contas
+
+- `crédito total = CBS/IBS creditável + ICMS + PIS/COFINS` (cada parcela limitada ao tributo destacado);
+- `custo líquido = bruto − crédito total`;
+- **repasse integral**: `preço_novo = preço_hoje × (1 − carga_hoje) ÷ (1 − carga_ano)`, que preserva a
+  receita líquida do transportador quando os tributos são "por dentro";
+- **preço-teto**: `custo líquido do regime regular ÷ (1 − crédito % do regime atual)` — o valor máximo que o
+  transportador atual pode cobrar para empatar com o regime regular no mesmo frete.
+
+### Exemplo (R$ 10.000,00/mês, SP → BA, Lucro Real, regime regular)
+
+| Ano | Bruto (preço de hoje) | Crédito total | Custo líquido | Com repasse: bruto | Com repasse: líquido |
+|---|---|---|---|---|---|
+| 2026 | R$ 10.000,00 | R$ 1.625,00 (16,25%) | R$ 8.375,00 | R$ 10.000,00 | R$ 8.375,00 |
+| 2027 | R$ 10.000,00 | R$ 1.550,00 (15,50%) | R$ 8.450,00 | R$ 9.911,24 | R$ 8.375,00 |
+| 2029 | R$ 10.000,00 | R$ 1.665,00 (16,65%) | R$ 8.335,00 | R$ 10.047,99 | R$ 8.375,00 |
+| 2033 | R$ 10.000,00 | R$ 2.700,00 (27,00%) | R$ 7.300,00 | R$ 11.472,60 | R$ 8.375,00 |
+
+A leitura que muda a decisão: **com crédito integral, o repasse não altera o custo líquido — altera o
+caixa**. O desembolso sobe 14,73% até 2033, mas o líquido fica em R$ 8.375,00.
+
+Para o mesmo frete contratado de um **Simples/DAS** (PGDAS 2,3591% + 0,0260%), o crédito fica em 2,39% e o
+preço-teto para empatar com o regime regular cai de **R$ 8.459,60 em 2026** para **R$ 7.478,37 em 2033** — é o
+número que a negociação deve usar.
+
+### Interface
+
+A seção **Seu frete ao longo da reforma** (abaixo do resultado) mostra os três KPIs (hoje, próximo marco e
+regime pleno), o bloco **Quanto você deveria pagar** (benchmark, preço-teto e veredito), a tabela ano a ano com
+o cenário **Preço de hoje × Com repasse**, a lista **Como se ajustar** e as notas oficiais de cada etapa.
+
+A verificação de runtime está em `scripts/verificar-horizonte.mjs` (CDP): aplica o cenário do regime regular,
+confere R$ 8.375,00 na coluna de hoje, o repasse de R$ 11.472,60 em 2033 com líquido invariante e a ausência
+de erros de console.

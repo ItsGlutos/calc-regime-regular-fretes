@@ -103,7 +103,7 @@ export const PERFIS = [
     curto: 'Regime regular',
     regime: 'REGULAR',
     variante: 'REGULAR',
-    varianteRotulo: 'Lucro Real/Presumido · crédito integral',
+    varianteRotulo: 'Regime regular · crédito integral',
     varianteHint: 'Destaca CBS/IBS no CT-e e transfere o crédito integral ao tomador.',
     min: null,
     max: null,
@@ -240,6 +240,150 @@ export function formatarNumero(valor, casas = 2) {
   }).format(Number(valor) || 0)
 }
 
+/* ------------------------------------------------------------------ */
+/* Crédito total do pagador (ICMS + PIS/COFINS + CBS/IBS)              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Regime da empresa que PAGA o frete. O que muda é o crédito de PIS/COFINS:
+ * no Lucro Real (não cumulativo) o frete usado na operação gera crédito; no
+ * Lucro Presumido (cumulativo) não há crédito de PIS/COFINS sobre o frete.
+ * O ICMS e o CBS/IBS são creditáveis nos dois regimes, quando destacados.
+ */
+export const REGIMES_PAGADORA = [
+  {
+    id: 'NAO_CUMULATIVO',
+    rotulo: 'Lucro Real — não cumulativo',
+    curto: 'Lucro Real',
+    creditaPisCofins: true,
+    descricao:
+      'Credita o ICMS, o PIS/COFINS (enquanto existirem) e o CBS/IBS destacados no CT-e, na proporção da operação.',
+  },
+  {
+    id: 'CUMULATIVO',
+    rotulo: 'Lucro Presumido — cumulativo',
+    curto: 'Lucro Presumido',
+    creditaPisCofins: false,
+    descricao:
+      'Credita o ICMS e o CBS/IBS destacados; o PIS/COFINS cumulativo não gera crédito sobre o frete.',
+  },
+]
+
+export function regimePagadoraPorId(id) {
+  const normalizado = String(id ?? '')
+    .trim()
+    .toUpperCase()
+  return REGIMES_PAGADORA.find((regime) => regime.id === normalizado) ?? null
+}
+
+/**
+ * Quanto de cada tributo do CT-e vira crédito para o pagador em um ano.
+ *
+ * A regra combina três coisas:
+ * 1. o regime do transportador decide o que é destacado no documento;
+ * 2. o regime da pagadora decide o que ela pode creditar;
+ * 3. o ano decide quais tributos existem (ICMS/PIS/COFINS saem, CBS/IBS entram).
+ *
+ * Não há alíquota calculada aqui: os percentuais vêm da projeção oficial do
+ * motor (`valor do tributo ÷ valor do frete`).
+ *
+ * | Transportador | ICMS | PIS/COFINS | CBS/IBS |
+ * | regime regular | creditável | creditável se a pagadora é não cumulativa | creditável de 2027 |
+ * | Simples híbrido | no DAS, não destacado | no DAS, não destacado | creditável de 2027 |
+ * | Simples/DAS | no DAS, não destacado | no DAS, não destacado | transferível na medida estimada |
+ * | autônomo/MEI | não destacado | não destacado | faixa estimada |
+ *
+ * Em 2026 o CBS/IBS de 0,90% + 0,10% é compensado pelo transportador e não é
+ * somado ao crédito do pagador: a carga efetiva do ano é a do regime anterior.
+ * No Simples o CBS/IBS está dentro do DAS e o crédito é o do DAS, inclusive em
+ * 2026 (por isso o percentual próprio, `taxaSimples`).
+ */
+export function creditosDoPagador({ perfil, regimePagadora, tipoOperacao = 'B2B', ano, percentuais, taxaSimples = 0 }) {
+  const pct = (valor) => {
+    const n = Number(valor)
+    return Number.isFinite(n) && n > 0 ? n : 0
+  }
+  const ehRegular = perfil.id === 'REGIME_REGULAR'
+  const ehHibrido = perfil.id === 'SIMPLES_HIBRIDO'
+  const cbsIbsDestacado = pct(percentuais.cbs) + pct(percentuais.ibs)
+  const temCbsIbs = Number(ano) >= 2027
+
+  let icms = 0
+  let pisCofins = 0
+  let cbsIbs = 0
+  const notas = []
+
+  if (ehRegular) {
+    icms = pct(percentuais.icms)
+    pisCofins = regimePagadora?.creditaPisCofins ? pct(percentuais.pis) + pct(percentuais.cofins) : 0
+    cbsIbs = temCbsIbs ? cbsIbsDestacado : 0
+    if (!regimePagadora?.creditaPisCofins && pct(percentuais.pis) + pct(percentuais.cofins) > 0) {
+      notas.push('PIS/COFINS cumulativo não gera crédito sobre o frete: só ICMS e CBS/IBS entram.')
+    }
+    if (Number(ano) === 2026) {
+      notas.push('O CBS/IBS de 2026 é fase de teste e compensado pelo transportador: não entra no seu crédito.')
+    }
+  } else if (ehHibrido) {
+    cbsIbs = temCbsIbs ? cbsIbsDestacado : 0
+    notas.push('Simples híbrido: ICMS e PIS/COFINS ficam no DAS e não são destacados para crédito.')
+    if (Number(ano) === 2026) {
+      notas.push('Em 2026 o destaque de 1,00% do híbrido é compensado pelo transportador e não gera crédito.')
+    }
+  } else {
+    cbsIbs = pct(taxaSimples)
+    notas.push(
+      'Simples/DAS e autônomo/MEI não destacam ICMS nem PIS/COFINS: o crédito é só a parcela de CBS/IBS do DAS.',
+    )
+    if (perfil.id === 'AUTONOMO_MEI') {
+      notas.push(
+        'No autônomo/MEI o CBS/IBS é crédito presumido, com percentual definido em ato conjunto (art. 169 da LC 214/2025) — a faixa setorial é estimativa do simulador.',
+      )
+    }
+    if (Number(ano) === 2026) {
+      cbsIbs = 0
+      notas.push(
+        'Em 2026 as alíquotas de 0,90% e 0,10% não se aplicam às operações de optante do Simples (art. 348, III, "c"): não há crédito de CBS/IBS no ano.',
+      )
+    }
+  }
+
+  if (Number(ano) <= 2025) {
+    icms = ehRegular ? pct(percentuais.icms) : 0
+    pisCofins = ehRegular && regimePagadora?.creditaPisCofins ? pct(percentuais.pis) + pct(percentuais.cofins) : 0
+    cbsIbs = 0
+    notas.push(
+      ehRegular
+        ? 'Antes da reforma não havia CBS/IBS: o crédito é de ICMS e PIS/COFINS.'
+        : 'Antes da reforma o optante recolhia ICMS e PIS/COFINS no DAS, sem destaque para crédito.',
+    )
+  }
+
+  const total = icms + pisCofins + cbsIbs
+  if (tipoOperacao === 'B2C') {
+    return {
+      icms: 0,
+      pisCofins: 0,
+      cbsIbs: 0,
+      total: 0,
+      percentual: 0,
+      zeradoPorB2C: true,
+      notas: [
+        'B2C: o pagador é o consumidor final e não aproveita crédito de nenhum tributo — o custo é o preço cheio.',
+      ],
+    }
+  }
+
+  return {
+    icms,
+    pisCofins,
+    cbsIbs,
+    total,
+    percentual: Number(total.toFixed(4)),
+    zeradoPorB2C: false,
+    notas,
+  }
+}
+
 /**
  * Aplica a regra de crédito do regime ao destaque apurado pelo motor.
  *
@@ -268,6 +412,7 @@ export function avaliarCredito({
   destaque,
   tipoOperacao,
   taxaInformada,
+  ano,
   fonteCredito = perfil.estimativa ? 'estimativa' : 'integral',
 }) {
   const bruto = arredondar(valorFrete)
@@ -328,8 +473,22 @@ export function avaliarCredito({
     )
   }
 
+  // 2026 é fase de teste: o CBS/IBS destacado é compensado pelo próprio
+  // transportador (LC 214/2025, art. 348, I) e, nas operações de optante do
+  // Simples, as alíquotas nem se aplicam (art. 348, III, "c"). Não há crédito
+  // de CBS/IBS para o adquirente nesse ano.
+  if (Number(ano) === 2026) {
+    if (percentual > 0) {
+      notas.push(
+        'Em 2026 o CBS/IBS de 1,00% é compensado pelo transportador e não gera crédito ao adquirente (art. 348 da LC 214/2025). O crédito do ano é de ICMS e PIS/COFINS.',
+      )
+    }
+    credito = 0
+    percentual = 0
+  }
+
   const custoLiquido = arredondar(bruto - credito)
-  const creditoPerdido = arredondar(teto - credito)
+  const creditoPerdido = Number(ano) === 2026 ? 0 : arredondar(teto - credito)
 
   return {
     credito,
@@ -343,18 +502,27 @@ export function avaliarCredito({
     fonteCredito,
     creditoIntegral: fonteCredito !== 'estimativa',
     faixa: fonteCredito === 'estimativa' ? { min: perfil.min, max: perfil.max } : { min: tetoPercentual, max: tetoPercentual },
-    alerta: montarAlerta({ percentual, tipoOperacao, perfil, creditoPerdido, bruto }),
+    alerta: montarAlerta({ percentual, tipoOperacao, perfil, creditoPerdido, bruto, ano }),
     notas,
   }
 }
 
-function montarAlerta({ percentual, tipoOperacao, perfil, creditoPerdido, bruto }) {
+function montarAlerta({ percentual, tipoOperacao, perfil, creditoPerdido, bruto, ano }) {
   if (tipoOperacao === 'B2C') {
     return {
       nivel: 'neutro',
       titulo: 'Sem crédito por definição (B2C)',
       texto:
         'Nesta operação o crédito de CBS/IBS não chega ao pagador. Compare preço e serviço; o regime do transportador não muda o custo líquido.',
+    }
+  }
+
+  if (Number(ano) === 2026) {
+    return {
+      nivel: 'neutro',
+      titulo: 'Fase de teste: 1,00% de CBS/IBS',
+      texto:
+        'Em 2026 o CBS/IBS é de 1,00% e compensável pelo transportador com PIS/COFINS e ICMS: o percentual é da fase de teste, não uma comparação entre regimes. O crédito total do pagador neste ano é ICMS + PIS/COFINS — veja em Seu frete ao longo da reforma.',
     }
   }
 

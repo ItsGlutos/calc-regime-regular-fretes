@@ -9,6 +9,20 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ### Adicionado
 
+- **Frete Líquido: hoje → amanhã (o horizonte do pagador)**: nova seção e endpoint `POST /api/pagador`
+  com o desembolso e o custo líquido de hoje até 2033, cenário **preço de hoje × repasse integral** da
+  carga, crédito total decomposto, **benchmark do regime regular**, **preço-teto** do regime atual
+  (`custo líquido do regular ÷ (1 − crédito %)`) e a lista **como se ajustar** com valores por período e
+  por ano. Verificação de runtime em `scripts/verificar-horizonte.mjs`.
+- **Crédito total do pagador**: o crédito passa a somar ICMS e PIS/COFINS (regime anterior, enquanto
+  existirem) ao CBS/IBS, no regime regular. Em 2026, o CBS/IBS de 1,00% não gera crédito ao adquirente
+  (LC 214/2025, art. 348, I; no Simples, art. 348, III, "c"). O resultado, o comparador e a linha do tempo
+  passam a usar o custo líquido total.
+- **Regime de crédito da pagadora**: novo campo (`NAO_CUMULATIVO` padrão ou `CUMULATIVO`) que decide o
+  crédito de PIS/COFINS sobre o frete.
+- **Validação fiscal independente** em `docs/especialista-fiscal/` (validação premissa por premissa,
+  questionamentos do pagador, exemplo funcional executável e avaliação de intuitividade), com o script
+  `scripts/exemplo-pagador.mjs`.
 - **Motor do Simples Nacional** (`simples-nacional/`): subtree do repositório oficial
   `ReceitaFederal/calculadora-rtc-simples-nacional` (1.0.2), executado na porta `8082` contra o mesmo
   SQLite do motor do regime regular. O `run.ps1` agora sobe os dois motores e a aplicação.

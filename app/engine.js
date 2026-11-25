@@ -298,6 +298,47 @@ export async function projetarFrete({ valorFrete, ufOrigem, ufDestino, tipoOpera
 }
 
 /* ------------------------------------------------------------------ */
+/* Percentuais do frete por ano (só as taxas, sem valor)               */
+/* ------------------------------------------------------------------ */
+
+const cacheTaxas = new Map()
+
+/**
+ * Percentuais de ICMS, PIS, COFINS, CBS e IBS de cada ano, para uma rota.
+ *
+ * As taxas da projeção são proporcionais ao valor do frete (não há faixa nem
+ * teto para o transporte de cargas), então uma chamada com valor fixo serve
+ * para qualquer preço. O resultado é cacheado por rota para que a simulação e o
+ * comparador não paguem a projeção a cada clique.
+ */
+export async function taxasDoFretePorAno({ ufOrigem, ufDestino, tipoOperacao = 'INTERESTADUAL' }) {
+  const chave = [ufOrigem, ufDestino, tipoOperacao].join('|')
+  const agora = Date.now()
+  const emCache = cacheTaxas.get(chave)
+  if (emCache && agora - emCache.em < 10 * 60_000) return emCache.dados
+
+  const projecao = await projetarFrete({ valorFrete: 1000, ufOrigem, ufDestino, tipoOperacao })
+  const porAno = new Map(
+    projecao.anos.map((ano) => [
+      ano.ano,
+      {
+        ano: ano.ano,
+        icms: ano.percentualIcms,
+        pis: ano.percentualPis,
+        cofins: ano.percentualCofins,
+        cbs: ano.percentualCbs,
+        ibs: ano.percentualIbs,
+        carga: ano.percentualTotal,
+      },
+    ]),
+  )
+
+  const dados = { porAno, versaoBaseDados: projecao.versaoBaseDados, disponivel: true }
+  cacheTaxas.set(chave, { em: agora, dados })
+  return dados
+}
+
+/* ------------------------------------------------------------------ */
 /* Motor do Simples Nacional                                           */
 /* ------------------------------------------------------------------ */
 

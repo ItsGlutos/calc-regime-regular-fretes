@@ -36,7 +36,11 @@ ws.addEventListener('message', (evento) => {
     erros.push(msg.params?.exceptionDetails?.text ?? 'exceção de runtime')
   }
   if (msg.method === 'Log.entryAdded' && msg.params?.entry?.level === 'error') {
-    erros.push(msg.params.entry.text)
+    const entrada = msg.params.entry
+    // Fontes externas bloqueadas no headless não são erro da aplicação.
+    if (!/fonts\.(googleapis|gstatic)\.com/.test(entrada.url ?? '')) {
+      erros.push(`${entrada.text} ${entrada.url ?? ''}`)
+    }
   }
 })
 
