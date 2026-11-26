@@ -340,15 +340,17 @@ public sealed class SimuladorDemonstracao : ISimuladorFrete
             {
                 var preco = Arredondar(entrada.ValorFrete * t.FatorPreco);
                 var simulacao = Calcular(entrada with { ModalidadeId = t.ModalidadeId }, entrada.Ano);
-                var percentual = preco > 0m ? Arredondar(simulacao.PercentualCredito) : 0m;
-                var credito = Arredondar(percentual / 100m * preco);
+                // O crédito vem do cálculo, arredondado uma única vez. Reaproveitar o
+                // percentual já arredondado (2,39%) reescalava o valor e o comparador
+                // mostrava R$ 23,90 de crédito onde a calculadora mostra R$ 23,85.
+                var credito = Arredondar(simulacao.CreditoTotal * t.FatorPreco);
                 return new TransportadoraAvaliada(
                     t.Nome,
                     Catalogo.Modalidade(t.ModalidadeId).Curto,
                     t.ModalidadeId,
                     preco,
                     credito,
-                    percentual,
+                    simulacao.PercentualCredito,
                     Arredondar(preco - credito));
             })
             .OrderBy(t => t.CustoTotal)

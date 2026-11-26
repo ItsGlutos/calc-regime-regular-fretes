@@ -172,6 +172,23 @@ public sealed class SimuladorTestes
     }
 
     [Fact]
+    public void Comparador_credita_o_mesmo_valor_da_calculadora()
+    {
+        // Regressão: o comparador reescalava o percentual já arredondado (2,39%),
+        // mostrando R$ 23,90 de crédito e R$ 976,10 de custo para o mesmo frete
+        // que a calculadora resolve com R$ 23,85 e R$ 976,15.
+        var avaliada = _simulador.Comparar(
+            Entrada(2027),
+            new[] { new TransportadoraEntrada("Simples", ModalidadeOpcao.SimplesDas, 1.00m) })[0];
+        var calculo = _simulador.Simular(Entrada(2027, ModalidadeOpcao.SimplesDas));
+
+        Assert.Equal(23.85m, avaliada.Credito);
+        Assert.Equal(976.15m, avaliada.CustoTotal);
+        Assert.Equal(calculo.CustoLiquido, avaliada.CustoTotal);
+        Assert.Equal(calculo.PercentualCredito, avaliada.PercentualCredito);
+    }
+
+    [Fact]
     public void Json_bruto_e_serializavel_e_identifica_a_fonte()
     {
         var resultado = _simulador.Simular(Entrada(2027));

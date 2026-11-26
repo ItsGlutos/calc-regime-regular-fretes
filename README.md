@@ -159,7 +159,7 @@ de cálculo ficam em abas secundárias. O projeto está em [desktop/](desktop/RE
 - **dados de demonstração** nesta fase: o cronograma da LC 214/2025 e as regras de
   crédito são reproduzidos localmente; a troca pelos motores oficiais é uma
   interface (`ISimuladorFrete`);
-- **compila, roda e tem testes**: build sem avisos no SDK 8, 31 testes do Core
+- **compila, roda e tem testes**: build sem avisos no SDK 8, 32 testes do Core
   (cronograma, formatação pt-BR e comparador) e `dotnet publish` gerando um
   executável único de ~43 MB, sem exigir .NET na máquina do cliente;
 - build e empacotamento (publish autocontido, MSIX/Inno Setup e roadmap Linux) em

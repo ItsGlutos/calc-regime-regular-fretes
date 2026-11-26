@@ -185,7 +185,7 @@ desktop/
       Views/                     MainWindow + 4 telas
       Assets/                    ícone
   tests/
-    FreteLiquido.Core.Tests/     31 testes: cronograma, pt-BR, comparador
+    FreteLiquido.Core.Tests/     32 testes: cronograma, pt-BR, comparador
   docs/
     design-soft-ui.md            sistema visual: tokens, escala, componentes
     preview/                     PNGs do app rodando + prévia HTML inicial

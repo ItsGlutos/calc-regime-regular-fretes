@@ -64,6 +64,16 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   linha do tempo). Capturas atualizadas em `app/docs/` (`web-desktop.png`, `web-mobile.png` e
   `web-reforma.png`).
 
+## [desktop-0.1.1] - 2026-11-26
+
+### Corrigido
+
+- **Crédito divergente entre a calculadora e o comparador**: o comparador reescalava o
+  percentual de crédito já arredondado (2,39%) em vez de usar o crédito do cálculo, e o
+  mesmo frete do Simples/DAS aparecia com R$ 23,90 de crédito e R$ 976,10 de custo
+  líquido contra R$ 23,85 e R$ 976,15 na calculadora. O crédito agora vem do cálculo,
+  arredondado uma única vez, e um teste trava a igualdade entre as duas telas.
+
 ## [desktop-0.1.0] - 2026-11-26
 
 Primeira versão instalável do produto. Notas da release em
