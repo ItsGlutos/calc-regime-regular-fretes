@@ -140,6 +140,27 @@ dotnet publish src/FreteLiquido.Desktop -c Release -r linux-x64 --self-contained
   -p:PublishSingleFile=true -o artefatos/linux-x64
 ```
 
+## Release
+
+A Release do GitHub é gerada pelo workflow `release-desktop` a partir do tag
+`desktop-vX.Y.Z`. O prefixo separa a linha de release do desktop da do app web
+(que já está em 1.7.x), então um `v0.1.0` solto pareceria regressão:
+
+```powershell
+git tag -a desktop-v0.1.0 -m "Frete Líquido desktop 0.1.0"
+git push origin desktop-v0.1.0
+```
+
+O workflow roda verificação de XAML, build, testes e `publicar.ps1` antes de
+publicar; se `<Version>` de `Directory.Build.props` não bater com o tag, ele
+falha antes de gerar o ativo. Saem `FreteLiquido-X.Y.Z-win-x64.exe` e
+`SHA256SUMS.txt`, e as notas vêm de `docs/releases/X.Y.Z.md`. Republicar uma
+release existente é rodar o workflow à mão com o tag: os ativos são
+substituídos (`--clobber`), não duplicados — útil depois de corrigir as notas.
+
+O ativo da release é construído no CI, a partir do commit do tag; o
+`publicar.ps1` local serve para gerar e testar o executável antes de marcar.
+
 ## Estrutura
 
 ```
@@ -168,6 +189,7 @@ desktop/
   docs/
     design-soft-ui.md            sistema visual: tokens, escala, componentes
     preview/                     PNGs do app rodando + prévia HTML inicial
+    releases/                    notas de cada versão publicada no GitHub
   installer/
     README.md                    empacotamento MSIX/Inno e roadmap Linux
 ```

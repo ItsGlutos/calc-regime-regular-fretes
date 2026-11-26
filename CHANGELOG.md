@@ -25,30 +25,7 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   mostra a faixa (3/4 R$ 550–900; toco R$ 860–1.350; truck R$ 1.440–2.200; carreta R$ 2.820–4.300; bitrem
   R$ 3.820–5.850), com alerta quando a diária fica fora da faixa ou abaixo de 40% da base, e aviso do
   limite do MEI caminhoneiro (R$ 251.600,00/ano).
-- **App desktop Frete Líquido (.NET 8 + Avalonia 11) — `desktop/`**: primeira interface
-  instalável do produto, com a calculadora do custo líquido como tela principal e comparador,
-  horizonte 2025–2033 e memória de cálculo em abas secundárias. Mesmo XAML/C# para Windows
-  (agora) e Linux (fase 2). O design Soft UI usa a paleta do produto com o azul de crédito
-  trocado por **verde militar**. Roda com dados de demonstração atrás de `ISimuladorFrete`;
-  a troca pelos motores oficiais é a fase seguinte. Ver [desktop/README.md](desktop/README.md).
-- **Build, testes e publicação do desktop**: solução com `Core` (catálogo, cronograma da
-  LC 214/2025, formatação pt-BR), `Desktop` (Avalonia) e 31 testes xUnit que travam os números
-  documentados (R$ 837,50 em 2026, R$ 845,00 em 2027, R$ 730,00 em 2033); `scripts/publicar.ps1`
-  gera executável único autocontido (~43 MB); workflow `.github/workflows/desktop.yml` roda
-  verificação de XAML, build, testes e publish no Windows.
-- **Verificação visual e acessibilidade do desktop**: `scripts/capturar-janela.ps1` abre o app
-  e captura a janela real (DPI-aware), gerando os PNGs de `desktop/docs/preview/`; anel de foco
-  visível em botões e cartões e `AutomationProperties.Name` nos controles sem texto próprio
-  (abas, cartões de regime, segmentos, combos e botões de ícone).
-
 ### Corrigido
-
-- **Percentual negativo na interface**: `Formatador.Variacao` emitia hífen ASCII (`-12,84%`)
-  enquanto `VariacaoMoeda` já usava o menos tipográfico; agora os dois usam `−`.
-- **Sombra azul remanescente na paleta oliva**: `Border.colunaDestaque` e o cartão de opção
-  selecionado ainda usavam `#470B5FA5`; agora usam a sombra oliva.
-- **Gradiente "antes da reforma" divergente**: `Cores.axaml`, `Paleta.cs` e a prévia HTML
-  tinham três valores diferentes para o mesmo gradiente; unificado em `#C9D5E4 → #A9B9CE`.
 
 - **Frete Líquido: hoje → amanhã (o horizonte do pagador)**: nova seção e endpoint `POST /api/pagador`
   com o desembolso e o custo líquido de hoje até 2033, cenário **preço de hoje × repasse integral** da
@@ -86,6 +63,47 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
   troca de métrica e a troca de regime) e `scripts/capturar-app.mjs` (capturas por seletor, com espera da
   linha do tempo). Capturas atualizadas em `app/docs/` (`web-desktop.png`, `web-mobile.png` e
   `web-reforma.png`).
+
+## [desktop-0.1.0] - 2026-11-26
+
+Primeira versão instalável do produto. Notas da release em
+[desktop/docs/releases/0.1.0.md](desktop/docs/releases/0.1.0.md).
+
+O tag leva o prefixo `desktop-` porque o app web já está em 1.7.x: as duas linhas
+de release convivem sem ambiguidade, e o workflow só reage a `desktop-vX.Y.Z`.
+
+### Adicionado
+
+- **App desktop Frete Líquido (.NET 8 + Avalonia 11) — `desktop/`**: primeira interface
+  instalável do produto, com a calculadora do custo líquido como tela principal e comparador,
+  horizonte 2025–2033 e memória de cálculo em abas secundárias. Mesmo XAML/C# para Windows
+  (agora) e Linux (fase 2). O design Soft UI usa a paleta do produto com o azul de crédito
+  trocado por **verde militar**. Roda com dados de demonstração atrás de `ISimuladorFrete`;
+  a troca pelos motores oficiais é a fase seguinte. Ver [desktop/README.md](desktop/README.md).
+- **Build, testes e publicação do desktop**: solução com `Core` (catálogo, cronograma da
+  LC 214/2025, formatação pt-BR), `Desktop` (Avalonia) e 31 testes xUnit que travam os números
+  documentados (R$ 837,50 em 2026, R$ 845,00 em 2027, R$ 730,00 em 2033); `scripts/publicar.ps1`
+  gera executável único autocontido (~43 MB); workflow `.github/workflows/desktop.yml` roda
+  verificação de XAML, build, testes e publish no Windows.
+- **Release do desktop automatizada**: `.github/workflows/release-desktop.yml` publica a Release
+  no GitHub a partir do tag `desktop-vX.Y.Z`, conferindo antes se `<Version>` de
+  `Directory.Build.props` bate com o tag, rodando verificação de XAML, build, testes e
+  `publicar.ps1`. O ativo sai como `FreteLiquido-X.Y.Z-win-x64.exe` com `SHA256SUMS.txt`, e as
+  notas vêm de `desktop/docs/releases/X.Y.Z.md`. `publicar.ps1` passou a aceitar só um `dotnet`
+  que comprove SDK instalado — um `dotnet` de runtime no PATH derrubava o publish.
+- **Verificação visual e acessibilidade do desktop**: `scripts/capturar-janela.ps1` abre o app
+  e captura a janela real (DPI-aware), gerando os PNGs de `desktop/docs/preview/`; anel de foco
+  visível em botões e cartões e `AutomationProperties.Name` nos controles sem texto próprio
+  (abas, cartões de regime, segmentos, combos e botões de ícone).
+
+### Corrigido
+
+- **Percentual negativo na interface**: `Formatador.Variacao` emitia hífen ASCII (`-12,84%`)
+  enquanto `VariacaoMoeda` já usava o menos tipográfico; agora os dois usam `−`.
+- **Sombra azul remanescente na paleta oliva**: `Border.colunaDestaque` e o cartão de opção
+  selecionado ainda usavam `#470B5FA5`; agora usam a sombra oliva.
+- **Gradiente "antes da reforma" divergente**: `Cores.axaml`, `Paleta.cs` e a prévia HTML
+  tinham três valores diferentes para o mesmo gradiente; unificado em `#C9D5E4 → #A9B9CE`.
 
 ## [1.7.2] - 2026-11-18
 

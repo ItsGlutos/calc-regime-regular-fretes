@@ -148,6 +148,9 @@ A consolidação em software instalável começou pela interface: a calculadora 
 custo líquido é a tela principal, e o comparador, o horizonte 2025–2033 e a memória
 de cálculo ficam em abas secundárias. O projeto está em [desktop/](desktop/README.md).
 
+**Baixar**: [Frete Líquido desktop 0.1.0](https://github.com/ItsGlutos/calc-regime-regular-fretes/releases)
+— executável único para Windows x64, autocontido (não exige .NET instalado).
+
 - **.NET 8 + Avalonia 11** (XAML/C#): roda no Windows hoje e no Linux na fase
   seguinte, com o mesmo código e sem Visual Studio;
 - **Soft UI**: superfícies de baixo contraste, sombras difusas, controles

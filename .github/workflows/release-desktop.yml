@@ -1,0 +1,124 @@
+name: release-desktop
+
+# Publica a Release do app desktop no GitHub a partir de um tag `desktop-vX.Y.Z`.
+#
+# O prefixo faz parte do nome: o repositório também versiona o app web (1.7.x),
+# então um `v0.1.0` solto pareceria uma regressão de versão. Assim as duas
+# linhas de release convivem sem ambiguidade.
+#
+# A release é montada a partir do commit do tag: build, testes, executável
+# autocontido e checksum. Se a release já existir (re-execução, ou alguém rodou
+# o workflow à mão), os ativos são substituídos em vez de dar erro.
+
+on:
+  push:
+    tags:
+      - 'desktop-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag existente, no formato desktop-v0.1.0'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: build, testes e release (windows)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: desktop
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # O tag é a fonte da versão; o csproj tem que concordar, senão o Release
+      # sairia com número diferente do binário.
+      - name: Resolver tag e conferir a versão
+        id: versao
+        run: |
+          $tag = if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            '${{ inputs.tag }}'
+          } else {
+            '${{ github.ref_name }}'
+          }
+          if ($tag -notmatch '^desktop-v(\d+\.\d+\.\d+)$') {
+            throw "Tag '$tag' fora do padrão desktop-vX.Y.Z."
+          }
+          $versao = $Matches[1]
+          [xml] $props = Get-Content Directory.Build.props
+          $esperada = $props.Project.PropertyGroup.Version
+          if ($esperada -ne $versao) {
+            throw "O tag pede versão $versao, mas Directory.Build.props declara $esperada."
+          }
+          "versao=$versao" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          Write-Output "Release $tag (versão $versao)"
+
+      - name: Verificar XAML, recursos e bindings
+        run: python scripts/verificar-xaml.py
+
+      - name: Restore
+        run: dotnet restore FreteLiquido.sln
+
+      - name: Build
+        run: dotnet build FreteLiquido.sln -c Release --no-restore
+
+      - name: Testes do Core
+        run: >
+          dotnet test tests/FreteLiquido.Core.Tests/FreteLiquido.Core.Tests.csproj
+          -c Release --no-build
+
+      # Mesmo caminho de publicação usado localmente (scripts/publicar.ps1),
+      # para o ativo da release ser o que foi verificado.
+      - name: Publicar executável (win-x64, self-contained)
+        run: ./scripts/publicar.ps1 -Destino artefatos/release
+
+      - name: Preparar ativo e checksum
+        id: ativo
+        run: |
+          $versao = '${{ steps.versao.outputs.versao }}'
+          $nome = "FreteLiquido-$versao-win-x64.exe"
+          Move-Item artefatos/release/FreteLiquido.exe "artefatos/$nome"
+          $hash = (Get-FileHash "artefatos/$nome" -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content artefatos/SHA256SUMS.txt "$hash  $nome" -Encoding utf8
+          "nome=$nome" >> $env:GITHUB_OUTPUT
+          "sha256=$hash" >> $env:GITHUB_OUTPUT
+          Write-Output "$nome $hash"
+
+      - name: Criar ou atualizar a release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag    = '${{ steps.versao.outputs.tag }}'
+          $versao = '${{ steps.versao.outputs.versao }}'
+          $repo   = '${{ github.repository }}'
+          $ativo  = "artefatos/${{ steps.ativo.outputs.nome }}"
+          $notas  = "docs/releases/$versao.md"
+
+          gh release view $tag --repo $repo *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Output "Release $tag já existe: substituindo os ativos."
+            gh release upload $tag $ativo artefatos/SHA256SUMS.txt --clobber --repo $repo
+          } else {
+            $argumentos = @(
+              $tag, $ativo, 'artefatos/SHA256SUMS.txt',
+              '--repo', $repo,
+              '--verify-tag',
+              '--title', "Frete Líquido desktop $versao"
+            )
+            if (Test-Path $notas) { $argumentos += @('--notes-file', $notas) }
+            else { $argumentos += '--generate-notes' }
+            gh release create @argumentos
+          }
+
+          if ($LASTEXITCODE -ne 0) { throw "gh falhou (exit $LASTEXITCODE)." }
+          Write-Output "Release $tag pronta."
