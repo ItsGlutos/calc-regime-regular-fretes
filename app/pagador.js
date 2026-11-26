@@ -46,12 +46,24 @@ export function construirHorizonte({
   anoHoje,
   serie,
   taxaSimples,
+  dados = {},
 }) {
   const base = arredondar(valorFrete)
   const anoBase = Number(anoHoje)
   const porAno = new Map(serie.map((linha) => [Number(linha.ano), linha]))
   const linhaBase = porAno.get(anoBase)
   const cargaHoje = linhaBase?.carga ?? 0
+  const creditoBase = linhaBase
+    ? creditosDoPagador({
+        perfil,
+        regimePagadora,
+        tipoOperacao,
+        ano: anoBase,
+        percentuais: linhaBase.percentuais,
+        taxaSimples: taxaSimples(anoBase),
+      })
+    : null
+  const creditoHoje = (creditoBase?.percentual ?? 0) / 100
   const anos = ANOS_HORIZONTE.filter((ano) => ano >= anoBase)
   const linhas = []
 
@@ -93,6 +105,70 @@ export function construirHorizonte({
     const precoEquivalente = taxaCredito < 1 ? arredondar(liquidoRegular / (1 - taxaCredito)) : null
     const economia = arredondar(liquido - liquidoRegular)
 
+    // Preço de equilíbrio do pagador: mantém o custo líquido de hoje, não a
+    // receita do transportador. É a leitura "quanto eu preciso pagar para não
+    // sentir a reforma no meu resultado".
+    const precoEquilibrio =
+      taxaCredito < 1 ? arredondar((base * (1 - creditoHoje)) / (1 - taxaCredito)) : null
+    const creditoEquilibrio =
+      precoEquilibrio === null ? null : arredondar((precoEquilibrio * credito.percentual) / 100)
+    const liquidoEquilibrio =
+      precoEquilibrio === null ? null : arredondar(precoEquilibrio - creditoEquilibrio)
+
+    // Piso do transportador: o repasse de receita líquida já calculado. Só é
+    // publicado para regimes em que a carga do documento é a carga do
+    // transportador. No Simples/DAS, se o pagador informar o DAS total e a
+    // parcela de insumos, estimamos o piso pela margem; sem esses dados, não
+    // publicamos um piso de 27%, que seria pior que não publicar.
+    const temPiso = perfil.id === 'REGIME_REGULAR' || perfil.id === 'SIMPLES_HIBRIDO'
+    const dadosSimples =
+      perfil.id === 'SIMPLES_DAS' &&
+      dados.dasTotal !== null &&
+      dados.dasTotal !== undefined &&
+      dados.insumos !== null &&
+      dados.insumos !== undefined &&
+      Number.isFinite(Number(dados.dasTotal)) &&
+      Number.isFinite(Number(dados.insumos)) &&
+      Number(dados.dasTotal) > 0 &&
+      Number(dados.dasTotal) < 100
+    let piso = null
+    if (temPiso) {
+      piso = {
+        preco: brutoRepasse,
+        credito: creditoRepasse,
+        liquido: liquidoRepasse,
+        variacaoPreco: quatro((brutoRepasse / base - 1) * 100),
+        estimado: perfil.id === 'SIMPLES_HIBRIDO',
+        fonte: 'carga',
+      }
+    } else if (dadosSimples) {
+      const fatorInsumos = fator ?? 1
+      const das = Number(dados.dasTotal) / 100
+      const insumos = Number(dados.insumos) / 100
+      // custos = insumos × fator + demais custos; a margem é o resíduo e se
+      // cancela: P = (1 − DAS + insumos × (fator − 1)) ÷ (1 − DAS).
+      const preco = arredondar((base * (1 - das + insumos * (fatorInsumos - 1))) / (1 - das))
+      const creditoPiso = arredondar((preco * credito.percentual) / 100)
+      const liquidoPiso = arredondar(preco - creditoPiso)
+      piso = {
+        preco,
+        credito: creditoPiso,
+        liquido: liquidoPiso,
+        variacaoPreco: quatro((preco / base - 1) * 100),
+        estimado: true,
+        fonte: 'margem',
+      }
+    }
+    const conflito =
+      piso && precoEquilibrio !== null ? arredondar(piso.preco - precoEquilibrio) : null
+    const percentualCargaTransportador =
+      perfil.id === 'SIMPLES_DAS' &&
+      dados.dasTotal !== null &&
+      dados.dasTotal !== undefined &&
+      Number.isFinite(Number(dados.dasTotal))
+        ? Number(dados.dasTotal)
+        : bruta.carga
+
     linhas.push({
       ano,
       rotulo: rotuloAnoReforma(ano),
@@ -100,6 +176,7 @@ export function construirHorizonte({
       bruto: base,
       carga: arredondar((base * bruta.carga) / 100),
       percentualCarga: quatro(bruta.carga),
+      percentualCargaTransportador: quatro(percentualCargaTransportador),
       credito: {
         icms: arredondar((base * credito.icms) / 100),
         pisCofins: arredondar((base * credito.pisCofins) / 100),
@@ -113,6 +190,17 @@ export function construirHorizonte({
       },
       liquido,
       percentualLiquido: quatro((liquido / base) * 100),
+      equilibrio: {
+        preco: precoEquilibrio,
+        credito: creditoEquilibrio,
+        liquido: liquidoEquilibrio,
+        percentualCredito: quatro(credito.percentual),
+        variacaoPreco:
+          precoEquilibrio === null ? null : quatro((precoEquilibrio / base - 1) * 100),
+        variacaoLiquido: liquidoEquilibrio === null ? null : arredondar(liquidoEquilibrio - liquido),
+      },
+      piso,
+      conflito,
       repasse: {
         fator: fator ? Number(fator.toFixed(6)) : null,
         bruto: brutoRepasse,
@@ -151,6 +239,9 @@ export function construirHorizonte({
       credito: arredondar(linha.credito.total - hoje.credito.total),
       carga: arredondar(linha.percentualCarga - hoje.percentualCarga),
     }
+    if (linha.piso) {
+      linha.piso.variacaoLiquido = arredondar(linha.piso.liquido - hoje.liquido)
+    }
   }
 
   const pleno = linhas.find((linha) => linha.ano === 2033 && linha.disponivel) ?? null
@@ -169,6 +260,15 @@ export function construirHorizonte({
     proximo: resumoLinha(proximoMarco),
     pleno: resumoLinha(pleno),
     primeiroAumentoCarga: primeiroAumento?.ano ?? null,
+    equilibrio: pleno
+      ? {
+          preco: pleno.equilibrio.preco,
+          liquido: pleno.equilibrio.liquido,
+          variacaoPreco: pleno.equilibrio.variacaoPreco,
+          piso: pleno.piso,
+          conflito: pleno.conflito,
+        }
+      : null,
     variacoes: pleno && {
       desembolsoRepasse: arredondar(pleno.repasse.bruto - hoje.bruto),
       percentualDesembolsoRepasse: quatro(

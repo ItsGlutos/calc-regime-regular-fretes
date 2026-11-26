@@ -41,6 +41,17 @@ const estado = {
   horizonte: null,
   horizonteCenario: 'congelado',
   horizonteSeq: 0,
+  perfis: {
+    lista: [],
+    atualId: null,
+    detalhe: null,
+    ano: Math.min(2033, Math.max(2026, new Date().getFullYear())),
+    mes: new Date().getMonth() + 1,
+    seq: 0,
+    comparacaoSeq: 0,
+    timer: null,
+    sujo: false,
+  },
 }
 
 /* ------------------------------------------------------------------ */
@@ -357,6 +368,8 @@ function lerEntrada() {
     taxaCredito: perfil?.estimativa && !usaReal ? Number($('#taxaRange').value) : undefined,
     aliquotaCbs: ehSimples ? $('#aliquotaCbs').value.trim() : undefined,
     aliquotaIbs: ehSimples ? $('#aliquotaIbs').value.trim() : undefined,
+    dasTotal: ehSimples ? $('#dasTotal').value.trim() : undefined,
+    insumos: ehSimples ? $('#insumos').value.trim() : undefined,
     atividade: ehSimples ? $('#atividade').value : undefined,
   }
 }
@@ -698,6 +711,44 @@ function renderizarComparacao(dados) {
     )
     .join('')
 
+  const ano = dados.entrada?.ano ?? 2033
+  const anoHoje = dados.entrada?.anoHoje ?? 2026
+  const linhasCaminhos = ranking
+    .map(
+      (item) => `
+      <tr>
+        <td class="cell-name" data-rotulo="Transportadora"><strong>${esc(item.nome)}</strong><small class="cell-meta">${esc(item.perfil.curto)}</small></td>
+        <td class="num" data-rotulo="Líquido hoje">${brl(item.hoje?.liquido ?? item.liquidoEquilibrio)}</td>
+        <td class="num" data-rotulo="Líquido em ${ano} · preço travado">${brl(item.liquidoTravado)}${typeof item.variacaoLiquidoTravado === 'number' ? `<small>${sinalPercentual(item.variacaoLiquidoTravado)}</small>` : ''}</td>
+        <td class="num cell-equilibrio" data-rotulo="Preço de equilíbrio">${item.precoEquilibrio === null || item.precoEquilibrio === undefined ? '—' : brl(item.precoEquilibrio)}${typeof item.variacaoPreco === 'number' ? `<small>${sinalPercentual(item.variacaoPreco)}</small>` : ''}</td>
+        <td class="num" data-rotulo="Seu líquido mantido">${brl(item.liquidoEquilibrio ?? item.hoje?.liquido)}</td>
+      </tr>`,
+    )
+    .join('')
+
+  const tabelaCaminhosComparador = `
+    <div class="comparator__caminhos">
+      <div class="horizonte__tabela-head">
+        <h3>Seu líquido: hoje × ${ano}</h3>
+        <span class="horizonte__fonte">Preço travado = nominal contratado. Preço de equilíbrio = preço que mantém o seu líquido de hoje em ${ano}.</span>
+      </div>
+      <div class="table-wrap">
+        <table class="table table--caminhos" aria-label="Líquido hoje e preço de equilíbrio por transportadora">
+          <thead>
+            <tr>
+              <th>Transportadora</th>
+              <th class="num">Líquido hoje</th>
+              <th class="num">Líquido em ${ano}<small>preço travado</small></th>
+              <th class="num">Preço de equilíbrio<small>para manter hoje</small></th>
+              <th class="num">Seu líquido mantido</th>
+            </tr>
+          </thead>
+          <tbody>${linhasCaminhos}</tbody>
+        </table>
+      </div>
+      <p class="table-note">O ranking acima continua sendo pelo custo líquido no preço nominal. Esta tabela mostra o outro lado: quanto o preço precisaria mudar em ${ano} para o seu líquido ficar no nível de ${anoHoje}. No Simples/MEI o preço de equilíbrio é o do seu líquido, não o piso do transportador.</p>
+    </div>`
+
   const observacoes = []
   if (precoIgual && economia > 0) {
     observacoes.push(`
@@ -743,6 +794,7 @@ function renderizarComparacao(dados) {
         </table>
       </div>
       <p class="table-note">Crédito total = CBS/IBS do destaque + ICMS e PIS/COFINS quando o transportador os destaca no CT-e (só o regime regular). Simples/DAS: cálculo real pelo Motor do Simples quando as alíquotas do PGDAS são informadas; sem elas, faixa setorial estimada. Simples híbrido: só o CBS/IBS destacado no regime regular vira crédito — o ICMS fica no DAS.</p>
+      ${tabelaCaminhosComparador}
       ${observacoes.join('')}
     </div>`
 }
@@ -1256,18 +1308,39 @@ function marcarTimelineDesatualizado(desatualizado) {
 
 const CENARIOS = {
   congelado: {
-    rotulo: 'Preço de hoje',
+    rotulo: 'Preço travado',
     nota: 'O preço do contrato não muda: o que varia é a alíquota e o crédito que você aproveita.',
   },
+  equilibrio: {
+    rotulo: 'Preço de equilíbrio',
+    nota: 'O preço sobe (ou cai) o suficiente para o seu custo líquido ficar igual ao de hoje: preço = líquido_de_hoje ÷ (1 − crédito_do_ano).',
+  },
   repasse: {
-    rotulo: 'Com repasse',
-    nota: 'O transportador preserva a receita líquida e repassa a carga ao preço: preço_novo = preço_hoje × (1 − carga_hoje) ÷ (1 − carga_ano).',
+    rotulo: 'Piso do transportador',
+    nota: 'O preço preserva a margem do transportador: preço_novo = preço_hoje × (1 − carga_hoje) ÷ (1 − carga_ano) no regime regular; no Simples, a conta usa o DAS e os insumos informados.',
   },
 }
 
 function cenarioDaLinha(linha, cenario) {
   if (!linha?.disponivel) return null
+  if (cenario === 'equilibrio') {
+    return {
+      bruto: linha.equilibrio?.preco ?? linha.bruto,
+      credito: linha.equilibrio?.credito ?? linha.credito.total,
+      liquido: linha.equilibrio?.liquido ?? linha.liquido,
+      variacao: 0,
+    }
+  }
   if (cenario === 'repasse') {
+    const piso = linha.piso
+    if (piso) {
+      return {
+        bruto: piso.preco,
+        credito: piso.credito,
+        liquido: piso.liquido,
+        variacao: piso.variacaoLiquido ?? 0,
+      }
+    }
     return {
       bruto: linha.repasse.bruto,
       credito: linha.repasse.credito,
@@ -1284,7 +1357,12 @@ function cenarioDaLinha(linha, cenario) {
 }
 
 function composicaoCredito(linha, cenario) {
-  const base = cenario === 'repasse' ? linha.repasse.bruto : linha.bruto
+  const base =
+    cenario === 'equilibrio'
+      ? (linha.equilibrio?.preco ?? linha.bruto)
+      : cenario === 'repasse'
+        ? (linha.piso?.preco ?? linha.repasse.bruto)
+        : linha.bruto
   const partes = []
   if (linha.credito.percentualIcms > 0) partes.push(`ICMS ${brl((base * linha.credito.percentualIcms) / 100)}`)
   if (linha.credito.percentualPisCofins > 0) {
@@ -1300,6 +1378,233 @@ function textoVariacao(valor) {
   const n = Number(valor) || 0
   if (Math.abs(n) < 0.005) return 'igual a hoje'
   return `${sinalNumero(n)} vs hoje`
+}
+
+function sinalPercentual(valor, casas = 2) {
+  const n = Number(valor) || 0
+  if (Math.abs(n) < 0.005) return '0,00%'
+  return `${n > 0 ? '+' : '−'}${numero(Math.abs(n), casas)}%`
+}
+
+function brlCurto(valor) {
+  return `R$ ${numero(Number(valor) || 0, 0)}`
+}
+
+/**
+ * Cartões "Preço travado × Preço de equilíbrio × Piso do transportador".
+ * A pergunta do pagador é simples: quanto sobra hoje, quanto sobra se eu não
+ * mexer no preço e quanto preciso pagar para preservar o que sobra hoje.
+ */
+function caminhosHorizonte(dados) {
+  const { hoje, resumo, anos, entrada } = dados
+  const pleno = anos.find((linha) => linha.ano === 2033 && linha.disponivel) ?? resumo?.pleno ?? null
+  if (!hoje || !pleno?.equilibrio) return ''
+
+  const variacaoTravado =
+    hoje.liquido > 0 ? ((pleno.liquido - hoje.liquido) / hoje.liquido) * 100 : null
+  const eq = pleno.equilibrio
+  const piso = pleno.piso
+  const conflito = pleno.conflito
+  const perfilSimples = entrada.perfil.id === 'SIMPLES_DAS' || entrada.perfil.id === 'AUTONOMO_MEI'
+  const pisoCoincide = piso && conflito !== null && Math.abs(conflito) < 0.005
+
+  const cardTravado = `
+    <article class="caminho caminho--travado">
+      <span class="caminho__tag">Preço travado</span>
+      <strong class="caminho__valor">${brl(hoje.bruto)}</strong>
+      <p>Em 2033, o líquido cai para <b>${brl(pleno.liquido)}</b>${variacaoTravado === null ? '' : ` <span class="${variacaoTravado < -0.005 ? 'is-baixa' : 'is-alta'}">${sinalPercentual(variacaoTravado)}</span>`}.</p>
+    </article>`
+
+  const cardEquilibrio = `
+    <article class="caminho caminho--ok">
+      <span class="caminho__tag">Preço de equilíbrio</span>
+      <strong class="caminho__valor">${brl(eq.preco)}</strong>
+      <p>${sinalPercentual(eq.variacaoPreco)} no bruto para o seu líquido ficar em <b>${brl(eq.liquido)}</b> — o de hoje.</p>
+      ${pisoCoincide ? '<small class="caminho__nota">Com crédito integral, o piso do transportador coincide com este preço.</small>' : ''}
+    </article>`
+
+  const cardPiso =
+    piso && !pisoCoincide
+      ? `
+    <article class="caminho ${conflito > 0 ? 'caminho--alerta' : 'caminho--piso'}">
+      <span class="caminho__tag">Piso do transportador${piso.estimado ? ' · estimado' : ''}</span>
+      <strong class="caminho__valor">${brl(piso.preco)}</strong>
+      <p>${sinalPercentual(piso.variacaoPreco)} no bruto. Fica <b>${conflito > 0 ? 'acima' : 'abaixo'}</b> do seu equilíbrio em ${brl(Math.abs(conflito))}.</p>
+    </article>`
+      : ''
+
+  const avisoPiso = (() => {
+    if (perfilSimples && !piso) {
+      return `
+        <div class="callout callout--aviso">
+          ${ICONE.alerta}
+          <div><p><strong>No Simples/MEI o app ainda não calcula o piso do transportador.</strong> Informe o DAS total e a parcela de insumos na modalidade para estimar; sem isso, o preço de equilíbrio acima é o do <em>seu</em> líquido e pode não ser suficiente para o transportador.</p></div>
+        </div>`
+    }
+    if (piso && conflito > 0.005) {
+      return `
+        <div class="callout callout--aviso">
+          ${ICONE.alerta}
+          <div><p><strong>Há um conflito de ${brl(conflito)} por período.</strong> O piso do transportador (${brl(piso.preco)}) fica acima do preço que preserva o seu líquido (${brl(eq.preco)}). O contrato precisa decidir quem absorve essa diferença.</p></div>
+        </div>`
+    }
+    if (piso && conflito < -0.005) {
+      return `
+        <div class="callout">
+          ${ICONE.info}
+          <div><p><strong>Há espaço de negociação de ${brl(Math.abs(conflito))} por período.</strong> O piso do transportador (${brl(piso.preco)}) fica abaixo do preço que preserva o seu líquido (${brl(eq.preco)}).</p></div>
+        </div>`
+    }
+    return ''
+  })()
+
+  return `
+    <div class="horizonte__caminhos">
+      ${cardTravado}
+      ${cardEquilibrio}
+      ${cardPiso}
+    </div>
+    ${avisoPiso}`
+}
+
+function graficoHorizonte(dados) {
+  const linhas = (dados.anos ?? []).filter((linha) => linha.disponivel && linha.equilibrio)
+  if (linhas.length < 2) return ''
+
+  const series = [
+    {
+      id: 'travado',
+      rotulo: 'Preço travado',
+      cor: '#9a5b06',
+      valores: linhas.map((linha) => linha.liquido),
+    },
+    {
+      id: 'equilibrio',
+      rotulo: 'Preço de equilíbrio',
+      cor: '#0f7a55',
+      valores: linhas.map((linha) => linha.equilibrio.liquido),
+    },
+  ]
+
+  const piso = linhas.map((linha) => linha.piso?.liquido ?? null)
+  const pisoCompleto = piso.every((valor) => Number.isFinite(valor))
+  const pisoDiferente =
+    pisoCompleto && piso.some((valor, indice) => Math.abs(valor - linhas[indice].equilibrio.liquido) > 0.005)
+  if (pisoDiferente) {
+    series.push({
+      id: 'piso',
+      rotulo: 'Seu líquido no piso',
+      cor: '#0b5fa5',
+      tracejado: true,
+      valores: piso,
+    })
+  }
+
+  const largura = 760
+  const altura = 250
+  const margem = { topo: 26, direita: 18, baixo: 34, esquerda: 64 }
+  const todos = series.flatMap((serie) => serie.valores.filter((valor) => Number.isFinite(valor)))
+  const minimo = Math.min(...todos)
+  const maximo = Math.max(...todos)
+  const folga = Math.max(20, (maximo - minimo) * 0.14)
+  const yMin = Math.max(0, Math.floor((minimo - folga) / 50) * 50)
+  const yMax = Math.ceil((maximo + folga) / 50) * 50
+  const x = (indice) =>
+    margem.esquerda + (indice * (largura - margem.esquerda - margem.direita)) / Math.max(1, linhas.length - 1)
+  const y = (valor) =>
+    margem.topo + ((yMax - valor) / Math.max(1, yMax - yMin)) * (altura - margem.topo - margem.baixo)
+
+  const grade = Array.from({ length: 5 }, (_, indice) => {
+    const valor = yMin + ((yMax - yMin) * indice) / 4
+    const yy = y(valor)
+    return `<line x1="${margem.esquerda}" x2="${largura - margem.direita}" y1="${yy}" y2="${yy}" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="2 5" />
+      <text x="${margem.esquerda - 10}" y="${yy + 3.5}" text-anchor="end" class="chart__tick">${brlCurto(valor)}</text>`
+  }).join('')
+
+  const anos = linhas
+    .map(
+      (linha, indice) => `
+      <text x="${x(indice)}" y="${altura - 10}" text-anchor="middle" class="chart__ano ${linha.ano === 2026 ? 'is-atual' : ''}">${linha.ano}</text>`,
+    )
+    .join('')
+
+  const caminhos = series
+    .map((serie, indiceSerie) => {
+      const pontos = serie.valores
+        .map((valor, indice) => `${x(indice)},${y(valor)}`)
+        .join(' ')
+      const ultimo = serie.valores.at(-1)
+      const ultimoY = y(ultimo)
+      const marcadores = serie.valores
+        .map(
+          (valor, indice) =>
+            `<circle cx="${x(indice)}" cy="${y(valor)}" r="2.8" fill="#fff" stroke="${serie.cor}" stroke-width="2" />`,
+        )
+        .join('')
+      return `
+        <polyline points="${pontos}" fill="none" stroke="${serie.cor}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" ${serie.tracejado ? 'stroke-dasharray="6 5"' : ''} />
+        ${marcadores}
+        <text x="${largura - margem.direita}" y="${ultimoY - 8 - indiceSerie * 13}" text-anchor="end" class="chart__valor">${brlCurto(ultimo)}</text>`
+    })
+    .join('')
+
+  const legenda = series
+    .map(
+      (serie) =>
+        `<span><i style="background:${serie.cor}"></i>${serie.rotulo}</span>`,
+    )
+    .join('')
+
+  return `
+    <div class="horizonte__chart-wrap">
+      <div class="horizonte__chart">
+        <svg viewBox="0 0 ${largura} ${altura}" role="img" aria-label="Custo líquido do frete por ano com preço travado, preço de equilíbrio e piso do transportador" class="chart">
+          ${grade}
+          ${anos}
+          ${caminhos}
+        </svg>
+      </div>
+      <div class="horizonte__legenda">${legenda}</div>
+    </div>`
+}
+
+function tabelaCaminhos(dados) {
+  const linhas = (dados.anos ?? [])
+    .filter((linha) => linha.disponivel && linha.equilibrio)
+    .map(
+      (linha) => `
+      <tr class="${linha.ano === 2026 ? 'is-current' : ''}">
+        <td class="cell-ano" data-rotulo="Ano">${linha.ano}</td>
+        <td class="num" data-rotulo="Preço travado">${brl(linha.bruto)}</td>
+        <td class="num" data-rotulo="Líquido com preço travado">${brl(linha.liquido)}</td>
+        <td class="num" data-rotulo="Preço de equilíbrio">${brl(linha.equilibrio.preco)}</td>
+        <td class="num cell-equilibrio" data-rotulo="Líquido mantido">${brl(linha.equilibrio.liquido)}</td>
+        <td class="num" data-rotulo="Variação do preço">${sinalPercentual(linha.equilibrio.variacaoPreco)}</td>
+      </tr>`,
+    )
+    .join('')
+
+  return `
+    <div class="horizonte__tabela-head">
+      <h3>Os dois caminhos, ano a ano</h3>
+      <span class="horizonte__fonte">Preço travado = nominal do contrato. Preço de equilíbrio = preço que mantém o seu líquido de hoje.</span>
+    </div>
+    <div class="table-wrap">
+      <table class="table table--caminhos" aria-label="Preço travado e preço de equilíbrio, com o líquido do pagador em cada ano">
+        <thead>
+          <tr>
+            <th>Ano</th>
+            <th class="num">Preço travado</th>
+            <th class="num">Seu líquido com preço travado</th>
+            <th class="num">Preço de equilíbrio</th>
+            <th class="num">Seu líquido mantido</th>
+            <th class="num">Δ do preço</th>
+          </tr>
+        </thead>
+        <tbody>${linhas}</tbody>
+      </table>
+    </div>
+    <p class="table-note">O líquido mantido é constante por definição: o preço de equilíbrio é recalculado a cada ano para compensar a variação do crédito. No Simples/MEI, ele não incorpora o DAS total nem o custo não creditável do transportador — é o seu equilíbrio, não uma proposta de contrato.</p>`
 }
 
 async function carregarHorizonte(entrada = lerEntrada()) {
@@ -1346,13 +1651,20 @@ function renderizarHorizonte(dados) {
     return
   }
 
-  const cenario = estado.horizonteCenario
+  let cenario = estado.horizonteCenario
   const pleno = resumo?.pleno ?? null
+  if (cenario === 'repasse' && !pleno?.piso) {
+    cenario = 'equilibrio'
+    estado.horizonteCenario = 'equilibrio'
+  }
   const proximo = resumo?.proximo ?? null
   const anual = entrada.anual ?? 12
   const cenarioHoje = cenarioDaLinha(hoje, cenario)
   const cenarioPleno = pleno ? cenarioDaLinha(pleno, cenario) : null
   const cenarioProximo = proximo ? cenarioDaLinha(proximo, cenario) : null
+  const caminhosHTML = caminhosHorizonte(dados)
+  const graficoHTML = graficoHorizonte(dados)
+  const tabelaCaminhosHTML = tabelaCaminhos(dados)
 
   const fonte = [
     'projeção oficial do frete',
@@ -1376,6 +1688,19 @@ function renderizarHorizonte(dados) {
     hoje.credito.total > 0
       ? `e recupera <b>${brl(hoje.credito.total)}</b> ${fraseCredito}`
       : 'e não recupera crédito'
+
+  const fraseCenario = (() => {
+    if (!pleno) return 'a série não chega ao regime pleno.'
+    if (cenario === 'equilibrio') {
+      return `Em 2033, para manter o seu líquido de hoje, o preço de equilíbrio é <b>${brl(pleno.equilibrio.preco)}</b> (${sinalPercentual(pleno.equilibrio.variacaoPreco)}) e o líquido fica em <b>${brl(pleno.equilibrio.liquido)}</b>.`
+    }
+    if (cenario === 'repasse') {
+      return pleno.piso
+        ? `Em 2033, o piso do transportador é <b>${brl(pleno.piso.preco)}</b> (${sinalPercentual(pleno.piso.variacaoPreco)}) e o seu líquido fica em <b>${brl(pleno.piso.liquido)}</b>.`
+        : 'Em 2033, o app não calcula o piso do transportador para este regime.'
+    }
+    return `Em 2033, com o preço travado, o crédito chega a ${pct(pleno.credito.percentual)} e o líquido a <b>${brl(pleno.liquido)}</b>.`
+  })()
 
   const linhasTabela = dados.anos
     .filter((linha) => linha.disponivel)
@@ -1402,7 +1727,7 @@ function renderizarHorizonte(dados) {
       return `
         <tr class="${classes}">
           <td class="cell-ano" data-rotulo="Ano">${linha.ano}<small>${esc(marcos.join(' · '))}</small></td>
-          <td class="num" data-rotulo="Carga do serviço">${pct(linha.percentualCarga)}</td>
+          <td class="num" data-rotulo="Carga do serviço">${pct(linha.percentualCargaTransportador ?? linha.percentualCarga)}${entrada.perfil.id === 'SIMPLES_DAS' && Number(entrada.dasTotal) > 0 ? '<small>DAS</small>' : ''}</td>
           <td class="num" data-rotulo="Bruto">${brl(c.bruto)}</td>
           <td class="num cell-credito" data-rotulo="Crédito">${brl(c.credito)}${composicao.length ? `<small>${esc(composicao.join(' · '))}</small>` : ''}</td>
           <td class="num cell-net" data-rotulo="Custo líquido">${brl(c.liquido)}</td>
@@ -1449,7 +1774,7 @@ function renderizarHorizonte(dados) {
           <small>crédito de ${pct(pleno.credito.percentual)}</small>
         </div>
         <div class="is-ok">
-          <span>Em 2033 · com repasse</span>
+          <span>Em 2033 · piso do transportador</span>
           <strong>${brl(pleno.repasse.liquido)}</strong>
           <small>desembolso de ${brl(pleno.repasse.bruto)}</small>
         </div>`
@@ -1465,7 +1790,7 @@ function renderizarHorizonte(dados) {
           <small>crédito de ${pct(d.benchmark.percentualCredito)}</small>
         </div>
         <div class="${pior ? 'is-alerta' : 'is-ok'}">
-          <span>Preço-teto no seu regime</span>
+          <span>Preço-teto vs. regime regular</span>
           <strong>${teto === null ? '—' : brl(teto)}</strong>
           <small>${d.percentualPreco === null ? 'sem crédito' : `${pct(d.percentualPreco)} do valor atual`}</small>
         </div>`
@@ -1473,12 +1798,13 @@ function renderizarHorizonte(dados) {
       <div class="deveria ${pior ? 'deveria--alerta' : 'deveria--ok'}">
         <div class="deveria__head">
           <div>
-            <p class="eyebrow-sm">Quanto você deveria pagar</p>
+            <p class="eyebrow-sm">Quanto vale a pena pagar · benchmark do regime regular</p>
             <p class="deveria__veredito">${esc(d.veredito)}</p>
           </div>
           <span class="chip chip--soft">${d.ano}</span>
         </div>
         <div class="deveria__grid">${grade}</div>
+        <p class="deveria__nota">Este bloco compara com o <b>regime regular</b>. O <b>preço de equilíbrio</b> da seção acima é outro: ele mantém o seu líquido atual, não empata com o benchmark.</p>
         ${
           !ehRegular && deveria.pleno && deveria.pleno.precoEquivalente !== null
             ? `<p class="deveria__nota">Em 2033 o preço-teto cai para <b>${brl(deveria.pleno.precoEquivalente)}</b> (${pct(deveria.pleno.percentualPreco)} do valor atual): o crédito do seu regime não acompanha a alta da carga.</p>`
@@ -1528,14 +1854,19 @@ function renderizarHorizonte(dados) {
       <span class="chip">${esc(entrada.tipoOperacao)}</span>
       <span class="chip chip--year">${esc(entrada.rota)}</span>
       ${entrada.perfil.estimativa ? '<span class="chip">crédito estimado</span>' : ''}
+      ${entrada.perfil.id === 'SIMPLES_DAS' && Number(entrada.dasTotal) > 0 && entrada.insumos !== null ? `<span class="chip">DAS ${pct(entrada.dasTotal)} · insumos ${pct(entrada.insumos)}</span>` : ''}
       <span class="chip chip--soft">${esc(fonte)}</span>
     </div>
 
     <p class="horizonte__frase">
       Hoje você paga <b>${brl(hoje.bruto)}</b> ${fraseRecupera}:
       o custo líquido é <b>${brl(hoje.liquido)}</b> (${pct(hoje.percentualLiquido)} do preço).
-      Em 2033, com o preço de hoje, ${pleno ? `o crédito chega a ${pct(pleno.credito.percentual)} e o custo líquido a <b>${brl(pleno.liquido)}</b>` : 'a série não chega ao regime pleno'}.
+      ${fraseCenario}
     </p>
+
+    ${caminhosHTML}
+    ${graficoHTML}
+    ${tabelaCaminhosHTML}
 
     <div class="horizonte__kpis">
       ${kpi(`Hoje · ${hoje.ano}`, hoje, cenarioHoje, `bruto ${brl(cenarioHoje.bruto)} · crédito ${brl(cenarioHoje.credito)}`)}
@@ -1545,31 +1876,35 @@ function renderizarHorizonte(dados) {
 
     ${deveriaHTML}
 
-    <div class="horizonte__tabela-head">
-      <h3>Ano a ano · ${esc(CENARIOS[cenario].rotulo)}</h3>
-      <span class="horizonte__fonte">${esc(CENARIOS[cenario].nota)}</span>
-    </div>
-    <div class="table-wrap">
-      <table class="table table--horizonte" aria-label="Desembolso, crédito e custo líquido do frete por ano">
-        <thead>
-          <tr>
-            <th>Ano</th>
-            <th class="num">Carga do serviço</th>
-            <th class="num">Bruto</th>
-            <th class="num">Crédito</th>
-            <th class="num">Custo líquido</th>
-            <th class="num">vs hoje (líquido)</th>
-          </tr>
-        </thead>
-        <tbody>${linhasTabela}</tbody>
-      </table>
-    </div>
-    <p class="table-note">
-      Carga do serviço = tributos que incidem sobre o frete no regime regular (ICMS/PIS/COFINS + CBS/IBS), a mesma
-      referência do repasse. No Simples/DAS parte dessa carga fica dentro do DAS e não aparece destacada.
-      Crédito = ICMS + PIS/COFINS (até 2026) + CBS/IBS (2027 em diante), conforme o regime do transportador e o da
-      pagadora. Anual = ${anual} × o valor do período.
-    </p>
+    <details class="horizonte__detalhe">
+      <summary>Crédito e carga ano a ano — detalhe do cenário</summary>
+      <div class="horizonte__tabela-head">
+        <h3>Ano a ano · ${esc(CENARIOS[cenario].rotulo)}</h3>
+        <span class="horizonte__fonte">${esc(CENARIOS[cenario].nota)}</span>
+      </div>
+      <div class="table-wrap">
+        <table class="table table--horizonte" aria-label="Desembolso, crédito e custo líquido do frete por ano">
+          <thead>
+            <tr>
+              <th>Ano</th>
+              <th class="num">Carga do serviço</th>
+              <th class="num">Bruto</th>
+              <th class="num">Crédito</th>
+              <th class="num">Custo líquido</th>
+              <th class="num">vs hoje (líquido)</th>
+            </tr>
+          </thead>
+          <tbody>${linhasTabela}</tbody>
+        </table>
+      </div>
+      <p class="table-note">
+        Carga do serviço = DAS total informado no Simples (quando informado); nos demais regimes e sem DAS,
+        ICMS/PIS/COFINS + CBS/IBS.
+        No Simples/DAS, o crédito é só a parcela de CBS/IBS do DAS; a diferença entre DAS e crédito é custo do
+        transportador. Crédito = ICMS + PIS/COFINS (até 2026) + CBS/IBS (2027 em diante), conforme o regime do
+        transportador e o da pagadora. Anual = ${anual} × o valor do período.
+      </p>
+    </details>
 
     ${
       ajustesHTML
@@ -1607,7 +1942,7 @@ function renderizarHorizonte(dados) {
 
     <div class="horizonte__rodape">
       <span>Fonte: ${esc(fonte)}</span>
-      <span>${cenario === 'repasse' ? 'Desembolso com repasse integral' : 'Desembolso com o preço de hoje'} · anual = ${anual} períodos</span>
+      <span>${cenario === 'repasse' ? 'Desembolso com o piso do transportador' : cenario === 'equilibrio' ? 'Desembolso com o preço de equilíbrio' : 'Desembolso com o preço travado'} · anual = ${anual} períodos</span>
     </div>`
 
   marcarHorizonteDesatualizado(false)
@@ -1630,8 +1965,16 @@ function rotuloAjuste(tipo) {
 function atualizarCenarioHorizonte() {
   const alvo = $('#horizonteCenario')
   if (!alvo) return
+  const pleno = estado.horizonte?.resumo?.pleno ?? null
+  const temPiso = Boolean(pleno?.piso)
   alvo.querySelectorAll('[data-cenario]').forEach((botao) => {
     botao.setAttribute('aria-checked', String(botao.dataset.cenario === estado.horizonteCenario))
+    if (botao.dataset.cenario === 'repasse') {
+      botao.disabled = Boolean(estado.horizonte) && !temPiso
+      botao.title = temPiso
+        ? 'O preço que preserva a margem do transportador'
+        : 'O app não calcula o piso do transportador para este regime'
+    }
   })
 }
 
@@ -1639,6 +1982,865 @@ function marcarHorizonteDesatualizado(desatualizado) {
   const nota = $('#horizonteStale')
   if (!nota) return
   nota.hidden = !desatualizado
+}
+
+/* ------------------------------------------------------------------ */
+/* Perfis de transportadores                                           */
+/* ------------------------------------------------------------------ */
+
+const NOMES_MESES = [
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
+]
+
+const PERFIL_VAZIO = () => ({
+  nome: '',
+  diaria: '',
+  tipoVeiculo: '',
+  ufOrigem: $('#ufOrigem')?.value || 'SP',
+  ufDestino: $('#ufDestino')?.value || 'BA',
+  perfil: 'REGIME_REGULAR',
+  modoDias: 'UTEIS',
+  diasFixo: 22,
+  aliquotaCbs: '',
+  aliquotaIbs: '',
+  dasTotal: '',
+})
+
+function perfilAtual() {
+  return estado.perfis.lista.find((item) => item.id === estado.perfis.atualId) ?? null
+}
+
+function renderizarSelectsPerfil() {
+  $('#perfilModoDias').innerHTML = (estado.opcoes.modosDias ?? [])
+    .map((modo) => `<option value="${modo.id}">${esc(modo.rotulo)}</option>`)
+    .join('')
+
+  $('#perfilRegime').innerHTML = estado.opcoes.perfis
+    .map((perfil) => `<option value="${perfil.id}">${esc(perfil.varianteRotulo)}</option>`)
+    .join('')
+
+  $('#perfilTipoVeiculo').innerHTML = [
+    '<option value="">Não informado</option>',
+    ...(estado.opcoes.tiposVeiculo ?? []).map(
+      (tipo) => `<option value="${tipo.id}">${esc(tipo.rotulo)} · base ${brl(tipo.base)}</option>`,
+    ),
+  ].join('')
+
+  const regioes = [...new Set(estado.opcoes.ufs.map((uf) => uf.regiao))]
+  const opcoes = regioes
+    .map(
+      (regiao) => `
+      <optgroup label="${esc(regiao)}">
+        ${estado.opcoes.ufs
+          .filter((uf) => uf.regiao === regiao)
+          .map((uf) => `<option value="${uf.sigla}">${uf.sigla} — ${esc(uf.nome)}</option>`)
+          .join('')}
+      </optgroup>`,
+    )
+    .join('')
+
+  $('#perfilUfOrigem').innerHTML = opcoes
+  $('#perfilUfDestino').innerHTML = opcoes
+}
+
+function preencherFormulario(perfil) {
+  $('#perfilNome').value = perfil.nome ?? ''
+  $('#perfilDiaria').value = perfil.diaria ? numero(perfil.diaria) : ''
+  $('#perfilModoDias').value = perfil.modoDias ?? 'UTEIS'
+  $('#perfilDiasFixo').value = perfil.diasFixo ?? 22
+  $('#perfilUfOrigem').value = perfil.ufOrigem ?? 'SP'
+  $('#perfilUfDestino').value = perfil.ufDestino ?? 'BA'
+  $('#perfilRegime').value = perfil.perfil ?? 'REGIME_REGULAR'
+  $('#perfilTipoVeiculo').value = perfil.tipoVeiculo ?? ''
+  $('#perfilAliquotaCbs').value =
+    perfil.aliquotaCbs === null || perfil.aliquotaCbs === undefined ? '' : numero(perfil.aliquotaCbs, 4)
+  $('#perfilAliquotaIbs').value =
+    perfil.aliquotaIbs === null || perfil.aliquotaIbs === undefined ? '' : numero(perfil.aliquotaIbs, 4)
+  $('#perfilDas').value =
+    perfil.dasTotal === null || perfil.dasTotal === undefined ? '' : numero(perfil.dasTotal)
+  atualizarCamposPerfil()
+}
+
+function atualizarStatusPerfil() {
+  const chip = $('#perfilStatus')
+  if (!chip) return
+  const salvo = Boolean(estado.perfis.atualId)
+  chip.textContent = !salvo ? 'não salvo' : estado.perfis.sujo ? 'alterações não salvas' : 'salvo'
+  chip.classList.toggle('chip--best', salvo && !estado.perfis.sujo)
+}
+
+function atualizarCamposPerfil() {
+  const modo = $('#perfilModoDias').value
+  $('#perfilDiasFixoWrap').hidden = modo !== 'FIXO'
+  $('#perfilFormTitulo').textContent = estado.perfis.atualId ? 'Editar perfil' : 'Novo perfil'
+
+  const perfilId = $('#perfilRegime').value
+  const meta = estado.opcoes.perfis.find((item) => item.id === perfilId)
+  $('#perfilRegimeHint').textContent = meta?.descricao ?? ''
+
+  const simples = perfilId === 'SIMPLES_DAS'
+  $('#perfilSimplesWrap').hidden = !simples
+  $('#perfilSimplesHint').hidden = !simples
+
+  const tipo = (estado.opcoes.tiposVeiculo ?? []).find((item) => item.id === $('#perfilTipoVeiculo').value)
+  $('#perfilVeiculoHint').textContent = tipo
+    ? `Referência para ${tipo.rotulo}: ${brl(tipo.min)} a ${brl(tipo.max)} por dia, base ${brl(tipo.base)}. Derivada do piso ANTT de 16/07/2026 — não é cotação de mercado.`
+    : 'Selecione para ver a faixa de referência da diária (derivada do piso mínimo da ANTT).'
+
+  const interna = $('#perfilUfOrigem').value === $('#perfilUfDestino').value
+  $('#perfilRotaHint').textContent = interna
+    ? 'Operação interna (mesma UF): a projeção do regime anterior usa a alíquota interna padrão de 18% do motor.'
+    : 'Operação interestadual: ICMS de 12% (7% para Norte, Nordeste, Centro-Oeste e ES) na projeção do regime anterior.'
+
+  const regime = estado.opcoes.regimesPagadora.find((item) => item.id === estado.regimePagadora)
+  $('#perfilContextoHint').innerHTML = `Crédito calculado como <b>${esc(regime?.curto ?? 'Lucro Real')}</b> e operação <b>${esc(estado.operacao)}</b> — muda no formulário acima.`
+
+  $('#perfilExcluir').hidden = !estado.perfis.atualId
+  atualizarStatusPerfil()
+}
+
+function lerCamposPerfil() {
+  return {
+    nome: $('#perfilNome').value.trim(),
+    diaria: $('#perfilDiaria').value,
+    ufOrigem: $('#perfilUfOrigem').value,
+    ufDestino: $('#perfilUfDestino').value,
+    perfil: $('#perfilRegime').value,
+    tipoVeiculo: $('#perfilTipoVeiculo').value,
+    modoDias: $('#perfilModoDias').value,
+    diasFixo: $('#perfilDiasFixo').value,
+    aliquotaCbs: $('#perfilAliquotaCbs').value,
+    aliquotaIbs: $('#perfilAliquotaIbs').value,
+    dasTotal: $('#perfilDas').value,
+  }
+}
+
+function perfilDoFormulario() {
+  return { ...lerCamposPerfil(), tipoOperacao: estado.operacao }
+}
+
+async function enviarJson(url, metodo, corpo) {
+  const resposta = await fetch(url, {
+    method: metodo,
+    headers: { 'Content-Type': 'application/json' },
+    body: corpo === undefined ? undefined : JSON.stringify(corpo),
+  })
+  const dados = await resposta.json().catch(() => ({}))
+  if (!resposta.ok) {
+    const erro = new Error(dados.erro || `O servidor respondeu HTTP ${resposta.status}.`)
+    erro.campo = dados.campo ?? null
+    throw erro
+  }
+  return dados
+}
+
+function agendarPrevia() {
+  clearTimeout(estado.perfis.timer)
+  estado.perfis.timer = setTimeout(calcularPrevia, 320)
+}
+
+async function calcularPrevia() {
+  const campos = perfilDoFormulario()
+  const diaria = numeroDeTexto(campos.diaria)
+  if (!Number.isFinite(diaria) || diaria <= 0) {
+    renderizarPerfilVazio('Informe a diária para ver o mês fechar')
+    return
+  }
+
+  const seq = ++estado.perfis.seq
+  try {
+    const dados = await post('/api/perfis/calcular', {
+      perfil: { ...campos, nome: campos.nome || 'Prévia' },
+      regimePagadora: estado.regimePagadora,
+      tipoOperacao: estado.operacao,
+      ano: estado.perfis.ano,
+      mes: estado.perfis.mes,
+    })
+    if (seq !== estado.perfis.seq) return
+    estado.perfis.detalhe = dados
+    renderizarPerfilResultado(dados)
+  } catch (erro) {
+    if (seq !== estado.perfis.seq) return
+    renderizarPerfilErro(erro.message)
+  }
+}
+
+async function carregarListaPerfis() {
+  const dados = await fetch('/api/perfis').then((resposta) => resposta.json())
+  estado.perfis.lista = Array.isArray(dados.perfis) ? dados.perfis : []
+  renderizarCardsPerfis()
+}
+
+function renderizarCardsPerfis() {
+  const alvo = $('#perfisCards')
+  const lista = estado.perfis.lista
+  $('#perfisContagem').textContent = String(lista.length)
+
+  if (!lista.length) {
+    alvo.innerHTML = `
+      <div class="perfis__vazio">
+        <strong>Nenhum perfil salvo</strong>
+        <p>Cadastre a primeira diária para ver o faturamento do mês e o custo líquido.</p>
+      </div>`
+    return
+  }
+
+  alvo.innerHTML = lista
+    .map(
+      (perfil) => `
+      <button
+        type="button"
+        class="perfil-card ${perfil.id === estado.perfis.atualId ? 'is-active' : ''}"
+        data-perfil-id="${esc(perfil.id)}"
+        aria-pressed="${perfil.id === estado.perfis.atualId}"
+      >
+        <span class="perfil-card__nome">${esc(perfil.nome)}</span>
+        <span class="perfil-card__meta">
+          <span>${esc(perfil.rota)}</span>
+          <span>${esc(perfil.perfilCurto)}</span>
+          <span>${numero(perfil.diasMedios, 1)} dias/mês</span>
+        </span>
+        <span class="perfil-card__valores">
+          <span class="perfil-card__diaria">${brl(perfil.diaria)} <small>/dia</small></span>
+          <span class="perfil-card__bruto">${brl(perfil.brutoMensal)}/mês</span>
+        </span>
+      </button>`,
+    )
+    .join('')
+}
+
+async function selecionarPerfil(id) {
+  const perfil = estado.perfis.lista.find((item) => item.id === id)
+  if (!perfil) return
+  estado.perfis.atualId = id
+  estado.perfis.sujo = false
+  estado.perfis.erro = null
+  preencherFormulario(perfil)
+  renderizarCardsPerfis()
+  $('#perfilFormErro').hidden = true
+  await carregarDetalhePerfil()
+}
+
+function novoPerfil() {
+  estado.perfis.atualId = null
+  estado.perfis.sujo = false
+  estado.perfis.detalhe = null
+  preencherFormulario(PERFIL_VAZIO())
+  renderizarCardsPerfis()
+  $('#perfilFormErro').hidden = true
+  $('#perfilResultado').innerHTML = ''
+  renderizarPerfilVazio('Preencha a diária e o regime para ver o mês fechar')
+  $('#perfilNome').focus()
+}
+
+async function carregarDetalhePerfil() {
+  if (!estado.perfis.atualId) return
+  const seq = ++estado.perfis.seq
+  const parametros = new URLSearchParams({
+    ano: String(estado.perfis.ano),
+    mes: String(estado.perfis.mes),
+    regimePagadora: estado.regimePagadora,
+    tipoOperacao: estado.operacao,
+  })
+
+  try {
+    const resposta = await fetch(`/api/perfis/${estado.perfis.atualId}?${parametros}`)
+    const dados = await resposta.json().catch(() => ({}))
+    if (!resposta.ok) throw new Error(dados.erro || `O servidor respondeu HTTP ${resposta.status}.`)
+    if (seq !== estado.perfis.seq) return
+    estado.perfis.detalhe = dados
+    renderizarPerfilResultado(dados)
+  } catch (erro) {
+    if (seq !== estado.perfis.seq) return
+    renderizarPerfilErro(erro.message)
+  }
+}
+
+async function carregarComparacaoPerfis() {
+  if (!estado.perfis.lista.length) {
+    $('#perfisComparacao').innerHTML = ''
+    return
+  }
+  const seq = ++estado.perfis.comparacaoSeq
+  try {
+    const dados = await enviarJson('/api/perfis/comparar', 'POST', {
+      ano: estado.perfis.ano,
+      regimePagadora: estado.regimePagadora,
+      tipoOperacao: estado.operacao,
+    })
+    if (seq !== estado.perfis.comparacaoSeq) return
+    renderizarComparacaoPerfis(dados)
+  } catch (erro) {
+    if (seq !== estado.perfis.comparacaoSeq) return
+    $('#perfisComparacao').innerHTML = `
+      <div class="callout callout--aviso">${ICONE.alerta}<div><p><strong>Não foi possível comparar os perfis.</strong> ${esc(erro.message)}</p></div></div>`
+  }
+}
+
+function renderizarPerfilVazio(mensagem) {
+  $('#perfilResultado').innerHTML = `
+    <div class="perfis__vazio-painel">
+      <strong>${esc(mensagem)}</strong>
+      <p class="hint">A diária é o preço do dia. O app multiplica pelos dias do mês e mostra o crédito e o custo líquido de cada mês.</p>
+    </div>`
+}
+
+function renderizarPerfilErro(mensagem) {
+  $('#perfilResultado').innerHTML = `
+    <div class="callout callout--aviso">
+      ${ICONE.alerta}
+      <div>
+        <p><strong>Não foi possível calcular este perfil.</strong> ${esc(mensagem)}</p>
+      </div>
+    </div>`
+}
+
+function opcoesAnoPerfil() {
+  return (estado.opcoes.anosPerfil ?? []).map((ano) => {
+    const meta = estado.opcoes.anos.find((item) => item.ano === ano)
+    return `<option value="${ano}"${ano === estado.perfis.ano ? ' selected' : ''}>${ano}${meta ? ` — ${esc(meta.rotulo)}` : ''}</option>`
+  })
+}
+
+function opcoesMesPerfil() {
+  return NOMES_MESES.map(
+    (nome, indice) =>
+      `<option value="${indice + 1}"${indice + 1 === estado.perfis.mes ? ' selected' : ''}>${esc(nome)}</option>`,
+  )
+}
+
+function composicaoDoMes(mes) {
+  const partes = []
+  if (mes.composicao?.icms > 0) partes.push(`ICMS ${brl(mes.composicao.icms)}`)
+  if (mes.composicao?.pisCofins > 0) partes.push(`PIS/COFINS ${brl(mes.composicao.pisCofins)}`)
+  if (mes.composicao?.cbsIbs > 0) partes.push(`CBS/IBS ${brl(mes.composicao.cbsIbs)}`)
+  return partes.join(' · ')
+}
+
+function rotuloDias(perfil) {
+  if (perfil.modoDias === 'CORRIDOS') return 'dias corridos'
+  if (perfil.modoDias === 'FIXO') return 'dias fixos'
+  if (perfil.modoDias === 'UTEIS_SABADO') return 'dias (seg–sáb)'
+  return 'dias úteis'
+}
+
+function renderizarPerfilResultado(dados) {
+  const alvo = $('#perfilResultado')
+  const { perfil, meses, totais, anos, deveria, contexto } = dados
+  const mes = meses.find((item) => item.mes === contexto.mesReferencia) ?? meses[0]
+  const rotulo = rotuloDias(perfil)
+  const composicao = composicaoDoMes(mes)
+  const creditoHtml =
+    mes.credito > 0
+      ? `${pct(mes.percentualCredito)}${composicao ? ` · ${esc(composicao)}` : ''}`
+      : `sem crédito em ${contexto.anoReferencia}`
+
+  const frase =
+    `Em <b>${esc(mes.nome.toLowerCase())}</b>, ${mes.dias} ${rotulo} × ${brl(perfil.diaria)} = ` +
+    `<b>${brl(mes.bruto)}</b> de faturamento. ` +
+    (mes.credito > 0
+      ? `Desse valor, <b>${brl(mes.credito)}</b> voltam como crédito e o seu custo líquido fica em <b>${brl(mes.liquido)}</b>.`
+      : `Não há crédito neste regime/ano: o seu custo líquido é o faturamento cheio, <b>${brl(mes.liquido)}</b>.`)
+
+  const linhasMes = meses
+    .map(
+      (item) => `
+      <tr class="${item.mes === mes.mes ? 'is-current' : ''}">
+        <td class="cell-mes" data-rotulo="Mês">${esc(item.nome)}${item.atual ? ' <span class="chip chip--year">atual</span>' : ''}</td>
+        <td class="num" data-rotulo="Dias">${item.dias}</td>
+        <td class="num" data-rotulo="Bruto">${brl(item.bruto)}</td>
+        <td class="num" data-rotulo="Crédito">${brl(item.credito)}</td>
+        <td class="num cell-net" data-rotulo="Custo líquido">${brl(item.liquido)}</td>
+      </tr>`,
+    )
+    .join('')
+
+  const linhasAno = anos
+    .map((item) => {
+      const variacao =
+        item.ano === contexto.anoReferencia
+          ? '<span class="cell-dash">—</span>'
+          : Math.abs(item.variacaoLiquido) < 0.005
+            ? '<span class="cell-dash">=</span>'
+            : `<span class="${item.variacaoLiquido > 0 ? 'is-alta' : 'is-baixa'}">${sinalNumero(item.variacaoLiquido)}</span>`
+      return `
+      <tr class="${item.ano === contexto.anoReferencia ? 'is-current' : ''}">
+        <td class="cell-mes" data-rotulo="Ano">${item.ano}<small>${esc(item.rotulo)}</small></td>
+        <td class="num" data-rotulo="Dias">${item.dias}</td>
+        <td class="num" data-rotulo="Bruto">${brl(item.bruto)}</td>
+        <td class="num" data-rotulo="Crédito">${pct(item.percentualCredito)}<small>${brl(item.credito)}</small></td>
+        <td class="num cell-net" data-rotulo="Custo líquido">${brl(item.liquido)}</td>
+        <td class="num cell-variacao" data-rotulo="vs ${contexto.anoReferencia}">${variacao}</td>
+      </tr>`
+    })
+    .join('')
+
+  const deveriaHTML = (() => {
+    if (!deveria) return ''
+    if (deveria.disponivel === false) {
+      return `<div class="callout">${ICONE.info}<div><p>${esc(deveria.motivo)}</p></div></div>`
+    }
+    if (deveria.jaRegular) {
+      return `
+        <div class="callout">
+          ${ICONE.ok}
+          <div>
+            <p><strong>Você já captura todo o crédito deste perfil.</strong> ${esc(deveria.veredito)}</p>
+          </div>
+        </div>`
+    }
+
+    const pior = deveria.economiaAnual > 0.005
+    return `
+      <div class="deveria ${pior ? 'deveria--alerta' : 'deveria--ok'}">
+        <div class="deveria__head">
+          <div>
+            <p class="eyebrow-sm">Quanto deveria ser a diária · benchmark do regime regular</p>
+            <p class="deveria__veredito">${esc(deveria.veredito)}</p>
+          </div>
+          <span class="chip chip--soft">${deveria.ano}</span>
+        </div>
+        <div class="deveria__grid">
+          <div>
+            <span>Sua diária</span>
+            <strong>${brl(perfil.diaria)}</strong>
+            <small>crédito de ${pct(deveria.percentualCreditoAtual)}</small>
+          </div>
+          <div>
+            <span>Diária-teto</span>
+            <strong>${deveria.diariaTeto === null ? '—' : brl(deveria.diariaTeto)}</strong>
+            <small>${deveria.percentualTeto === null ? 'sem crédito' : `${pct(deveria.percentualTeto)} da atual`}</small>
+          </div>
+          <div class="${pior ? 'is-alerta' : 'is-ok'}">
+            <span>Diferença no ano</span>
+            <strong>${brl(Math.abs(deveria.economiaAnual))}</strong>
+            <small>${pior ? 'você paga a mais' : 'você paga a menos'}</small>
+          </div>
+        </div>
+        <p class="deveria__nota">
+          O benchmark é o mesmo serviço com um transportador do regime regular, que transfere
+          ${pct(deveria.percentualCreditoRegular)} de crédito. A diária-teto é a diária que empata o seu custo líquido com esse benchmark.
+        </p>
+      </div>`
+  })()
+
+  const notaDas =
+    perfil.dasTotal !== null && perfil.dasTotal !== undefined
+      ? `<p class="perfil-res__nota">DAS estimado em ${brl(mes.das)} no mês e ${brl(totais.das)} no ano; a receita líquida do transportador fica em ${brl(mes.liquidoTransportador)} no mês.</p>`
+      : ''
+
+  const alertasHTML = (dados.alertas ?? [])
+    .map(
+      (alerta) => `
+      <div class="callout ${alerta.nivel === 'alto' ? 'callout--aviso' : ''}">
+        ${alerta.nivel === 'alto' ? ICONE.alerta : ICONE.info}
+        <div><p><strong>${esc(alerta.titulo)}.</strong> ${esc(alerta.texto)}</p></div>
+      </div>`,
+    )
+    .join('')
+
+  alvo.innerHTML = `
+    <div class="perfil-res">
+      <div class="perfil-res__head">
+        <div>
+          <p class="eyebrow-sm">${esc(perfil.nome)} · ${esc(perfil.rota)} · ${esc(perfil.perfilCurto)}</p>
+          <p class="perfil-res__frase">${frase}</p>
+        </div>
+        <div class="perfil-res__controles">
+          <label for="perfilAno">Ano
+            <select id="perfilAno" data-perfil-ano>${opcoesAnoPerfil()}</select>
+          </label>
+          <label for="perfilMes">Mês
+            <select id="perfilMes" data-perfil-mes>${opcoesMesPerfil()}</select>
+          </label>
+        </div>
+      </div>
+
+      ${alertasHTML}
+
+      <div class="perfil-res__kpis">
+        <div class="kpi">
+          <span class="kpi__label">Diária</span>
+          <strong class="kpi__valor">${brl(perfil.diaria)}</strong>
+          <span class="kpi__sub">${mes.dias} ${rotulo} em ${esc(mes.nome.toLowerCase())}</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi__label">Faturamento bruto</span>
+          <strong class="kpi__valor">${brl(mes.bruto)}</strong>
+          <span class="kpi__sub">média do ano ${brl(totais.mediaMensalBruto)}</span>
+        </div>
+        <div class="kpi ${mes.credito > 0 ? 'kpi--credit' : ''}">
+          <span class="kpi__label">Crédito</span>
+          <strong class="kpi__valor">${brl(mes.credito)}</strong>
+          <span class="kpi__sub">${creditoHtml}</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi__label">Custo líquido</span>
+          <strong class="kpi__valor">${brl(mes.liquido)}</strong>
+          <span class="kpi__sub">no ano ${brl(totais.liquido)}</span>
+        </div>
+      </div>
+
+      <div class="perfil-res__secao">
+        <div class="perfil-res__secao-head">
+          <h4>Mês a mês · ${contexto.anoReferencia}</h4>
+          <span>${totais.dias} ${rotulo} no ano · média de ${numero(totais.mediaMensalBruto)} por mês</span>
+        </div>
+        <div class="table-wrap">
+          <table class="table table--perfil">
+            <thead>
+              <tr>
+                <th>Mês</th>
+                <th class="num">Dias</th>
+                <th class="num">Bruto</th>
+                <th class="num">Crédito</th>
+                <th class="num">Custo líquido</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${linhasMes}
+              <tr class="is-total">
+                <td class="cell-mes">Ano</td>
+                <td class="num cell-dias-total" data-rotulo="Dias">${totais.dias}</td>
+                <td class="num" data-rotulo="Bruto">${brl(totais.bruto)}</td>
+                <td class="num" data-rotulo="Crédito">${brl(totais.credito)}</td>
+                <td class="num cell-net" data-rotulo="Custo líquido">${brl(totais.liquido)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        ${notaDas}
+      </div>
+
+      <div class="perfil-res__secao">
+        <div class="perfil-res__secao-head">
+          <h4>Ano a ano · diária travada</h4>
+          <span>o que muda é o calendário e a carga tributária</span>
+        </div>
+        <div class="table-wrap">
+          <table class="table table--perfil">
+            <thead>
+              <tr>
+                <th>Ano</th>
+                <th class="num">Dias</th>
+                <th class="num">Bruto</th>
+                <th class="num">Crédito</th>
+                <th class="num">Custo líquido</th>
+                <th class="num">vs ${contexto.anoReferencia}</th>
+              </tr>
+            </thead>
+            <tbody>${linhasAno}</tbody>
+          </table>
+        </div>
+      </div>
+
+      ${deveriaHTML}
+    </div>`
+
+  const notas = (dados.notas ?? []).slice(0, 6)
+  if (notas.length) {
+    alvo.querySelector('.perfil-res')?.insertAdjacentHTML(
+      'beforeend',
+      `<ul class="perfil-res__notas">${notas.map((nota) => `<li>${esc(nota)}</li>`).join('')}</ul>`,
+    )
+  }
+}
+
+function renderizarComparacaoPerfis(dados) {
+  const alvo = $('#perfisComparacao')
+  if (!dados?.linhas?.length) {
+    alvo.innerHTML = ''
+    return
+  }
+
+  const linhaHTML = (linha) => `
+      <tr class="${linha.melhor ? 'is-best' : ''}">
+        <td class="rank" data-rotulo="#">${linha.posicao}º</td>
+        <td class="cell-perfil" data-rotulo="Perfil">
+          ${esc(linha.nome)}
+          <small>${esc(linha.rota)} · ${esc(linha.perfilCurto)} · ${esc(linha.tipoOperacao)}</small>
+        </td>
+        <td class="num" data-rotulo="Diária">${brl(linha.diaria)}</td>
+        <td class="num cell-vazio" data-rotulo="Dias/ano">${linha.diasNoAno}</td>
+        <td class="num" data-rotulo="Bruto anual">${brl(linha.brutoAnual)}<small>${brl(linha.brutoMensal)}/mês</small></td>
+        <td class="num" data-rotulo="Crédito">${pct(linha.percentualCredito)}<small>${brl(linha.creditoAnual)}/ano</small></td>
+        <td class="num cell-net" data-rotulo="Custo líquido/ano">${brl(linha.liquidoAnual)}<small>${brl(linha.liquidoMensal)}/mês</small></td>
+        <td class="num" data-rotulo="vs melhor">
+          ${linha.melhor ? '<span class="chip chip--best">melhor</span>' : `${brl(linha.diferencaAnual)}<small>${pct(linha.percentualDiferenca)}</small>`}
+        </td>
+      </tr>`
+
+  const grupos = dados.grupos?.length ? dados.grupos : [{ rotulo: null, linhas: dados.linhas }]
+  const corpo = grupos
+    .map(
+      (grupo) => `
+      <tbody>
+        ${grupo.rotulo ? `<tr class="is-grupo"><th colspan="8">${esc(grupo.rotulo)}</th></tr>` : ''}
+        ${grupo.linhas.map(linhaHTML).join('')}
+      </tbody>`,
+    )
+    .join('')
+
+  alvo.innerHTML = `
+    <div class="perfis__comparacao-head">
+      <div>
+        <p class="eyebrow-sm">Ranking · ${dados.ano} · ${esc(dados.contexto.regimePagadora.curto)} · ${esc(dados.contexto.tipoOperacao ?? 'B2B')}</p>
+        <h3>Qual perfil custa menos no ano</h3>
+      </div>
+      <span class="chip chip--soft">custo líquido anual · diária travada</span>
+    </div>
+    <div class="table-wrap">
+      <table class="table table--perfis-rank">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Perfil</th>
+            <th class="num">Diária</th>
+            <th class="num">Dias/ano</th>
+            <th class="num">Bruto anual</th>
+            <th class="num">Crédito</th>
+            <th class="num">Custo líquido</th>
+            <th class="num">vs melhor</th>
+          </tr>
+        </thead>
+        ${corpo}
+      </table>
+    </div>
+    <p class="perfil-res__nota">
+      ${dados.economiaEntreExtremos > 0 ? `Dentro do mesmo tipo de veículo, a diferença entre o melhor e o pior perfil chega a ${brl(dados.economiaEntreExtremos)} por ano.` : 'Crie outro perfil do mesmo tipo de veículo para comparar dois transportadores.'}
+      A comparação é sempre dentro do mesmo tipo: uma carreta e um toco não disputam o mesmo serviço.${
+        dados.ano === 2026
+          ? ' Em 2026 o optante do Simples não gera crédito de CBS/IBS (art. 348, III, "c", da LC 214/2025): o custo desses perfis é o faturamento cheio.'
+          : ''
+      }
+    </p>`
+}
+
+async function iniciarPerfis() {
+  renderizarSelectsPerfil()
+  try {
+    await carregarListaPerfis()
+    if (estado.perfis.lista.length) {
+      await selecionarPerfil(estado.perfis.lista[0].id)
+    } else {
+      novoPerfil()
+    }
+    await carregarComparacaoPerfis()
+  } catch (erro) {
+    renderizarPerfilErro(erro.message)
+  }
+}
+
+async function salvarPerfil() {
+  const campos = perfilDoFormulario()
+  const erroEl = $('#perfilFormErro')
+  erroEl.hidden = true
+
+  if (campos.nome.length < 2) {
+    erroEl.hidden = false
+    erroEl.textContent = 'Dê um nome ao perfil com pelo menos 2 caracteres.'
+    $('#perfilNome').focus()
+    return
+  }
+  const diaria = numeroDeTexto(campos.diaria)
+  if (!Number.isFinite(diaria) || diaria <= 0) {
+    erroEl.hidden = false
+    erroEl.textContent = 'Informe a diária em reais, maior que zero.'
+    $('#perfilDiaria').focus()
+    return
+  }
+
+  const botao = $('#perfilSalvar')
+  botao.classList.add('is-loading')
+  botao.disabled = true
+  try {
+    if (estado.perfis.atualId) {
+      await enviarJson(`/api/perfis/${estado.perfis.atualId}`, 'PUT', campos)
+    } else {
+      const criado = await enviarJson('/api/perfis', 'POST', campos)
+      estado.perfis.atualId = criado.perfil.id
+    }
+    estado.perfis.sujo = false
+    await carregarListaPerfis()
+    const perfil = perfilAtual()
+    if (perfil) preencherFormulario(perfil)
+    renderizarCardsPerfis()
+    await carregarDetalhePerfil()
+    await carregarComparacaoPerfis()
+  } catch (erro) {
+    erroEl.hidden = false
+    erroEl.textContent = erro.message
+  } finally {
+    botao.classList.remove('is-loading')
+    botao.disabled = false
+  }
+}
+
+async function excluirPerfil() {
+  const botao = $('#perfilExcluir')
+  if (!estado.perfis.atualId) return
+
+  if (!botao.dataset.confirmar) {
+    botao.dataset.confirmar = '1'
+    botao.textContent = 'Confirmar exclusão'
+    setTimeout(() => {
+      delete botao.dataset.confirmar
+      botao.textContent = 'Excluir'
+    }, 4000)
+    return
+  }
+  delete botao.dataset.confirmar
+  botao.textContent = 'Excluir'
+
+  try {
+    await enviarJson(`/api/perfis/${estado.perfis.atualId}`, 'DELETE')
+    estado.perfis.atualId = null
+    estado.perfis.detalhe = null
+    await carregarListaPerfis()
+    if (estado.perfis.lista.length) await selecionarPerfil(estado.perfis.lista[0].id)
+    else novoPerfil()
+    await carregarComparacaoPerfis()
+  } catch (erro) {
+    const erroEl = $('#perfilFormErro')
+    erroEl.hidden = false
+    erroEl.textContent = erro.message
+  }
+}
+
+async function restaurarExemplosPerfis() {
+  const botao = $('#perfisExemplos')
+  if (!botao.dataset.confirmar) {
+    botao.dataset.confirmar = '1'
+    botao.textContent = 'Confirmar restauração'
+    setTimeout(() => {
+      delete botao.dataset.confirmar
+      botao.textContent = 'Restaurar exemplos'
+    }, 4000)
+    return
+  }
+  delete botao.dataset.confirmar
+  botao.textContent = 'Restaurar exemplos'
+
+  try {
+    const dados = await enviarJson('/api/perfis/exemplos', 'POST')
+    estado.perfis.lista = dados.perfis ?? []
+    estado.perfis.atualId = null
+    renderizarCardsPerfis()
+    if (estado.perfis.lista.length) await selecionarPerfil(estado.perfis.lista[0].id)
+    else novoPerfil()
+    await carregarComparacaoPerfis()
+  } catch (erro) {
+    const erroEl = $('#perfilFormErro')
+    erroEl.hidden = false
+    erroEl.textContent = erro.message
+  }
+}
+
+async function usarPerfilNaSimulacao() {
+  const dados = estado.perfis.detalhe
+  if (!dados?.perfil) return
+  const mes = dados.meses.find((item) => item.mes === estado.perfis.mes) ?? dados.meses[0]
+  const perfil = dados.perfil
+
+  $('#valor').value = numero(mes.bruto)
+  $('#ufOrigem').value = perfil.ufOrigem
+  $('#ufDestino').value = perfil.ufDestino
+  $('#ano').value = String(dados.contexto.anoReferencia)
+
+  const meta = estado.opcoes.perfis.find((item) => item.id === perfil.perfil)
+  if (meta) estado.regime = meta.regime
+  estado.perfil = perfil.perfil
+
+  if (perfil.perfil === 'SIMPLES_DAS') {
+    if (perfil.aliquotaCbs !== null && perfil.aliquotaCbs !== undefined) {
+      $('#aliquotaCbs').value = numero(perfil.aliquotaCbs, 4)
+    }
+    if (perfil.aliquotaIbs !== null && perfil.aliquotaIbs !== undefined) {
+      $('#aliquotaIbs').value = numero(perfil.aliquotaIbs, 4)
+    }
+    if (perfil.dasTotal !== null && perfil.dasTotal !== undefined) {
+      $('#dasTotal').value = numero(perfil.dasTotal)
+    }
+  }
+
+  renderizarRegimes()
+  renderizarPerfis()
+  atualizarPerfil()
+  atualizarAno()
+  marcarDesatualizado(true)
+  await simular()
+  $('#resultado').scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+/** Recalcula o perfil aberto quando o contexto da pagadora muda. */
+function atualizarContextoPerfis() {
+  if (estado.perfis.detalhe) {
+    const id = estado.perfis.atualId
+    if (id) carregarDetalhePerfil()
+    else agendarPrevia()
+  }
+  if (estado.perfis.lista.length) carregarComparacaoPerfis()
+}
+
+function ligarEventosPerfis() {
+  $('#perfisCards').addEventListener('click', (evento) => {
+    const cartao = evento.target.closest('[data-perfil-id]')
+    if (cartao) selecionarPerfil(cartao.dataset.perfilId)
+  })
+
+  $('#perfilNovo').addEventListener('click', novoPerfil)
+  $('#perfilForm').addEventListener('submit', (evento) => {
+    evento.preventDefault()
+    salvarPerfil()
+  })
+  $('#perfilExcluir').addEventListener('click', excluirPerfil)
+  $('#perfisExemplos').addEventListener('click', restaurarExemplosPerfis)
+  $('#perfilUsar').addEventListener('click', usarPerfilNaSimulacao)
+
+  $('#perfilForm').addEventListener('input', (evento) => {
+    if (evento.target.closest('[data-perfil-ano], [data-perfil-mes]')) return
+    estado.perfis.sujo = true
+    atualizarStatusPerfil()
+    atualizarCamposPerfil()
+    agendarPrevia()
+  })
+
+  $('#perfilForm').addEventListener('change', (evento) => {
+    estado.perfis.sujo = true
+    atualizarStatusPerfil()
+    atualizarCamposPerfil()
+    if (evento.target.id === 'perfilTipoVeiculo') {
+      const tipo = (estado.opcoes.tiposVeiculo ?? []).find((item) => item.id === evento.target.value)
+      const diaria = numeroDeTexto($('#perfilDiaria').value)
+      if (tipo && !(Number.isFinite(diaria) && diaria > 0)) {
+        $('#perfilDiaria').value = numero(tipo.base)
+      }
+    }
+    agendarPrevia()
+  })
+
+  $('#perfilResultado').addEventListener('change', (evento) => {
+    const alvo = evento.target
+    if (alvo.matches('[data-perfil-ano]')) {
+      estado.perfis.ano = Number(alvo.value)
+      carregarDetalhePerfil()
+      carregarComparacaoPerfis()
+    } else if (alvo.matches('[data-perfil-mes]')) {
+      estado.perfis.mes = Number(alvo.value)
+      carregarDetalhePerfil()
+    }
+  })
 }
 
 /* ------------------------------------------------------------------ */
@@ -1676,6 +2878,7 @@ function ligarEventos() {
     estado.operacao = botao.dataset.valor
     renderizarOperacao()
     marcarDesatualizado(true)
+    atualizarContextoPerfis()
   })
 
   $('#taxaRange').addEventListener('input', (evento) => {
@@ -1686,6 +2889,8 @@ function ligarEventos() {
   })
 
   $('#valor').addEventListener('input', () => marcarDesatualizado(true))
+  $('#dasTotal')?.addEventListener('input', () => marcarDesatualizado(true))
+  $('#insumos')?.addEventListener('input', () => marcarDesatualizado(true))
 
   $('#valor').addEventListener('blur', (evento) => {
     const valor = numeroDeTexto(evento.target.value)
@@ -1702,6 +2907,7 @@ function ligarEventos() {
   $('#regimePagadora').addEventListener('change', (evento) => {
     estado.regimePagadora = evento.target.value
     marcarDesatualizado(true)
+    atualizarContextoPerfis()
   })
 
   $('#horizonteCenario').addEventListener('click', (evento) => {
@@ -1716,6 +2922,8 @@ function ligarEventos() {
   $('#ufDestino').addEventListener('change', () => marcarDesatualizado(true))
 
   $('#reset').addEventListener('click', restaurar)
+
+  ligarEventosPerfis()
 
   $('#carriers').addEventListener('input', (evento) => {
     const campo = evento.target.dataset.campo
@@ -1865,6 +3073,8 @@ function restaurar() {
   $('#ano').value = '2033'
   $('#aliquotaCbs').value = ''
   $('#aliquotaIbs').value = ''
+  $('#dasTotal').value = '12'
+  $('#insumos').value = '60'
 
   renderizarRegimes()
   renderizarPerfis()
@@ -1903,7 +3113,7 @@ async function iniciar() {
     atualizarAno()
     ligarEventos()
 
-    await Promise.allSettled([simular(), comparar()])
+    await Promise.allSettled([simular(), comparar(), iniciarPerfis()])
   } catch (erro) {
     mostrarErro($('#resultado'), `Falha ao iniciar a interface: ${erro.message}`)
   }

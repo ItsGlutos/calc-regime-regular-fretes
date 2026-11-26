@@ -37,6 +37,27 @@ import {
 } from './domain.js'
 import { construirHorizonte } from './pagador.js'
 import {
+  ANOS_PERFIL,
+  LIMITES,
+  MODOS_DIAS,
+  REFERENCIA_DIARIA,
+  TIPOS_VEICULO,
+  PerfilInvalidoError,
+  calcularPerfil,
+  normalizarPerfil as normalizarPerfilTransportador,
+  resumoDoPerfil,
+  tipoVeiculoPorId,
+} from './perfis.js'
+import {
+  atualizar as atualizarPerfil,
+  criar as criarPerfil,
+  listar as listarPerfis,
+  obter as obterPerfil,
+  remover as removerPerfil,
+  restaurarExemplos,
+  todos as todosOsPerfis,
+} from './perfis-store.js'
+import {
   MOTOR_URL,
   MOTOR_SIMPLES_URL,
   MotorError,
@@ -116,6 +137,16 @@ function normalizarPercentual(valor, campo) {
   return texto
 }
 
+function percentualOpcional(valor, campo, { min = 0, max = 100 } = {}) {
+  if (valor === undefined || valor === null || String(valor).trim() === '') return null
+  const texto = normalizarPercentual(valor, campo)
+  const n = Number(texto)
+  if (!Number.isFinite(n) || n < min || n > max) {
+    throw new HttpError(400, `Informe ${campo} entre ${min}% e ${max}%.`)
+  }
+  return n
+}
+
 function normalizarEntrada(entrada) {
   if (!entrada || typeof entrada !== 'object') {
     throw new HttpError(400, 'Envie os dados da simulação em JSON.')
@@ -170,6 +201,11 @@ function normalizarEntrada(entrada) {
   const aliquotaCbs = informouCbs ? normalizarPercentual(aliquotaCbsBruta, 'a alíquota efetiva da CBS') : null
   const aliquotaIbs = informouIbs ? normalizarPercentual(aliquotaIbsBruta, 'a alíquota efetiva do IBS') : null
 
+  // Dados opcionais do Simples para estimar o piso do transportador (margem
+  // preservada). Sem eles, o horizonte mostra só o equilíbrio do pagador.
+  const dasTotal = percentualOpcional(entrada.dasTotal, 'o DAS total', { min: 0, max: 30 })
+  const insumos = percentualOpcional(entrada.insumos, 'a parcela de insumos', { min: 0, max: 100 })
+
   const avisos = []
   let fonteCredito = 'integral'
 
@@ -216,6 +252,8 @@ function normalizarEntrada(entrada) {
     taxaCredito,
     aliquotaCbs,
     aliquotaIbs,
+    dasTotal,
+    insumos,
     atividade,
     fonteCredito,
     avisos,
@@ -659,11 +697,12 @@ async function comparar(entrada) {
     ufOrigem: entrada.ufOrigem ?? 'SP',
     ufDestino: entrada.ufDestino ?? 'BA',
   }
+  const anoHoje = Math.min(2033, Math.max(2026, new Date().getFullYear()))
 
   const avaliadas = await Promise.all(
     cenarios.map(async (cenario, indice) => {
       const nome = String(cenario?.nome ?? '').trim().slice(0, 80) || `Transportadora ${indice + 1}`
-      const simulacao = await simular({
+      const comum = {
         ...base,
         valorFrete: cenario?.preco ?? cenario?.valorFrete,
         perfil: cenario?.perfil ?? cenario?.perfilTransportador,
@@ -671,8 +710,12 @@ async function comparar(entrada) {
         aliquotaCbs: cenario?.aliquotaCbs ?? cenario?.aliquotasEfetivas?.cbs,
         aliquotaIbs: cenario?.aliquotaIbs ?? cenario?.aliquotasEfetivas?.ibs,
         atividade: cenario?.atividade,
-      })
-      return { nome, simulacao }
+      }
+      const [simulacao, simulacaoHoje] = await Promise.all([
+        simular(comum),
+        simular({ ...comum, ano: anoHoje }),
+      ])
+      return { nome, simulacao, simulacaoHoje }
     }),
   )
 
@@ -687,24 +730,50 @@ async function comparar(entrada) {
 
   const ranking = ordenadas.map((item, indice) => {
     const simulacao = item.simulacao
+    const resultado = simulacao.resultado
+    const resultadoHoje = item.simulacaoHoje.resultado
+    const liquidoHoje = resultadoHoje.custoTotal
+    const creditoHoje = resultadoHoje.percentualCreditoTotal
+    const creditoAno = resultado.percentualCreditoTotal
+    const precoEquilibrio =
+      creditoAno < 100 ? arredondar(liquidoHoje / (1 - creditoAno / 100)) : null
     return {
       posicao: indice + 1,
       nome: item.nome,
       perfil: simulacao.entrada.perfil,
       valorFrete: simulacao.entrada.valorFrete,
-      credito: simulacao.resultado.credito,
-      percentualCredito: simulacao.resultado.percentualCredito,
-      creditoTotal: simulacao.resultado.creditoTotal,
-      percentualCreditoTotal: simulacao.resultado.percentualCreditoTotal,
-      percentualCreditoCbsIbs: simulacao.resultado.percentualCreditoCbsIbs,
-      creditoAntigos: simulacao.resultado.creditoAntigos,
-      custoLiquido: simulacao.resultado.custoLiquido,
-      custoTotal: simulacao.resultado.custoTotal,
-      diferencaParaMelhor: arredondar(simulacao.resultado.custoTotal - menorLiquido),
-      fonteCredito: simulacao.resultado.fonteCredito,
-      creditoIntegral: simulacao.resultado.creditoIntegral,
-      alerta: simulacao.resultado.alerta,
+      credito: resultado.credito,
+      percentualCredito: resultado.percentualCredito,
+      creditoTotal: resultado.creditoTotal,
+      percentualCreditoTotal: resultado.percentualCreditoTotal,
+      percentualCreditoCbsIbs: resultado.percentualCreditoCbsIbs,
+      creditoAntigos: resultado.creditoAntigos,
+      custoLiquido: resultado.custoLiquido,
+      custoTotal: resultado.custoTotal,
+      diferencaParaMelhor: arredondar(resultado.custoTotal - menorLiquido),
+      fonteCredito: resultado.fonteCredito,
+      creditoIntegral: resultado.creditoIntegral,
+      alerta: resultado.alerta,
       simulacao,
+      // Leitura "hoje → ano escolhido": o preço travado é o nominal que a
+      // transportadora já cobra; o preço de equilíbrio é o que manteria o
+      // líquido de hoje com o crédito do ano escolhido.
+      hoje: {
+        bruto: item.simulacaoHoje.entrada.valorFrete,
+        credito: resultadoHoje.creditoTotal,
+        percentualCredito: creditoHoje,
+        liquido: liquidoHoje,
+      },
+      precoTravado: simulacao.entrada.valorFrete,
+      liquidoTravado: resultado.custoTotal,
+      precoEquilibrio,
+      liquidoEquilibrio: liquidoHoje,
+      variacaoPreco:
+        precoEquilibrio === null
+          ? null
+          : Number((((precoEquilibrio - simulacao.entrada.valorFrete) / simulacao.entrada.valorFrete) * 100).toFixed(2)),
+      variacaoLiquidoTravado:
+        liquidoHoje > 0 ? Number((((resultado.custoTotal - liquidoHoje) / liquidoHoje) * 100).toFixed(2)) : null,
     }
   })
 
@@ -726,6 +795,7 @@ async function comparar(entrada) {
   return {
     entrada: {
       ano: ranking[0].simulacao.entrada.ano,
+      anoHoje,
       tipoOperacao: ranking[0].simulacao.entrada.tipoOperacao,
       ufOrigem: ranking[0].simulacao.entrada.ufOrigem,
       ufDestino: ranking[0].simulacao.entrada.ufDestino,
@@ -1448,6 +1518,7 @@ async function pagador(entrada) {
     anoHoje,
     serie,
     taxaSimples,
+    dados: { dasTotal: dados.dasTotal, insumos: dados.insumos },
   })
 
   if (tipoOperacaoFrete === 'INTERNA') {
@@ -1490,6 +1561,8 @@ async function pagador(entrada) {
       rota: `${dados.ufOrigem.sigla} → ${dados.ufDestino.sigla}`,
       aliquotaCbs: dados.aliquotaCbs,
       aliquotaIbs: dados.aliquotaIbs,
+      dasTotal: dados.dasTotal,
+      insumos: dados.insumos,
       taxaSimples: perfil.id === 'SIMPLES_DAS' || perfil.id === 'AUTONOMO_MEI' ? taxaSimples2027 : null,
       anual: 12,
     },
@@ -1526,6 +1599,244 @@ async function pagador(entrada) {
       aliquotaIcms: projecao.aliquotaIcms,
       geradoEm: new Date().toISOString(),
     },
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Perfis de transportadores                                           */
+/* ------------------------------------------------------------------ */
+
+const ANO_MINIMO_PERFIL = 2026
+const ANO_MAXIMO_PERFIL = 2033
+
+function anoCorrente() {
+  return Math.min(ANO_MAXIMO_PERFIL, Math.max(ANO_MINIMO_PERFIL, new Date().getFullYear()))
+}
+
+function anoDoPerfil(valor, padrao = anoCorrente()) {
+  const ano = Number(valor ?? padrao)
+  if (!Number.isInteger(ano) || !ANOS_PERFIL.includes(ano)) {
+    throw new HttpError(400, `Ano do perfil inválido. Use ${ANOS_PERFIL.join(', ')}.`)
+  }
+  return ano
+}
+
+function mesDoPerfil(valor, padrao = new Date().getMonth() + 1) {
+  const mes = Number(valor ?? padrao)
+  if (!Number.isInteger(mes) || mes < 1 || mes > 12) {
+    throw new HttpError(400, 'Mês inválido. Use 1 a 12.')
+  }
+  return mes
+}
+
+/** A rota do perfil decide a projeção; a mesma chamada é cacheada no motor. */
+async function taxasDaRotaPerfil({ ufOrigem, ufDestino }) {
+  try {
+    return await taxasDoFretePorAno({
+      ufOrigem,
+      ufDestino,
+      tipoOperacao: ufOrigem === ufDestino ? 'INTERNA' : 'INTERESTADUAL',
+    })
+  } catch (erro) {
+    throw new HttpError(
+      503,
+      `Os perfis precisam da projeção anual do frete do motor oficial e ela não respondeu (${erro.message}). Suba o motor do regime regular com .\\run.ps1 e tente de novo.`,
+    )
+  }
+}
+
+const TAXAS_ZERADAS = {
+  porAno: new Map(
+    ANOS_PERFIL.map((ano) => [ano, { ano, icms: 0, pis: 0, cofins: 0, cbs: 0, ibs: 0, carga: 0 }]),
+  ),
+  versaoBaseDados: null,
+  disponivel: true,
+}
+
+/** Aceita `{ perfil: {...} }` e também os campos soltos no corpo. */
+function perfilRecebido(entrada) {
+  if (entrada?.perfil && typeof entrada.perfil === 'object' && !Array.isArray(entrada.perfil)) {
+    return entrada.perfil
+  }
+  return entrada ?? {}
+}
+
+async function contextoDoPerfil(entrada) {
+  const base = perfilRecebido(entrada)
+  let perfil
+
+  if (base?.id) {
+    perfil = await obterPerfil(String(base.id))
+    if (!perfil) throw new HttpError(404, 'Perfil não encontrado.')
+  } else {
+    perfil = { ...normalizarPerfilTransportador(base), id: null }
+  }
+
+  const regimePagadora = regimePagadoraPorId(
+    entrada?.regimePagadora ?? perfil.regimePagadora ?? REGIMES_PAGADORA[0].id,
+  )
+  if (!regimePagadora) {
+    throw new HttpError(
+      400,
+      `Regime da pagadora desconhecido. Use ${REGIMES_PAGADORA.map((regime) => regime.id).join(', ')}.`,
+    )
+  }
+
+  const tipoOperacao = String(entrada?.tipoOperacao ?? perfil.tipoOperacao ?? 'B2B').toUpperCase()
+  if (!['B2B', 'B2C'].includes(tipoOperacao)) {
+    throw new HttpError(400, 'Tipo de operação inválido. Use B2B ou B2C.')
+  }
+
+  const ano = anoDoPerfil(entrada?.ano)
+  const mes = mesDoPerfil(entrada?.mes)
+  // Em B2C não há crédito e o motor não é necessário: o perfil abre mesmo offline.
+  const taxas =
+    tipoOperacao === 'B2C' ? TAXAS_ZERADAS : await taxasDaRotaPerfil(perfil)
+
+  return { perfil, regimePagadora, tipoOperacao, ano, mes, mesAtual: new Date().getMonth() + 1, taxas }
+}
+
+async function detalharPerfil(entrada) {
+  const contexto = await contextoDoPerfil(entrada)
+  const detalhe = calcularPerfil({
+    perfil: contexto.perfil,
+    taxas: contexto.taxas,
+    regimePagadora: contexto.regimePagadora.id,
+    anoReferencia: contexto.ano,
+    anoHoje: anoCorrente(),
+    mesReferencia: contexto.mes,
+    mesAtual: contexto.mesAtual,
+  })
+
+  return {
+    ...detalhe,
+    geradoEm: new Date().toISOString(),
+  }
+}
+
+async function compararPerfis(entrada) {
+  const ano = anoDoPerfil(entrada?.ano)
+  const mes = mesDoPerfil(entrada?.mes)
+  const regimePagadora = regimePagadoraPorId(entrada?.regimePagadora ?? REGIMES_PAGADORA[0].id)
+  if (!regimePagadora) {
+    throw new HttpError(
+      400,
+      `Regime da pagadora desconhecido. Use ${REGIMES_PAGADORA.map((regime) => regime.id).join(', ')}.`,
+    )
+  }
+
+  const tipoForcado = entrada?.tipoOperacao ? String(entrada.tipoOperacao).toUpperCase() : null
+  if (tipoForcado && !['B2B', 'B2C'].includes(tipoForcado)) {
+    throw new HttpError(400, 'Tipo de operação inválido. Use B2B ou B2C.')
+  }
+
+  const ids = Array.isArray(entrada?.ids) ? entrada.ids.map(String) : null
+  const todos = await todosOsPerfis()
+  const alvo = ids ? todos.filter((perfil) => ids.includes(perfil.id)) : todos
+  if (alvo.length === 0) throw new HttpError(400, 'Não há perfis para comparar. Crie um perfil primeiro.')
+
+  const cacheRotas = new Map()
+  const taxasDa = async (perfil) => {
+    const chave = `${perfil.ufOrigem}|${perfil.ufDestino}`
+    if (!cacheRotas.has(chave)) cacheRotas.set(chave, await taxasDaRotaPerfil(perfil))
+    return cacheRotas.get(chave)
+  }
+
+  const linhas = await Promise.all(
+    alvo.map(async (perfil) => {
+      const tipoOperacao = tipoForcado ?? perfil.tipoOperacao ?? 'B2B'
+      const taxas = tipoOperacao === 'B2C' ? TAXAS_ZERADAS : await taxasDa(perfil)
+      const detalhe = calcularPerfil({
+        perfil,
+        taxas,
+        regimePagadora: regimePagadora.id,
+        anoReferencia: ano,
+        anoHoje: anoCorrente(),
+        mesReferencia: mes,
+        mesAtual: new Date().getMonth() + 1,
+      })
+      const base = detalhe.anos.find((item) => item.ano === ano) ?? detalhe.anos[0]
+      return {
+        id: perfil.id,
+        nome: perfil.nome,
+        rota: detalhe.perfil.rota,
+        tipoRota: detalhe.perfil.tipoRota,
+        perfil: perfil.perfil,
+        perfilRotulo: detalhe.perfil.perfilRotulo,
+        perfilCurto: detalhe.perfil.perfilCurto,
+        tipoVeiculo: perfil.tipoVeiculo ?? null,
+        diaria: perfil.diaria,
+        modoDias: perfil.modoDias,
+        tipoOperacao,
+        diasNoAno: base.dias,
+        brutoAnual: base.bruto,
+        brutoMensal: base.mediaMensalBruto,
+        percentualCredito: base.percentualCredito,
+        creditoAnual: base.credito,
+        liquidoAnual: base.liquido,
+        liquidoMensal: base.mediaMensalLiquido,
+      }
+    }),
+  )
+
+  linhas.sort((a, b) => a.liquidoAnual - b.liquidoAnual)
+
+  // Comparar carreta com toco não decide nada: o ranking é feito dentro do
+  // mesmo tipo de veículo. Perfis sem tipo informado formam um grupo próprio.
+  const porTipo = new Map()
+  for (const linha of linhas) {
+    const chave = linha.tipoVeiculo ?? 'NAO_INFORMADO'
+    if (!porTipo.has(chave)) porTipo.set(chave, [])
+    porTipo.get(chave).push(linha)
+  }
+
+  const grupos = [...porTipo.entries()].map(([tipo, itens]) => {
+    itens.sort((a, b) => a.liquidoAnual - b.liquidoAnual)
+    const melhorDoGrupo = itens[0]?.liquidoAnual ?? 0
+    return {
+      tipo,
+      rotulo: tipo === 'NAO_INFORMADO' ? 'Sem tipo de veículo' : (tipoVeiculoPorId(tipo)?.rotulo ?? tipo),
+      linhas: itens.map((linha, indice) => ({
+        ...linha,
+        grupo: tipo,
+        posicao: indice + 1,
+        melhor: indice === 0,
+        diferencaAnual: arredondar(linha.liquidoAnual - melhorDoGrupo),
+        diferencaMensal: arredondar((linha.liquidoAnual - melhorDoGrupo) / 12),
+        percentualDiferenca:
+          melhorDoGrupo > 0
+            ? Number((((linha.liquidoAnual - melhorDoGrupo) / melhorDoGrupo) * 100).toFixed(2))
+            : 0,
+      })),
+    }
+  })
+
+  const ranking = grupos.flatMap((grupo) => grupo.linhas)
+  const economias = grupos
+    .filter((grupo) => grupo.linhas.length > 1)
+    .map((grupo) => arredondar(grupo.linhas[grupo.linhas.length - 1].liquidoAnual - grupo.linhas[0].liquidoAnual))
+
+  return {
+    ano,
+    mes,
+    contexto: {
+      regimePagadora: {
+        id: regimePagadora.id,
+        rotulo: regimePagadora.rotulo,
+        curto: regimePagadora.curto,
+      },
+      tipoOperacao: tipoForcado,
+    },
+    linhas: ranking,
+    grupos,
+    melhorId: ranking[0]?.id ?? null,
+    economiaEntreExtremos: economias.length ? Math.max(...economias) : 0,
+    notas: [
+      'O ranking é pelo custo líquido ANUAL depois do crédito, com a diária travada e o calendário de cada perfil.',
+      'A comparação é dentro do mesmo tipo de veículo: uma carreta e um toco não disputam o mesmo serviço.',
+      'Perfis com tipos de operação diferentes (B2B e B2C) não são comparáveis entre si: o B2C não gera crédito.',
+      'Feriados nacionais entram no calendário; estaduais, municipais e pontos facultativos não.',
+    ],
   }
 }
 
@@ -1609,6 +1920,11 @@ async function opcoes() {
     regimesPagadora: REGIMES_PAGADORA,
     tiposOperacao: TIPOS_OPERACAO,
     atividadesSimples: ATIVIDADES_SIMPLES,
+    modosDias: MODOS_DIAS,
+    anosPerfil: ANOS_PERFIL,
+    limitesPerfil: LIMITES,
+    tiposVeiculo: TIPOS_VEICULO,
+    referenciaDiaria: REFERENCIA_DIARIA,
     anoInicioSimples: ANO_INICIO_SIMPLES,
     anoReferencia: ANO_REFERENCIA_REFORMA,
     anosReforma: ANOS_REFORMA,
@@ -1693,6 +2009,65 @@ const rotas = {
     const corpo = await lerCorpo(req)
     return { status: 200, corpo: await comparar(corpo) }
   },
+
+  'GET /api/perfis': async () => ({ status: 200, corpo: await listarPerfis() }),
+
+  'POST /api/perfis': async (req) => {
+    const corpo = await lerCorpo(req)
+    const criado = await criarPerfil(corpo)
+    return { status: 201, corpo: { perfil: resumoDoPerfil(criado) } }
+  },
+
+  'POST /api/perfis/calcular': async (req) => ({
+    status: 200,
+    corpo: await detalharPerfil(await lerCorpo(req)),
+  }),
+
+  'POST /api/perfis/comparar': async (req) => ({
+    status: 200,
+    corpo: await compararPerfis(await lerCorpo(req)),
+  }),
+
+  'POST /api/perfis/exemplos': async () => {
+    await restaurarExemplos()
+    return { status: 200, corpo: await listarPerfis() }
+  },
+}
+
+/**
+ * Rotas com id no caminho (`/api/perfis/:id`). O dicionário `rotas` cobre as
+ * rotas exatas; esta função só é consultada quando não há correspondência.
+ */
+function rotaComParametro(metodo, caminho) {
+  const encontrado = /^\/api\/perfis\/([^/]+)$/.exec(caminho)
+  if (!encontrado) return null
+  const id = decodeURIComponent(encontrado[1])
+
+  if (metodo === 'GET') {
+    return async (req, url) => {
+      const consulta = Object.fromEntries(url.searchParams.entries())
+      return { status: 200, corpo: await detalharPerfil({ ...consulta, perfil: { id } }) }
+    }
+  }
+
+  if (metodo === 'PUT') {
+    return async (req) => {
+      const corpo = await lerCorpo(req)
+      const atualizado = await atualizarPerfil(id, corpo)
+      if (!atualizado) throw new HttpError(404, 'Perfil não encontrado.')
+      return { status: 200, corpo: { perfil: resumoDoPerfil(atualizado) } }
+    }
+  }
+
+  if (metodo === 'DELETE') {
+    return async () => {
+      const removido = await removerPerfil(id)
+      if (!removido) throw new HttpError(404, 'Perfil não encontrado.')
+      return { status: 200, corpo: { ok: true, id } }
+    }
+  }
+
+  return null
 }
 
 const servidor = http.createServer(async (req, res) => {
@@ -1703,7 +2078,7 @@ const servidor = http.createServer(async (req, res) => {
   try {
     if (caminho.startsWith('/api/')) {
       const chave = `${req.method} ${caminho}`
-      const rota = rotas[chave]
+      const rota = rotas[chave] ?? rotaComParametro(req.method, caminho)
       if (!rota) {
         responderJson(res, 404, { erro: `Rota não encontrada: ${chave}` })
         return
@@ -1721,12 +2096,22 @@ const servidor = http.createServer(async (req, res) => {
 
     await servirEstatico(req, res, caminho)
   } catch (erro) {
-    const status = erro instanceof HttpError ? erro.status : erro instanceof MotorError ? 502 : 500
+    const status =
+      erro instanceof HttpError
+        ? erro.status
+        : erro instanceof PerfilInvalidoError
+          ? 400
+          : erro instanceof MotorError
+            ? 502
+            : 500
     const mensagem =
-      erro instanceof HttpError || erro instanceof MotorError ? erro.message : 'Erro interno ao processar a simulação.'
+      erro instanceof HttpError || erro instanceof PerfilInvalidoError || erro instanceof MotorError
+        ? erro.message
+        : 'Erro interno ao processar a simulação.'
     if (status >= 500) console.error(`[erro] ${req.method} ${caminho}`, erro)
     responderJson(res, status, {
       erro: mensagem,
+      campo: erro?.campo ?? null,
       detalhe: erro?.detalhe ?? erro?.corpo ?? null,
     })
   }

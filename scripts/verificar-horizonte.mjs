@@ -109,6 +109,16 @@ for (let i = 0; i < 120; i++) {
   if (pronto) break
   await esperar(300)
 }
+for (let i = 0; i < 80; i++) {
+  const regularPronto = await avaliar(`(() => {
+    const valor = document.querySelector('#valor')?.value;
+    const liquido = document.querySelector('#resultado .net__val')?.textContent ?? '';
+    const primeiraLinha = document.querySelector('.table--horizonte tbody tr')?.children[2]?.textContent ?? '';
+    return valor === '10.000,00' && liquido.includes('8.375,00') && primeiraLinha.includes('10.000,00');
+  })()`)
+  if (regularPronto) break
+  await esperar(250)
+}
 await esperar(500)
 
 const leitura = await avaliar(`(() => {
@@ -138,6 +148,18 @@ const leitura = await avaliar(`(() => {
 })()`)
 
 // Cenário com repasse: o líquido do regime regular deve ficar igual ao de hoje.
+await avaliar("document.querySelector('[data-cenario=\"equilibrio\"]').click()")
+await esperar(400)
+
+const equilibrio = await avaliar(`(() => {
+  const linhas = [...document.querySelectorAll('.table--horizonte tbody tr')].map((tr) => ({
+    ano: tr.children[0]?.textContent?.trim(),
+    bruto: tr.children[2]?.textContent?.trim(),
+    liquido: tr.children[4]?.textContent?.trim(),
+  }));
+  return { linhas };
+})()`)
+
 await avaliar("document.querySelector('[data-cenario=\"repasse\"]').click()")
 await esperar(400)
 
@@ -201,6 +223,11 @@ if (repasse.linhas.at(-1)?.liquido !== 'R$ 8.375,00') {
 }
 if (repasse.linhas.at(-1)?.bruto !== 'R$ 11.472,60') {
   falhas.push(`com repasse o bruto de 2033 deveria ser R$ 11.472,60, veio ${repasse.linhas.at(-1)?.bruto}`)
+}
+if (equilibrio.linhas.at(-1)?.bruto !== 'R$ 11.472,60' || equilibrio.linhas.at(-1)?.liquido !== 'R$ 8.375,00') {
+  falhas.push(
+    `preço de equilíbrio em 2033 deveria ser R$ 11.472,60 com líquido R$ 8.375,00; veio ${equilibrio.linhas.at(-1)?.bruto} / ${equilibrio.linhas.at(-1)?.liquido}`,
+  )
 }
 if (erros.length) falhas.push(`erros de console: ${erros.length}`)
 

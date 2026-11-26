@@ -1,0 +1,565 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Soft UI: nada de bordas duras. Superfícies claras, cantos de 14 a 26 px,
+    sombra difusa dupla (uma escura embaixo, uma luz em cima) e controles
+    rebaixados por sombra interna.
+  -->
+
+  <Styles.Resources>
+
+      <!-- ============================================================ botões -->
+
+      <ControlTheme x:Key="BotaoPrimario" TargetType="Button">
+        <Setter Property="FocusAdorner" Value="{x:Null}" />
+        <Setter Property="Background" Value="{DynamicResource GradienteMarca}" />
+        <Setter Property="Foreground" Value="{DynamicResource PincelBranco}" />
+        <Setter Property="FontSize" Value="14.5" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontFamily" Value="Calibri, Carlito, Segoe UI" />
+        <Setter Property="Padding" Value="22,12" />
+        <Setter Property="MinHeight" Value="52" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border Name="Fundo"
+                    Background="{TemplateBinding Background}"
+                    CornerRadius="16"
+                    BoxShadow="0 18 30 -20 #990F172A">
+              <ContentPresenter Name="PART_ContentPresenter"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                Margin="{TemplateBinding Padding}" />
+            </Border>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border#Fundo">
+          <Setter Property="Background" Value="{DynamicResource GradienteMarcaForte}" />
+        </Style>
+        <Style Selector="^:pressed /template/ Border#Fundo">
+          <Setter Property="Background" Value="{DynamicResource PincelNavy}" />
+        </Style>
+        <Style Selector="^:disabled">
+          <Setter Property="Opacity" Value="0.45" />
+        </Style>
+      </ControlTheme>
+
+      <ControlTheme x:Key="BotaoSuave" TargetType="Button">
+        <Setter Property="FocusAdorner" Value="{x:Null}" />
+        <Setter Property="Background" Value="{DynamicResource PincelSuperficie}" />
+        <Setter Property="Foreground" Value="{DynamicResource PincelTintaSuave}" />
+        <Setter Property="FontSize" Value="13.5" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontFamily" Value="Calibri, Carlito, Segoe UI" />
+        <Setter Property="Padding" Value="18,10" />
+        <Setter Property="MinHeight" Value="44" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border Name="Fundo"
+                    Background="{TemplateBinding Background}"
+                    CornerRadius="14"
+                    BoxShadow="0 14 26 -20 #8C0F172A">
+              <ContentPresenter Name="PART_ContentPresenter"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                Margin="{TemplateBinding Padding}" />
+            </Border>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border#Fundo">
+          <Setter Property="Background" Value="{DynamicResource PincelSuperficieSuave}" />
+        </Style>
+        <Style Selector="^:pressed /template/ Border#Fundo">
+          <Setter Property="Background" Value="{DynamicResource PincelAfundado}" />
+        </Style>
+      </ControlTheme>
+
+      <ControlTheme x:Key="BotaoFantasma" TargetType="Button">
+        <Setter Property="FocusAdorner" Value="{x:Null}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource PincelOliva}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontFamily" Value="Calibri, Carlito, Segoe UI" />
+        <Setter Property="Padding" Value="10,7" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border Name="Fundo"
+                    Background="{TemplateBinding Background}"
+                    CornerRadius="10">
+              <ContentPresenter Name="PART_ContentPresenter"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                Margin="{TemplateBinding Padding}" />
+            </Border>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border#Fundo">
+          <Setter Property="Background" Value="{DynamicResource PincelOliva050}" />
+        </Style>
+      </ControlTheme>
+
+      <ControlTheme x:Key="BotaoIcone" TargetType="Button">
+        <Setter Property="FocusAdorner" Value="{x:Null}" />
+        <Setter Property="Background" Value="{DynamicResource PincelSuperficie}" />
+        <Setter Property="Width" Value="38" />
+        <Setter Property="Height" Value="38" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border Name="Fundo"
+                    Background="{TemplateBinding Background}"
+                    CornerRadius="12"
+                    BoxShadow="0 10 18 -14 #8C0F172A">
+              <ContentPresenter Name="PART_ContentPresenter"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+            </Border>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border#Fundo">
+          <Setter Property="Background" Value="{DynamicResource PincelOliva050}" />
+        </Style>
+      </ControlTheme>
+
+      <!-- =================================================== abas e segmentos -->
+
+      <ControlTheme x:Key="AbaNav" TargetType="RadioButton">
+        <Setter Property="FocusAdorner" Value="{x:Null}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="FontSize" Value="13.5" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontFamily" Value="Calibri, Carlito, Segoe UI" />
+        <Setter Property="Padding" Value="15,9" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border Name="Moldura"
+                    Background="{TemplateBinding Background}"
+                    CornerRadius="13"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter Name="PART_ContentPresenter"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+            </Border>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border#Moldura">
+          <Setter Property="Background" Value="{DynamicResource PincelSuperficieGelo}" />
+        </Style>
+        <Style Selector="^:checked /template/ Border#Moldura">
+          <Setter Property="Background" Value="{DynamicResource PincelSuperficie}" />
+          <Setter Property="BoxShadow" Value="0 12 22 -16 #8C0F172A" />
+        </Style>
+      </ControlTheme>
+
+      <ControlTheme x:Key="Segmento" TargetType="RadioButton">
+        <Setter Property="FocusAdorner" Value="{x:Null}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontFamily" Value="Calibri, Carlito, Segoe UI" />
+        <Setter Property="Padding" Value="14,7" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border Name="Moldura"
+                    Background="{TemplateBinding Background}"
+                    CornerRadius="11"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter Name="PART_ContentPresenter"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+            </Border>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border#Moldura">
+          <Setter Property="Background" Value="{DynamicResource PincelSuperficieGelo}" />
+        </Style>
+        <Style Selector="^:checked /template/ Border#Moldura">
+          <Setter Property="Background" Value="{DynamicResource PincelSuperficie}" />
+          <Setter Property="BoxShadow" Value="0 8 16 -12 #8C0F172A" />
+        </Style>
+      </ControlTheme>
+
+      <!-- Cartão de opção (regime tributário) -->
+      <ControlTheme x:Key="CartaoOpcao" TargetType="RadioButton">
+        <Setter Property="FocusAdorner" Value="{x:Null}" />
+        <Setter Property="Background" Value="{DynamicResource PincelSuperficieSuave}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource PincelLinha}" />
+        <Setter Property="FontFamily" Value="Calibri, Carlito, Segoe UI" />
+        <Setter Property="Padding" Value="15,12" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border Name="Moldura"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="15"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter Name="PART_ContentPresenter"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Center" />
+            </Border>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border#Moldura">
+          <Setter Property="BorderBrush" Value="{DynamicResource PincelOliva200}" />
+        </Style>
+        <Style Selector="^:checked /template/ Border#Moldura">
+          <Setter Property="Background" Value="{DynamicResource PincelOliva050}" />
+          <Setter Property="BorderBrush" Value="{DynamicResource PincelOliva200}" />
+          <Setter Property="BoxShadow" Value="0 14 26 -22 #474D5C36" />
+        </Style>
+      </ControlTheme>
+
+      <!-- ============================================================ barras -->
+
+      <ControlTheme x:Key="BarraCredito" TargetType="ProgressBar">
+        <Setter Property="Height" Value="10" />
+        <Setter Property="Background" Value="{DynamicResource PincelAfundado}" />
+        <Setter Property="Foreground" Value="{DynamicResource GradienteCredito}" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border Name="Trilha"
+                    Background="{TemplateBinding Background}"
+                    CornerRadius="{TemplateBinding CornerRadius}"
+                    ClipToBounds="True">
+              <Border Name="PART_Indicator"
+                      Background="{TemplateBinding Foreground}"
+                      CornerRadius="{TemplateBinding CornerRadius}"
+                      HorizontalAlignment="Left" />
+            </Border>
+          </ControlTemplate>
+        </Setter>
+      </ControlTheme>
+
+      <ControlTheme x:Key="BarraFina" TargetType="ProgressBar">
+        <Setter Property="Height" Value="5" />
+        <Setter Property="Background" Value="{DynamicResource PincelAfundado}" />
+        <Setter Property="Foreground" Value="{DynamicResource GradienteCredito}" />
+        <Setter Property="CornerRadius" Value="3" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border Background="{TemplateBinding Background}"
+                    CornerRadius="{TemplateBinding CornerRadius}"
+                    ClipToBounds="True">
+              <Border Name="PART_Indicator"
+                      Background="{TemplateBinding Foreground}"
+                      CornerRadius="{TemplateBinding CornerRadius}"
+                      HorizontalAlignment="Left" />
+            </Border>
+          </ControlTemplate>
+        </Setter>
+      </ControlTheme>
+
+      <!-- =========================================================== campos -->
+
+      <ControlTheme x:Key="CampoSelecao" TargetType="ComboBox">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="MinHeight" Value="50" />
+        <Setter Property="Height" Value="50" />
+        <Setter Property="FontFamily" Value="Calibri, Carlito, Segoe UI" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Padding" Value="14,0,10,0" />
+        <Setter Property="CornerRadius" Value="13" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+      </ControlTheme>
+
+    <ControlTheme x:Key="BarraRolagem" TargetType="ScrollBar">
+      <!-- O template do Fluent pinta o thumb com um cinza fixo (#888888), que
+           sobre o cartão branco vira um risco solto. Aqui o thumb usa o oliva
+           da paleta e tem largura própria. -->
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="Transparent">
+            <Track x:Name="PART_Track"
+                   Orientation="{TemplateBinding Orientation}"
+                   Minimum="{TemplateBinding Minimum}"
+                   Maximum="{TemplateBinding Maximum}"
+                   Value="{TemplateBinding Value}"
+                   ViewportSize="{TemplateBinding ViewportSize}">
+              <Track.Thumb>
+                <Thumb>
+                  <Thumb.Template>
+                    <ControlTemplate>
+                      <Border Background="{DynamicResource PincelOliva300}"
+                              CornerRadius="4"
+                              MinHeight="36"
+                              Margin="2,1" />
+                    </ControlTemplate>
+                  </Thumb.Template>
+                </Thumb>
+              </Track.Thumb>
+            </Track>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </ControlTheme>
+
+  </Styles.Resources>
+
+  <!-- ================================================================ base -->
+
+  <Style Selector="Window">
+    <Setter Property="FontFamily" Value="Calibri, Carlito, Segoe UI" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="Foreground" Value="{DynamicResource PincelTinta}" />
+  </Style>
+
+  <Style Selector="UserControl">
+    <Setter Property="FontFamily" Value="Calibri, Carlito, Segoe UI" />
+  </Style>
+
+  <Style Selector="ToolTip">
+    <Setter Property="FontFamily" Value="Calibri, Carlito, Segoe UI" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Background" Value="{DynamicResource PincelNavy}" />
+    <Setter Property="Foreground" Value="{DynamicResource PincelBranco}" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="CornerRadius" Value="9" />
+  </Style>
+
+  <!-- ============================================================== cartões -->
+
+  <Style Selector="Border.cartao">
+    <Setter Property="Background" Value="{DynamicResource PincelSuperficie}" />
+    <Setter Property="CornerRadius" Value="24" />
+    <Setter Property="Padding" Value="26" />
+    <Setter Property="BoxShadow" Value="0 26 50 -34 #330F172A, 0 2 4 0 #0A0F172A" />
+  </Style>
+
+  <Style Selector="Border.painel">
+    <Setter Property="Background" Value="{DynamicResource PincelSuperficie}" />
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="Padding" Value="20" />
+    <Setter Property="BoxShadow" Value="0 18 36 -30 #290F172A, 0 1 2 0 #080F172A" />
+  </Style>
+
+  <Style Selector="Border.afundado">
+    <Setter Property="Background" Value="{DynamicResource PincelSuperficieGelo}" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="BoxShadow" Value="inset 3 3 7 -3 #C9D3E0, inset -3 -3 7 -3 #FFFFFF" />
+  </Style>
+
+  <Style Selector="Border.coluna">
+    <Setter Property="Background" Value="{DynamicResource PincelSuperficieSuave}" />
+    <Setter Property="CornerRadius" Value="15" />
+    <Setter Property="Padding" Value="14,12" />
+  </Style>
+
+  <Style Selector="Border.colunaDestaque">
+    <Setter Property="Background" Value="{DynamicResource PincelOliva050}" />
+    <Setter Property="CornerRadius" Value="15" />
+    <Setter Property="Padding" Value="14,12" />
+    <Setter Property="BoxShadow" Value="0 14 26 -22 #474D5C36" />
+  </Style>
+
+  <Style Selector="Border.divisor">
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource PincelLinha}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+
+  <Style Selector="Border.chip">
+    <Setter Property="Background" Value="{DynamicResource PincelSuperficieGelo}" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Padding" Value="9,4" />
+  </Style>
+
+  <Style Selector="Border.chipOliva">
+    <Setter Property="Background" Value="{DynamicResource PincelOliva050}" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Padding" Value="9,4" />
+  </Style>
+
+  <Style Selector="Border.chipVerde">
+    <Setter Property="Background" Value="{DynamicResource PincelVerde050}" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Padding" Value="9,4" />
+  </Style>
+
+  <Style Selector="Border.segmentado">
+    <Setter Property="Background" Value="{DynamicResource PincelAfundado}" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="Padding" Value="4" />
+    <Setter Property="BoxShadow" Value="inset 2 2 6 -2 #C9D3E0, inset -2 -2 6 -2 #FFFFFF" />
+  </Style>
+
+  <Style Selector="Border.destaqueOliva">
+    <Setter Property="Background" Value="{DynamicResource PincelOliva050}" />
+    <Setter Property="CornerRadius" Value="18" />
+    <Setter Property="Padding" Value="18,15" />
+  </Style>
+
+  <Style Selector="Border.destaqueAmbar">
+    <Setter Property="Background" Value="{DynamicResource PincelAmbar050}" />
+    <Setter Property="CornerRadius" Value="18" />
+    <Setter Property="Padding" Value="18,15" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PincelAmbarLinha}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <Style Selector="Border.destaqueVerde">
+    <Setter Property="Background" Value="{DynamicResource PincelVerde050}" />
+    <Setter Property="CornerRadius" Value="18" />
+    <Setter Property="Padding" Value="18,15" />
+  </Style>
+
+  <!-- ============================================================ botões -->
+
+  <Style Selector="Button">
+    <Setter Property="FontFamily" Value="Calibri, Carlito, Segoe UI" />
+  </Style>
+
+  <!-- ======================================== navegação (cores por estado) -->
+
+  <Style Selector="RadioButton.nav TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource PincelTexto}" />
+  </Style>
+  <Style Selector="RadioButton.nav Path">
+    <Setter Property="Stroke" Value="{DynamicResource PincelTextoFraco}" />
+  </Style>
+  <Style Selector="RadioButton.nav:checked TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource PincelTinta}" />
+  </Style>
+  <Style Selector="RadioButton.nav:checked Path">
+    <Setter Property="Stroke" Value="{DynamicResource PincelOliva}" />
+  </Style>
+
+  <Style Selector="RadioButton.segmento TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource PincelTexto}" />
+  </Style>
+  <Style Selector="RadioButton.segmento:checked TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource PincelTinta}" />
+  </Style>
+
+  <Style Selector="RadioButton.opcao TextBlock.titulo">
+    <Setter Property="Foreground" Value="{DynamicResource PincelTinta}" />
+  </Style>
+  <Style Selector="RadioButton.opcao:checked TextBlock.titulo">
+    <Setter Property="Foreground" Value="{DynamicResource PincelOlivaForte}" />
+  </Style>
+
+  <!-- ============================================================= campos -->
+
+  <Style Selector="TextBox.campo">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Height" Value="50" />
+    <Setter Property="FontFamily" Value="Calibri, Carlito, Segoe UI" />
+    <Setter Property="FontSize" Value="17" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="CaretBrush" Value="{DynamicResource PincelOliva}" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource PincelOliva100}" />
+    <Setter Property="SelectionForegroundBrush" Value="{DynamicResource PincelTinta}" />
+  </Style>
+
+  <Style Selector="TextBox.campo /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="13" />
+  </Style>
+
+  <Style Selector="TextBox.campo:pointerover /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="TextBox.campo:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="TextBox.campo:focus">
+    <Setter Property="CaretBrush" Value="{DynamicResource PincelOliva}" />
+  </Style>
+
+  <Style Selector="ComboBox.campo">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="MinHeight" Value="50" />
+    <Setter Property="Height" Value="50" />
+    <Setter Property="FontFamily" Value="Calibri, Carlito, Segoe UI" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="Padding" Value="14,0,8,0" />
+    <Setter Property="CornerRadius" Value="13" />
+  </Style>
+
+  <Style Selector="ComboBoxItem">
+    <Setter Property="FontFamily" Value="Calibri, Carlito, Segoe UI" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="CornerRadius" Value="8" />
+  </Style>
+
+  <Style Selector="ScrollViewer">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <!-- ============================================================= rolagem -->
+
+  <Style Selector="ScrollBar">
+    <Setter Property="Theme" Value="{StaticResource BarraRolagem}" />
+    <Setter Property="Opacity" Value="0.85" />
+  </Style>
+
+  <Style Selector="ScrollBar:pointerover">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
+  <Style Selector="ScrollBar:vertical">
+    <Setter Property="Width" Value="11" />
+    <Setter Property="MinWidth" Value="11" />
+  </Style>
+
+  <!-- Anel de foco. Botões e cartões usam ControlTheme próprio, então o foco
+       do Fluent não desenha nada neles: sem isto, navegar por Tab não mostra
+       onde o cursor está. A cor é o PincelFoco (#A9B98E) com transparência,
+       porque BoxShadow não aceita DynamicResource dentro do valor. -->
+  <Style Selector="Button:focus-visible /template/ Border#Fundo">
+    <Setter Property="BoxShadow" Value="0 0 0 3 #B34D5C36, 0 14 28 -18 #470F172A" />
+  </Style>
+
+  <Style Selector="RadioButton:focus-visible /template/ Border#Moldura">
+    <Setter Property="BoxShadow" Value="0 0 0 3 #B34D5C36" />
+  </Style>
+
+</Styles>

@@ -108,6 +108,11 @@ tributários diferentes pelo custo líquido total — não pelo preço nominal.
 - **antes e depois da reforma (2025–2033)**: linha do tempo com a carga tributária (ICMS/PIS/COFINS +
   CBS/IBS) e o crédito total/custo líquido de cada ano, alternando entre as três leituras e comparando com o
   benchmark do regime regular;
+- **perfis de transportadores por diária (2026–2033)**: cadastro com nome, tipo de veículo, rota, regime e
+  **diária (R$/dia)**; o app calcula o faturamento bruto e o custo líquido **mês a mês** (19 a 23 dias úteis,
+  com feriados nacionais descontados), a **diária-teto** que empata com o regime regular e um ranking
+  **dentro do mesmo tipo de veículo**. É a seção que mostra por que uma carreta 5,7% mais barata no nominal
+  pode custar R$ 93 mil mais caro no ano quando o crédito do Simples não acompanha;
 - comparador de 2 a 3 transportadoras ordenado por custo líquido total pós-crédito, com as alíquotas do PGDAS
   por transportadora;
 - memória de cálculo com a resposta bruta do motor usado, para auditoria.
@@ -134,6 +139,41 @@ Detalhes e API em [app/README.md](app/README.md) · arquitetura em [ARCHITECTURE
 ![Antes e depois da reforma](app/docs/web-reforma.png)
 
 ![Hoje e amanhã](app/docs/web-horizonte.png)
+
+![Perfis de transportadores](app/docs/web-perfis.png)
+
+### App desktop: Frete Líquido (instalável, .NET + Avalonia)
+
+A consolidação em software instalável começou pela interface: a calculadora do
+custo líquido é a tela principal, e o comparador, o horizonte 2025–2033 e a memória
+de cálculo ficam em abas secundárias. O projeto está em [desktop/](desktop/README.md).
+
+- **.NET 8 + Avalonia 11** (XAML/C#): roda no Windows hoje e no Linux na fase
+  seguinte, com o mesmo código e sem Visual Studio;
+- **Soft UI**: superfícies de baixo contraste, sombras difusas, controles
+  rebaixados, tipografia em Calibri (Carlito no Linux) e a paleta já estabelecida,
+  com o azul de crédito trocado por **verde militar**;
+- **dados de demonstração** nesta fase: o cronograma da LC 214/2025 e as regras de
+  crédito são reproduzidos localmente; a troca pelos motores oficiais é uma
+  interface (`ISimuladorFrete`);
+- **compila, roda e tem testes**: build sem avisos no SDK 8, 31 testes do Core
+  (cronograma, formatação pt-BR e comparador) e `dotnet publish` gerando um
+  executável único de ~43 MB, sem exigir .NET na máquina do cliente;
+- build e empacotamento (publish autocontido, MSIX/Inno Setup e roadmap Linux) em
+  [desktop/installer/README.md](desktop/installer/README.md).
+
+```powershell
+cd desktop
+dotnet build FreteLiquido.sln
+dotnet test tests/FreteLiquido.Core.Tests
+dotnet run --project src/FreteLiquido.Desktop
+```
+
+![Calculadora do Frete Líquido desktop](desktop/docs/preview/app-calculadora.png)
+
+![Comparador de transportadoras](desktop/docs/preview/app-comparador.png)
+
+![Horizonte da reforma, ano a ano](desktop/docs/preview/app-horizonte.png)
 
 ---
 

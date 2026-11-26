@@ -600,51 +600,80 @@ de regime.
 
 ## 13. Hoje → amanhã: o horizonte do pagador
 
-`POST /api/pagador` responde à pergunta central de quem paga: **hoje pago X bruto e Y líquido; amanhã,
-quanto pago, quanto eu deveria pagar e como me ajustar?**
+`POST /api/pagador` responde à pergunta central de quem paga: **hoje pago X bruto e Y líquido; quanto sobra
+em cada ano se o preço não mudar; e quanto o preço precisa mudar para o líquido ficar no nível de hoje?**
 
 A entrada é a mesma de `/api/simular` (`valorFrete`, `perfil`, `regimePagadora`, `tipoOperacao`,
-`ufOrigem`, `ufDestino`, `aliquotaCbs?`, `aliquotaIbs?`). A saída tem cinco blocos:
+`ufOrigem`, `ufDestino`, `aliquotaCbs?`, `aliquotaIbs?`, `dasTotal?`, `insumos?`). A saída tem cinco blocos:
 
 | Bloco | Conteúdo |
 |---|---|
 | `hoje` | bruto, crédito total decomposto (ICMS, PIS/COFINS, CBS/IBS), custo líquido e carga do ano corrente |
-| `anos[]` | de hoje a 2033: bruto, crédito, líquido com o **preço de hoje**; `repasse` com o preço que preserva a receita líquida do transportador; `benchmark` do regime regular; `equivalente` (preço-teto); e a variação contra hoje |
-| `resumo` | hoje, próximo marco, regime pleno, primeiro ano com carga acima de hoje e as variações |
+| `anos[]` | de hoje a 2033: bruto, crédito, líquido com o **preço travado**; `equilibrio` com o preço/líquido que mantém o custo de hoje; `piso` com o preço que preserva a margem do transportador (quando calculável); `conflito`; `benchmark` do regime regular; `equivalente` (preço-teto); e a variação contra hoje |
+| `resumo` | hoje, próximo marco, regime pleno, primeiro ano com carga acima de hoje, equilíbrio e variações |
 | `deveria` | o benchmark do regime regular no mesmo valor e o **preço-teto** do regime atual, com o veredito |
-| `ajustes[]` | ações com número: renegociar até o teto, caixa do repasse, cláusula de reajuste, troca de regime e calendário |
+| `ajustes[]` | ações com número: renegociar até o teto, caixa do piso, cláusula de reajuste, troca de regime e calendário |
 
 ### As contas
 
 - `crédito total = CBS/IBS creditável + ICMS + PIS/COFINS` (cada parcela limitada ao tributo destacado);
 - `custo líquido = bruto − crédito total`;
-- **repasse integral**: `preço_novo = preço_hoje × (1 − carga_hoje) ÷ (1 − carga_ano)`, que preserva a
-  receita líquida do transportador quando os tributos são "por dentro";
+- **preço travado**: o bruto não muda; o líquido varia com a alíquota e o crédito;
+- **preço de equilíbrio do pagador**: `líquido_de_hoje ÷ (1 − crédito_do_ano)`, que mantém o seu custo
+  líquido no nível de hoje;
+- **piso do transportador**: `preço_hoje × (1 − carga_hoje) ÷ (1 − carga_ano)` no regime regular; no
+  Simples/DAS, `base × (1 − DAS + insumos × (fator − 1)) ÷ (1 − DAS)`, com `dasTotal` e `insumos`
+  informados. Sem eles, o piso não é publicado;
 - **preço-teto**: `custo líquido do regime regular ÷ (1 − crédito % do regime atual)` — o valor máximo que o
   transportador atual pode cobrar para empatar com o regime regular no mesmo frete.
 
 ### Exemplo (R$ 10.000,00/mês, SP → BA, Lucro Real, regime regular)
 
-| Ano | Bruto (preço de hoje) | Crédito total | Custo líquido | Com repasse: bruto | Com repasse: líquido |
+| Ano | Preço travado | Líquido com preço travado | Preço de equilíbrio | Líquido mantido | Piso do transportador |
 |---|---|---|---|---|---|
-| 2026 | R$ 10.000,00 | R$ 1.625,00 (16,25%) | R$ 8.375,00 | R$ 10.000,00 | R$ 8.375,00 |
-| 2027 | R$ 10.000,00 | R$ 1.550,00 (15,50%) | R$ 8.450,00 | R$ 9.911,24 | R$ 8.375,00 |
-| 2029 | R$ 10.000,00 | R$ 1.665,00 (16,65%) | R$ 8.335,00 | R$ 10.047,99 | R$ 8.375,00 |
-| 2033 | R$ 10.000,00 | R$ 2.700,00 (27,00%) | R$ 7.300,00 | R$ 11.472,60 | R$ 8.375,00 |
+| 2026 | R$ 10.000,00 | R$ 8.375,00 | R$ 10.000,00 | R$ 8.375,00 | R$ 10.000,00 |
+| 2027 | R$ 10.000,00 | R$ 8.450,00 | R$ 9.911,24 | R$ 8.375,00 | R$ 9.911,24 |
+| 2029 | R$ 10.000,00 | R$ 8.335,00 | R$ 10.047,99 | R$ 8.375,00 | R$ 10.047,99 |
+| 2033 | R$ 10.000,00 | R$ 7.300,00 | R$ 11.472,60 | R$ 8.375,00 | R$ 11.472,60 |
 
-A leitura que muda a decisão: **com crédito integral, o repasse não altera o custo líquido — altera o
-caixa**. O desembolso sobe 14,73% até 2033, mas o líquido fica em R$ 8.375,00.
+A leitura que muda a decisão: **com crédito integral, o preço de equilíbrio e o piso do transportador
+coincidem; o bruto sobe 14,73% até 2033 e o líquido fica em R$ 8.375,00**. No Simples/DAS, os dois se
+separam: o crédito não acompanha os 27,00%, o piso do transportador fica acima do equilíbrio do pagador e o
+app mostra o conflito.
 
-Para o mesmo frete contratado de um **Simples/DAS** (PGDAS 2,3591% + 0,0260%), o crédito fica em 2,39% e o
-preço-teto para empatar com o regime regular cai de **R$ 8.459,60 em 2026** para **R$ 7.478,37 em 2033** — é o
-número que a negociação deve usar.
+Para o mesmo frete contratado de um **Simples/DAS** (PGDAS 2,3591% + 0,0260%, DAS 12%, insumos 60%), o
+preço de equilíbrio do pagador em 2033 é **R$ 10.244,33** (o crédito de 2,39% mantém o líquido em
+R$ 10.000,00), enquanto o piso do transportador é **R$ 11.004,05** (+10,04%): há um conflito de
+**R$ 759,72** por período.
 
 ### Interface
 
-A seção **Seu frete ao longo da reforma** (abaixo do resultado) mostra os três KPIs (hoje, próximo marco e
-regime pleno), o bloco **Quanto você deveria pagar** (benchmark, preço-teto e veredito), a tabela ano a ano com
-o cenário **Preço de hoje × Com repasse**, a lista **Como se ajustar** e as notas oficiais de cada etapa.
+A seção **Seu frete ao longo da reforma** (abaixo do resultado) mostra os **três caminhos** (Preço travado,
+Preço de equilíbrio e Piso do transportador), um gráfico de duas ou três linhas, a tabela **Os dois caminhos,
+ano a ano**, os três KPIs (hoje, próximo marco e regime pleno), o bloco **Quanto vale a pena pagar**
+(benchmark, preço-teto e veredito), a lista **Como se ajustar** e as notas oficiais de cada etapa. O detalhe
+de crédito e carga fica em um `<details>` para não competir com a leitura principal.
 
 A verificação de runtime está em `scripts/verificar-horizonte.mjs` (CDP): aplica o cenário do regime regular,
-confere R$ 8.375,00 na coluna de hoje, o repasse de R$ 11.472,60 em 2033 com líquido invariante e a ausência
-de erros de console.
+confere R$ 8.375,00 na coluna de hoje, o preço de equilíbrio e o piso de R$ 11.472,60 em 2033 com líquido
+invariante e a ausência de erros de console.
+
+## 14. Perfis de transportadores (diária → mês)
+
+A seção **Perfis de transportadores** cadastra o transportador pelo que o pagador sabe antes de contratar:
+nome, tipo de veículo, rota, regime e **diária (R$/dia)**. O app transforma a diária em faturamento bruto e
+custo líquido **mês a mês** — porque o mês tem 28 a 31 dias corridos e **19 a 23 dias úteis**, já descontados
+os feriados nacionais (253 em 2026) — e projeta a mesma diária até 2033.
+
+- **diária-teto**: `custo líquido do regime regular ÷ (1 − crédito %) ÷ dias`, com a economia mensal e anual;
+- **ranking dentro do mesmo tipo de veículo**: duas carretas no mesmo trecho, uma no regular e uma no Simples,
+  mostram por que o desconto nominal pode custar mais caro depois do crédito;
+- **faixas de referência** derivadas do piso mínimo da ANTT (tabela de 16/07/2026) e da escala de capacidade;
+- API em `app/server.js` (`/api/perfis`, `/api/perfis/:id`, `/api/perfis/calcular`, `/api/perfis/comparar`),
+  modelo e fórmulas em [perfis.md](perfis.md) e pesquisa em
+  [especialista-custos-transportes/](especialista-custos-transportes/).
+
+A verificação de runtime está em `scripts/verificar-perfis.mjs` (CDP): confere o calendário de novembro/2026
+(19 dias úteis), bruto, crédito e líquido do mês, troca de mês, criação/edição/exclusão de perfil, preenchimento
+da diária pelo tipo de veículo, aviso de faixa e o botão "Usar na simulação".
+

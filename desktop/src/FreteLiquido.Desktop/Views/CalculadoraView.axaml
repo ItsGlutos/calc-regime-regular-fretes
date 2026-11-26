@@ -1,0 +1,473 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FreteLiquido.Desktop.ViewModels"
+             xmlns:modelos="using:FreteLiquido.Core.Modelos"
+             x:Class="FreteLiquido.Desktop.Views.CalculadoraView"
+             x:DataType="vm:CalculadoraViewModel">
+
+  <!--
+    Layout de desktop: o cabeçalho fica fixo, o formulário rola por dentro com o
+    botão sempre visível e a coluna do resultado mantém o custo líquido à vista.
+  -->
+  <Grid RowDefinitions="Auto,*" Margin="34,24,34,28">
+
+    <!-- ============================================================ abertura -->
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,18">
+
+      <StackPanel Spacing="8" MaxWidth="640" HorizontalAlignment="Left">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <Border Width="26" Height="2" CornerRadius="1"
+                  Background="{StaticResource PincelOliva}" VerticalAlignment="Center" />
+          <TextBlock Classes="eyebrow" Text="SIMULADOR DO PAGADOR DE FRETE · 2025–2033" />
+        </StackPanel>
+
+        <TextBlock Classes="h1" FontSize="28" LineHeight="34"
+                   Text="Quanto você paga de frete hoje — e quanto vai pagar até 2033." />
+
+        <TextBlock Classes="legenda" MaxWidth="580"
+                   Text="Informe o frete bruto. A calculadora mostra o custo líquido depois do crédito de ICMS, PIS/COFINS e CBS/IBS, compara com 2026 e projeta o regime pleno." />
+      </StackPanel>
+
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Bottom">
+        <Border Classes="painel" Width="168" Padding="18,14">
+          <StackPanel Spacing="2">
+            <TextBlock Classes="rotulo" Text="HOJE · 2026" />
+            <TextBlock FontSize="20" FontWeight="SemiBold" LetterSpacing="-0.4"
+                       Text="{Binding Resultado.BaseValor}" />
+            <TextBlock Classes="fina" Text="custo líquido" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="painel" Width="192" Padding="18,14">
+          <StackPanel Spacing="2">
+            <TextBlock Classes="rotulo" Text="2033 · REGIME PLENO" />
+            <TextBlock FontSize="20" FontWeight="SemiBold" LetterSpacing="-0.4"
+                       Text="{Binding Resultado.PlenoValor}" />
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Classes="fina forte" Text="{Binding Resultado.PlenoDelta}"
+                         Foreground="{Binding Resultado.PlenoCor}" />
+              <TextBlock Classes="fina" Text="vs. hoje" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </Grid>
+
+    <!-- ========================================================== workspace -->
+    <Grid Grid.Row="1" ColumnDefinitions="408,*">
+
+      <!-- ========================================================= formulário -->
+      <Border Grid.Column="0" Classes="cartao" Padding="24,20" Margin="0,0,20,0">
+        <Grid RowDefinitions="Auto,*,Auto">
+
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="2">
+              <TextBlock Classes="h2" Text="Dados do frete" />
+              <TextBlock Classes="legenda" Text="Valor, regime e rota." />
+            </StackPanel>
+            <Button Grid.Column="1" Theme="{StaticResource BotaoIcone}"
+                    Command="{Binding RestaurarCommand}"
+                    AutomationProperties.Name="Restaurar o exemplo"
+                    ToolTip.Tip="Restaurar o exemplo"
+                    VerticalAlignment="Top">
+              <Path Data="M4 10A8 8 0 1 1 6.2 17.4 M4 5V10H9"
+                    Stroke="{StaticResource PincelTextoFraco}"
+                    StrokeThickness="1.8"
+                    StrokeLineCap="Round"
+                    StrokeJoin="Round"
+                    Stretch="Uniform" Width="16" Height="16" />
+            </Button>
+          </Grid>
+
+          <Panel Grid.Row="1">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Margin="0,14,-14,0" Padding="0,0,14,0">
+              <StackPanel Spacing="14">
+
+                <!-- Valor -->
+                <StackPanel Spacing="6">
+                  <TextBlock Classes="rotulo" Text="VALOR DO FRETE" />
+                  <Border Classes="afundado" Height="56" Padding="16,0">
+                    <Grid ColumnDefinitions="Auto,*">
+                      <TextBlock Text="R$" FontSize="15" FontWeight="SemiBold"
+                                 Foreground="{StaticResource PincelTextoFraco}"
+                                 VerticalAlignment="Center" Margin="0,0,10,0" />
+                      <TextBox Grid.Column="1" Classes="campo"
+                               Text="{Binding ValorFreteTexto, Mode=TwoWay}"
+                               AutomationProperties.Name="Valor do frete"
+                               VerticalAlignment="Center"
+                               MaxLength="16" />
+                    </Grid>
+                  </Border>
+                  <TextBlock Classes="fina" Text="Preço nominal cobrado pela transportadora." />
+                  <TextBlock Classes="fina vermelho" Text="{Binding ErroValor}"
+                             IsVisible="{Binding TemErroValor}" />
+                </StackPanel>
+
+                <!-- Regime -->
+                <StackPanel Spacing="6">
+                  <TextBlock Classes="rotulo" Text="REGIME TRIBUTÁRIO" />
+
+                  <RadioButton Theme="{StaticResource CartaoOpcao}" Classes="opcao"
+                               GroupName="regime" IsChecked="{Binding EhSimples, Mode=TwoWay}"
+                               AutomationProperties.Name="Simples Nacional">
+                    <StackPanel Spacing="1">
+                      <TextBlock Classes="h3 titulo" Text="Simples Nacional" />
+                      <TextBlock Classes="fina" Text="DAS com PGDAS ou híbrido" />
+                    </StackPanel>
+                  </RadioButton>
+
+                  <RadioButton Theme="{StaticResource CartaoOpcao}" Classes="opcao"
+                               GroupName="regime" IsChecked="{Binding EhRegular, Mode=TwoWay}"
+                               AutomationProperties.Name="Regime regular">
+                    <StackPanel Spacing="1">
+                      <TextBlock Classes="h3 titulo" Text="Regime regular" />
+                      <TextBlock Classes="fina" Text="Lucro Real/Presumido ou MEI" />
+                    </StackPanel>
+                  </RadioButton>
+                </StackPanel>
+
+                <!-- Modalidade -->
+                <StackPanel Spacing="6">
+                  <TextBlock Classes="rotulo" Text="MODALIDADE" />
+                  <Border Classes="afundado" Height="50">
+                    <ComboBox Classes="campo"
+                              ItemsSource="{Binding Modalidades}"
+                              SelectedItem="{Binding ModalidadeSelecionada, Mode=TwoWay}"
+                              AutomationProperties.Name="Modalidade">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="modelos:ModalidadeOpcao">
+                          <TextBlock Text="{Binding Rotulo}" TextTrimming="CharacterEllipsis" />
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                  </Border>
+                  <TextBlock Classes="fina" Text="{Binding ModalidadeFonte}" />
+                </StackPanel>
+
+                <!-- Operação -->
+                <StackPanel Spacing="6">
+                  <TextBlock Classes="rotulo" Text="TIPO DE OPERAÇÃO" />
+                  <Border Classes="segmentado">
+                    <Grid ColumnDefinitions="*,*">
+                      <RadioButton Theme="{StaticResource Segmento}" Classes="segmento"
+                                   GroupName="operacao" IsChecked="{Binding EhB2B, Mode=TwoWay}"
+                                   AutomationProperties.Name="B2B"
+                                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+                        <TextBlock Text="B2B" FontSize="12.5" FontWeight="SemiBold" />
+                      </RadioButton>
+                      <RadioButton Grid.Column="1" Theme="{StaticResource Segmento}" Classes="segmento"
+                                   GroupName="operacao" IsChecked="{Binding EhB2C, Mode=TwoWay}"
+                                   AutomationProperties.Name="B2C"
+                                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+                        <TextBlock Text="B2C" FontSize="12.5" FontWeight="SemiBold" />
+                      </RadioButton>
+                    </Grid>
+                  </Border>
+                </StackPanel>
+
+                <!-- Empresa pagadora -->
+                <StackPanel Spacing="6">
+                  <TextBlock Classes="rotulo" Text="SUA EMPRESA · CRÉDITO" />
+                  <Border Classes="afundado" Height="50">
+                    <ComboBox Classes="campo"
+                              ItemsSource="{Binding RegimesPagadora}"
+                              SelectedItem="{Binding PagadoraSelecionada, Mode=TwoWay}"
+                              AutomationProperties.Name="Regime de credito da empresa">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="modelos:RegimePagadoraOpcao">
+                          <TextBlock Text="{Binding Rotulo}" TextTrimming="CharacterEllipsis" />
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                  </Border>
+                </StackPanel>
+
+                <!-- Rota -->
+                <Grid ColumnDefinitions="*,*">
+                  <StackPanel Spacing="6" Margin="0,0,6,0">
+                    <TextBlock Classes="rotulo" Text="UF ORIGEM" />
+                    <Border Classes="afundado" Height="50">
+                      <ComboBox Classes="campo"
+                                ItemsSource="{Binding Ufs}"
+                                SelectedItem="{Binding UfOrigem, Mode=TwoWay}"
+                                AutomationProperties.Name="UF de origem">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate x:DataType="modelos:UfOpcao">
+                            <TextBlock Text="{Binding Rotulo}" TextTrimming="CharacterEllipsis" />
+                          </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
+                    </Border>
+                  </StackPanel>
+
+                  <StackPanel Grid.Column="1" Spacing="6" Margin="6,0,0,0">
+                    <TextBlock Classes="rotulo" Text="UF DESTINO" />
+                    <Border Classes="afundado" Height="50">
+                      <ComboBox Classes="campo"
+                                ItemsSource="{Binding Ufs}"
+                                SelectedItem="{Binding UfDestino, Mode=TwoWay}"
+                                AutomationProperties.Name="UF de destino">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate x:DataType="modelos:UfOpcao">
+                            <TextBlock Text="{Binding Rotulo}" TextTrimming="CharacterEllipsis" />
+                          </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
+                    </Border>
+                  </StackPanel>
+                </Grid>
+
+                <!-- Ano -->
+                <StackPanel Spacing="6">
+                  <TextBlock Classes="rotulo" Text="ANO DE REFERÊNCIA" />
+                  <Border Classes="afundado" Height="50">
+                    <ComboBox Classes="campo"
+                              ItemsSource="{Binding Anos}"
+                              SelectedItem="{Binding AnoSelecionado, Mode=TwoWay}"
+                              AutomationProperties.Name="Ano de referencia">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="modelos:AnoOpcao">
+                          <TextBlock Text="{Binding Rotulo}" TextTrimming="CharacterEllipsis" />
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                  </Border>
+                  <TextBlock Classes="fina" Text="{Binding AnoFase}" />
+                </StackPanel>
+
+              </StackPanel>
+            </ScrollViewer>
+
+            <!-- O formulário rola por dentro: o degradê marca o corte em vez de
+                 deixar um campo fatiado no meio da linha. -->
+            <Border IsHitTestVisible="False" VerticalAlignment="Bottom" Height="28">
+              <Border.Background>
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                  <GradientStop Color="#00FFFFFF" Offset="0" />
+                  <GradientStop Color="#FFFFFFFF" Offset="1" />
+                </LinearGradientBrush>
+              </Border.Background>
+            </Border>
+          </Panel>
+          <!-- Rodapé fixo do formulário -->
+          <StackPanel Grid.Row="2" Spacing="8" Margin="0,12,0,0">
+            <Button Theme="{StaticResource BotaoPrimario}"
+                    Command="{Binding CalcularCommand}"
+                    HorizontalAlignment="Stretch">
+              <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <TextBlock Classes="branco" FontSize="14.5" FontWeight="SemiBold"
+                           Text="Calcular custo líquido" VerticalAlignment="Center" />
+                <Path Data="M4 12H19 M13 6L19 12L13 18"
+                      Stroke="{StaticResource PincelBranco}"
+                      StrokeThickness="2"
+                      StrokeLineCap="Round"
+                      StrokeJoin="Round"
+                      Stretch="Uniform" Width="17" Height="17" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            <TextBlock Classes="fina"
+                       Text="Recalcula a cada alteração. Esta build usa dados de demonstração." />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- ============================================================ resultado -->
+      <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Disabled"
+                    Margin="0,0,-6,0" Padding="0,0,6,0">
+        <StackPanel Spacing="18">
+
+          <Border Classes="cartao" Padding="28,24">
+            <StackPanel Spacing="18">
+
+              <!-- Chips -->
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Border Classes="chipOliva">
+                  <TextBlock Classes="fina forte oliva" Text="{Binding Resultado.ChipRegime}" />
+                </Border>
+                <Border Classes="chip">
+                  <TextBlock Classes="fina forte apagado" Text="{Binding Resultado.ChipOperacao}" />
+                </Border>
+                <Border Classes="chip">
+                  <TextBlock Classes="fina forte apagado" Text="{Binding Resultado.ChipRota}" />
+                </Border>
+                <TextBlock Classes="fina fraco" Text="{Binding Resultado.RotuloAno}"
+                           VerticalAlignment="Center" Margin="4,0,0,0" />
+              </StackPanel>
+
+              <!-- Herói -->
+              <StackPanel Spacing="2">
+                <TextBlock Classes="rotulo" Text="CUSTO LÍQUIDO DO FRETE" />
+                <StackPanel Orientation="Horizontal" Spacing="0">
+                  <TextBlock Text="R$" FontSize="19" FontWeight="SemiBold"
+                             Foreground="{StaticResource PincelTextoFraco}"
+                             VerticalAlignment="Bottom" Margin="0,0,9,11" />
+                  <TextBlock Classes="heroi" Text="{Binding Resultado.LiquidoInteiro}" />
+                  <TextBlock FontSize="24" FontWeight="SemiBold"
+                             Foreground="{StaticResource PincelTextoFraco}"
+                             VerticalAlignment="Bottom" Margin="0,0,0,10"
+                             Text="{Binding Resultado.LiquidoCentavos}" />
+                </StackPanel>
+                <TextBlock Classes="legenda" Text="{Binding Resultado.SubLiquido}" />
+              </StackPanel>
+
+              <!-- Barra de crédito -->
+              <StackPanel Spacing="7">
+                <ProgressBar Theme="{StaticResource BarraCredito}"
+                             Minimum="0" Maximum="1"
+                             Value="{Binding Resultado.BarraCredito}" />
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Classes="fina forte oliva" Text="{Binding Resultado.PercentualCredito}" />
+                    <TextBlock Classes="fina" Text="volta como crédito" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+                    <TextBlock Classes="fina forte" Text="{Binding Resultado.PercentualCusto}" />
+                    <TextBlock Classes="fina" Text="fica no custo" />
+                  </StackPanel>
+                </Grid>
+              </StackPanel>
+
+              <!-- Antes e depois -->
+              <Grid ColumnDefinitions="*,*,*">
+                <Border Classes="coluna" Margin="0,0,9,0">
+                  <StackPanel Spacing="4">
+                    <TextBlock Classes="fina forte fraco" Text="{Binding Resultado.BaseRotulo}" />
+                    <TextBlock Classes="valorMedio" Text="{Binding Resultado.BaseValor}" />
+                    <TextBlock Classes="fina fraco" Text="ponto de partida" />
+                  </StackPanel>
+                </Border>
+
+                <Border Grid.Column="1" Classes="colunaDestaque" Margin="0,0,9,0">
+                  <StackPanel Spacing="4">
+                    <TextBlock Classes="fina forte oliva" Text="{Binding Resultado.AnoRotulo}" />
+                    <TextBlock Classes="valorMedio" Text="{Binding Resultado.AnoValor}" />
+                    <TextBlock Classes="fina forte" Text="{Binding Resultado.AnoDelta}"
+                               Foreground="{Binding Resultado.AnoCor}" />
+                  </StackPanel>
+                </Border>
+
+                <Border Grid.Column="2" Classes="coluna">
+                  <StackPanel Spacing="4">
+                    <TextBlock Classes="fina forte fraco" Text="{Binding Resultado.PlenoRotulo}" />
+                    <TextBlock Classes="valorMedio" Text="{Binding Resultado.PlenoValor}" />
+                    <TextBlock Classes="fina forte" Text="{Binding Resultado.PlenoDelta}"
+                               Foreground="{Binding Resultado.PlenoCor}" />
+                  </StackPanel>
+                </Border>
+              </Grid>
+
+              <!-- Insight -->
+              <Border IsVisible="{Binding Resultado.TemInsight}"
+                      Background="{Binding Resultado.InsightFundo}"
+                      BorderBrush="{Binding Resultado.InsightBorda}"
+                      BorderThickness="1"
+                      CornerRadius="16"
+                      Padding="16,13">
+                <StackPanel Orientation="Horizontal" Spacing="13">
+                  <Border Width="26" Height="26" CornerRadius="13"
+                          Background="{Binding Resultado.InsightCor}" VerticalAlignment="Top">
+                    <TextBlock Classes="branco forte" FontSize="13"
+                               Text="{Binding Resultado.InsightSimbolo}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  </Border>
+                  <StackPanel Spacing="2" MaxWidth="600">
+                    <TextBlock Classes="h3" Text="{Binding Resultado.InsightTitulo}" />
+                    <TextBlock Classes="legenda" Text="{Binding Resultado.InsightTexto}" />
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+
+              <!-- Detalhes -->
+              <StackPanel Spacing="0">
+                <ItemsControl ItemsSource="{Binding Resultado.Detalhes}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DetalheLinha">
+                      <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+                        <StackPanel Spacing="1">
+                          <TextBlock Classes="legenda forte suave" Text="{Binding Rotulo}" />
+                          <TextBlock Classes="fina" Text="{Binding Nota}"
+                                     IsVisible="{Binding TemNota}" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Classes="numero" Text="{Binding Valor}"
+                                   VerticalAlignment="Center" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Border Classes="divisor" Margin="0,13,0,9" />
+
+                <Grid ColumnDefinitions="*,Auto">
+                  <Button Theme="{StaticResource BotaoFantasma}"
+                          Command="{Binding IrParaMemoriaCommand}"
+                          HorizontalAlignment="Left">
+                    <TextBlock Text="Ver memória de cálculo →" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{StaticResource PincelOliva}" />
+                  </Button>
+                  <TextBlock Grid.Column="1" Classes="fina fraco"
+                             Text="{Binding Resultado.Fonte}"
+                             VerticalAlignment="Center" />
+                </Grid>
+              </StackPanel>
+
+            </StackPanel>
+          </Border>
+
+          <!-- Série curta -->
+          <Border Classes="cartao" Padding="26,20">
+            <StackPanel Spacing="12">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="2">
+                  <TextBlock Classes="rotulo" Text="ANTES E DEPOIS DA REFORMA" />
+                  <TextBlock Classes="h2" Text="O mesmo frete, ano a ano" />
+                  <TextBlock Classes="legenda"
+                             Text="Custo líquido do pagador nos marcos do cronograma, com o mesmo valor nominal." />
+                </StackPanel>
+                <Button Grid.Column="1" Theme="{StaticResource BotaoFantasma}"
+                        Command="{Binding IrParaHorizonteCommand}"
+                        VerticalAlignment="Top">
+                  <TextBlock Text="Abrir horizonte →" FontSize="13" FontWeight="SemiBold"
+                             Foreground="{StaticResource PincelOliva}" />
+                </Button>
+              </Grid>
+
+              <Grid Height="168">
+                <ItemsControl ItemsSource="{Binding Resultado.Serie}" VerticalAlignment="Bottom">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <UniformGrid Rows="1" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ItemSerie">
+                      <StackPanel Spacing="4" VerticalAlignment="Bottom" Margin="6,0">
+                        <TextBlock Classes="fina forte suave" Text="{Binding Valor}"
+                                   HorizontalAlignment="Center" />
+                        <Border Height="{Binding Altura}" Background="{Binding Fundo}"
+                                CornerRadius="8,8,3,3" Margin="14,0" />
+                        <TextBlock Classes="fina forte" Text="{Binding Delta}"
+                                   Foreground="{Binding CorDelta}" HorizontalAlignment="Center" />
+                        <TextBlock Classes="fina forte suave" Text="{Binding Ano}"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock Classes="fina fraco" FontSize="10.5" Text="{Binding Marco}"
+                                   HorizontalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <TextBlock Classes="fina" Margin="2,0,0,0"
+                     Text="Simulação para decisão de compra. O CBS/IBS não é apurado pelos motores oficiais nesta build; as alíquotas seguem o cronograma da LC 214/2025 e não substituem a apuração fiscal." />
+
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </Grid>
+</UserControl>

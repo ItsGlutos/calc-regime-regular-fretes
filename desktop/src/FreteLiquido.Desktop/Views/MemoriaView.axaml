@@ -1,0 +1,151 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FreteLiquido.Desktop.ViewModels"
+             xmlns:modelos="using:FreteLiquido.Core.Modelos"
+             x:Class="FreteLiquido.Desktop.Views.MemoriaView"
+             x:DataType="vm:MemoriaViewModel">
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="34,26,34,44" Spacing="20">
+
+      <!-- Cabeçalho -->
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="10" MaxWidth="640" HorizontalAlignment="Left">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Border Width="26" Height="2" CornerRadius="1"
+                    Background="{StaticResource PincelOliva}" VerticalAlignment="Center" />
+            <TextBlock Classes="eyebrow" Text="AUDITORIA DO CÁLCULO" />
+          </StackPanel>
+          <TextBlock Classes="h1" Text="Como o número foi montado." />
+          <TextBlock Classes="legenda" Text="{Binding Resumo}" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+          <Border Classes="chip">
+            <TextBlock Classes="fina forte apagado" Text="{Binding Fonte}" />
+          </Border>
+          <Border Classes="chipOliva">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <TextBlock Classes="fina forte oliva" Text="Ano de referência" />
+              <TextBlock Classes="fina forte" Text="{Binding Ano}" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Grid>
+
+      <Grid ColumnDefinitions="*,18,0.92*">
+
+        <!-- Memória -->
+        <StackPanel Grid.Column="0">
+          <ItemsControl ItemsSource="{Binding Grupos}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:GrupoMemoria">
+                <Border Classes="painel" Padding="22,18" Margin="0,0,0,14">
+                  <StackPanel Spacing="6">
+                    <TextBlock Classes="rotulo" Text="{Binding Titulo}" />
+                    <ItemsControl ItemsSource="{Binding Itens}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="modelos:LinhaMemoria">
+                          <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+                            <StackPanel Spacing="1">
+                              <TextBlock Classes="legenda forte suave" Text="{Binding Titulo}" />
+                              <TextBlock Classes="fina" Text="{Binding Detalhe}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1" Classes="numero" Text="{Binding Valor}"
+                                       VerticalAlignment="Center" Margin="18,0,0,0" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <!-- Avisos -->
+          <ItemsControl ItemsSource="{Binding Avisos}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:AvisoTela">
+                <Border Background="{Binding Fundo}" BorderBrush="{Binding Borda}"
+                        BorderThickness="1" CornerRadius="16" Padding="16,13" Margin="0,0,0,10">
+                  <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Border Width="24" Height="24" CornerRadius="12" Background="{Binding Cor}"
+                            VerticalAlignment="Top">
+                      <TextBlock Classes="branco forte" FontSize="12" Text="{Binding Simbolo}"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Spacing="2" MaxWidth="560">
+                      <TextBlock Classes="legenda forte suave" Text="{Binding Titulo}" />
+                      <TextBlock Classes="fina" Text="{Binding Texto}" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <!-- JSON -->
+        <Border Grid.Column="2" Background="{StaticResource PincelNavy}" CornerRadius="22"
+                Padding="20,18" VerticalAlignment="Top">
+          <StackPanel Spacing="14">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="2">
+                <TextBlock Classes="rotulo" Foreground="{StaticResource PincelOliva300}"
+                           Text="RESPOSTA BRUTA" />
+                <TextBlock Classes="fina" Foreground="{StaticResource PincelOliva100}"
+                           Text="O que o motor devolveria em produção." />
+              </StackPanel>
+              <Button Grid.Column="1" Theme="{StaticResource BotaoIcone}"
+                      Click="CopiarJson"
+                      AutomationProperties.Name="Copiar a resposta JSON" ToolTip.Tip="Copiar JSON"
+                      Background="#1C2942" VerticalAlignment="Top">
+                <Path Data="M8 8H19V21H8Z M5 16H4V3H15V4"
+                      Stroke="{StaticResource PincelOliva300}"
+                      StrokeThickness="1.6"
+                      StrokeJoin="Round"
+                      Stretch="Uniform" Width="15" Height="15" />
+              </Button>
+            </Grid>
+
+            <Border Background="#0B1220" CornerRadius="14" Padding="16">
+              <ScrollViewer Height="430" VerticalScrollBarVisibility="Auto">
+                <SelectableTextBlock Text="{Binding Json}"
+                                     FontFamily="Cascadia Mono, Consolas, monospace"
+                                     FontSize="11.5"
+                                     LineHeight="18"
+                                     Foreground="#CBD9EC" />
+              </ScrollViewer>
+            </Border>
+
+            <TextBlock Classes="fina" Foreground="{StaticResource PincelOliva200}"
+                       Text="Em produção, este bloco é a resposta HTTP do motor oficial, preservada para auditoria." />
+          </StackPanel>
+        </Border>
+      </Grid>
+
+      <!-- Premissas -->
+      <Border Classes="cartao" Padding="26,22">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="h2" Text="Premissas e limites da simulação" />
+          <ItemsControl ItemsSource="{Binding Premissas}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:Premissa">
+                <Grid ColumnDefinitions="Auto,*" Margin="0,4,0,0">
+                  <Border Width="5" Height="5" CornerRadius="3"
+                          Background="{StaticResource PincelOliva300}"
+                          VerticalAlignment="Top" Margin="2,7,12,0" />
+                  <TextBlock Grid.Column="1" Classes="legenda" Text="{Binding Texto}" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="fina"
+                     Text="A ferramenta é de simulação para decisão de compra e não substitui a apuração fiscal." />
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

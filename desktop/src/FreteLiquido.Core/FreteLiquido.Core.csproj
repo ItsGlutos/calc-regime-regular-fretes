@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>FreteLiquido.Core</RootNamespace>
+    <AssemblyName>FreteLiquido.Core</AssemblyName>
+    <Description>Regras de apresentação, catálogo e simulação de demonstração do Frete Líquido.</Description>
+  </PropertyGroup>
+
+</Project>

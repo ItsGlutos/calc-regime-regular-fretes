@@ -1,0 +1,130 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:FreteLiquido.Desktop.ViewModels"
+        x:Class="FreteLiquido.Desktop.Views.MainWindow"
+        x:DataType="vm:PrincipalViewModel"
+        Title="Frete Líquido — desktop"
+        Width="1380"
+        Height="906"
+        MinWidth="1200"
+        MinHeight="760"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource PincelPapel}"
+        Icon="/Assets/frete-liquido.ico">
+
+  <Grid RowDefinitions="Auto,*">
+
+    <!-- ============================================================ topbar -->
+    <Border Grid.Row="0"
+            Background="{StaticResource PincelSuperficie}"
+            BoxShadow="0 14 30 -26 #470F172A, 0 1 0 0 #E4E9F0">
+      <Grid Height="76" Margin="30,0" ColumnDefinitions="Auto,*,Auto">
+
+        <!-- Marca -->
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+          <Border Width="40" Height="40" CornerRadius="13" Background="{StaticResource GradienteMarca}"
+                  BoxShadow="0 12 22 -14 #B30F172A">
+            <Grid>
+              <Path Data="M7 16H17 M13.5 9.5L20 16L13.5 22.5"
+                    Stroke="{StaticResource PincelBranco}"
+                    StrokeThickness="2"
+                    StrokeLineCap="Round"
+                    StrokeJoin="Round"
+                    Stretch="Uniform"
+                    Width="21"
+                    Height="21"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center" />
+              <Ellipse Width="5" Height="5"
+                       Fill="{StaticResource PincelOliva300}"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Top"
+                       Margin="0,7,7,0" />
+            </Grid>
+          </Border>
+          <StackPanel VerticalAlignment="Center" Spacing="0">
+            <StackPanel Orientation="Horizontal" Spacing="0">
+              <TextBlock FontSize="19" FontWeight="Bold" LetterSpacing="-0.3" Text="Frete" />
+              <TextBlock FontSize="19" FontWeight="Bold" LetterSpacing="-0.3" Margin="5,0,0,0"
+                         Foreground="{StaticResource PincelOliva}" Text="Líquido" />
+            </StackPanel>
+            <TextBlock Classes="fina fraco" Text="consolidação desktop · Windows" />
+          </StackPanel>
+        </StackPanel>
+
+        <!-- Navegação -->
+        <Border Grid.Column="1" Classes="segmentado" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="2">
+
+            <RadioButton Theme="{StaticResource AbaNav}" Classes="nav" GroupName="principal"
+                         IsChecked="{Binding AbaCalculadora, Mode=TwoWay}"
+                         AutomationProperties.Name="Calculadora">
+              <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Path Data="M4 4.5H20V19.5H4Z M4 8.5H20 M7.5 12H9 M11.5 12H13 M15.5 12H17 M7.5 15.5H9 M11.5 15.5H13 M15.5 15.5H17"
+                      StrokeThickness="1.7" StrokeLineCap="Round" StrokeJoin="Round"
+                      Stretch="Uniform" Width="15" Height="15" VerticalAlignment="Center" />
+                <TextBlock Text="Calculadora" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+              </StackPanel>
+            </RadioButton>
+
+            <RadioButton Theme="{StaticResource AbaNav}" Classes="nav" GroupName="principal"
+                         IsChecked="{Binding AbaComparador, Mode=TwoWay}"
+                         AutomationProperties.Name="Comparador">
+              <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Path Data="M4 20V12 M9.3 20V6 M14.6 20V10 M19.9 20V4 M3 21.5H21"
+                      StrokeThickness="1.7" StrokeLineCap="Round" StrokeJoin="Round"
+                      Stretch="Uniform" Width="15" Height="15" VerticalAlignment="Center" />
+                <TextBlock Text="Comparador" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+              </StackPanel>
+            </RadioButton>
+
+            <RadioButton Theme="{StaticResource AbaNav}" Classes="nav" GroupName="principal"
+                         IsChecked="{Binding AbaHorizonte, Mode=TwoWay}"
+                         AutomationProperties.Name="Horizonte">
+              <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Path Data="M3.5 18L8.5 11L13 14L20.5 5.5 M3 21.5H21"
+                      StrokeThickness="1.7" StrokeLineCap="Round" StrokeJoin="Round"
+                      Stretch="Uniform" Width="15" Height="15" VerticalAlignment="Center" />
+                <TextBlock Text="Horizonte" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+              </StackPanel>
+            </RadioButton>
+
+            <RadioButton Theme="{StaticResource AbaNav}" Classes="nav" GroupName="principal"
+                         IsChecked="{Binding AbaMemoria, Mode=TwoWay}"
+                         AutomationProperties.Name="Memoria">
+              <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Path Data="M6 3.5H14L18.5 8V20.5H6Z M14 3.5V8H18.5 M9 12H15 M9 15.5H15"
+                      StrokeThickness="1.7" StrokeLineCap="Round" StrokeJoin="Round"
+                      Stretch="Uniform" Width="15" Height="15" VerticalAlignment="Center" />
+                <TextBlock Text="Memória" FontSize="13.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+              </StackPanel>
+            </RadioButton>
+
+          </StackPanel>
+        </Border>
+
+        <!-- Status -->
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+          <Border Background="{StaticResource PincelAmbar050}"
+                  BorderBrush="{StaticResource PincelAmbarLinha}"
+                  BorderThickness="1"
+                  CornerRadius="11"
+                  Padding="11,7">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Border Width="7" Height="7" CornerRadius="4" Background="{StaticResource PincelAmbar}"
+                      VerticalAlignment="Center" />
+              <TextBlock Text="{Binding StatusDados}" FontSize="11.5" FontWeight="SemiBold"
+                         Foreground="{StaticResource PincelAmbar}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Border>
+          <TextBlock Text="{Binding Versao}" Classes="fina fraco" VerticalAlignment="Center" />
+        </StackPanel>
+
+      </Grid>
+    </Border>
+
+    <!-- ========================================================== conteúdo -->
+    <ContentControl Grid.Row="1" Content="{Binding PaginaAtual}" />
+
+  </Grid>
+</Window>

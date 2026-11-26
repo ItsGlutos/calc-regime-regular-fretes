@@ -52,3 +52,7 @@ node_modules/
 .DS_Store
 Thumbs.db
 .env
+
+# estado local dos perfis (recriado com os exemplos na primeira execução)
+app/data/perfis.json
+app/data/perfis.invalido-*.json

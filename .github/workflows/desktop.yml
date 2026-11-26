@@ -1,0 +1,68 @@
+name: desktop
+
+on:
+  push:
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/desktop.yml'
+  pull_request:
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/desktop.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build e testes (windows)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # Roda antes do build: pega XML inválido, StaticResource inexistente e
+      # caminho de binding que não existe no x:DataType, com mensagem melhor
+      # que a do compilador XAML.
+      - name: Verificar XAML, recursos e bindings
+        run: python scripts/verificar-xaml.py
+
+      - name: Restore
+        run: dotnet restore FreteLiquido.sln
+
+      - name: Build
+        run: dotnet build FreteLiquido.sln -c Release --no-restore
+
+      - name: Testes do Core
+        run: >
+          dotnet test tests/FreteLiquido.Core.Tests/FreteLiquido.Core.Tests.csproj
+          -c Release --no-build --logger "trx;LogFileName=testes.trx"
+
+      - name: Publicar executável (win-x64, self-contained)
+        run: >
+          dotnet publish src/FreteLiquido.Desktop/FreteLiquido.Desktop.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -o artefatos/app
+
+      - name: Guardar resultado dos testes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-testes-desktop
+          path: desktop/tests/FreteLiquido.Core.Tests/TestResults
+          if-no-files-found: ignore
+
+      - name: Guardar executável
+        uses: actions/upload-artifact@v4
+        with:
+          name: frete-liquido-win-x64
+          path: desktop/artefatos/app

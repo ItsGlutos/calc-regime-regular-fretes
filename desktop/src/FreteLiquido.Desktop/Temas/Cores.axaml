@@ -1,0 +1,86 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Paleta herdada do Frete Líquido (papel frio, tinta naval, verde militar de crédito e
+    âmbar de alerta), reorganizada para o Soft UI: superfícies de baixo contraste,
+    sombras difusas e nenhuma borda dura.
+  -->
+
+  <!-- Papel e superfícies -->
+  <SolidColorBrush x:Key="PincelPapel" Color="#EDF0F5" />
+  <SolidColorBrush x:Key="PincelPapelFundo" Color="#E6EBF2" />
+  <SolidColorBrush x:Key="PincelSuperficie" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="PincelSuperficieSuave" Color="#F7F9FC" />
+  <SolidColorBrush x:Key="PincelSuperficieGelo" Color="#F2F5FA" />
+  <SolidColorBrush x:Key="PincelAfundado" Color="#E7ECF3" />
+  <SolidColorBrush x:Key="PincelVidro" Color="#F8FAFD" />
+
+  <!-- Tinta -->
+  <SolidColorBrush x:Key="PincelTinta" Color="#0B1220" />
+  <SolidColorBrush x:Key="PincelTintaSuave" Color="#33405A" />
+  <SolidColorBrush x:Key="PincelTexto" Color="#556274" />
+  <SolidColorBrush x:Key="PincelTextoFraco" Color="#7E8A9C" />
+  <SolidColorBrush x:Key="PincelLinha" Color="#E4E9F0" />
+  <SolidColorBrush x:Key="PincelLinhaForte" Color="#D3DAE5" />
+
+  <!-- Marca -->
+  <SolidColorBrush x:Key="PincelNavy" Color="#0F172A" />
+  <SolidColorBrush x:Key="PincelNavyClaro" Color="#1C2942" />
+  <SolidColorBrush x:Key="PincelBranco" Color="#FFFFFF" />
+
+  <LinearGradientBrush x:Key="GradienteMarca" StartPoint="0%,0%" EndPoint="100%,100%">
+    <GradientStop Color="#1B2A44" Offset="0" />
+    <GradientStop Color="#0F172A" Offset="1" />
+  </LinearGradientBrush>
+
+  <LinearGradientBrush x:Key="GradienteMarcaForte" StartPoint="0%,0%" EndPoint="100%,100%">
+    <GradientStop Color="#24395B" Offset="0" />
+    <GradientStop Color="#13203A" Offset="1" />
+  </LinearGradientBrush>
+
+  <!-- Verde militar (oliva) — cor de crédito e de marca -->
+  <SolidColorBrush x:Key="PincelOliva" Color="#4D5C36" />
+  <SolidColorBrush x:Key="PincelOlivaForte" Color="#3C4829" />
+  <SolidColorBrush x:Key="PincelOliva050" Color="#F3F5EA" />
+  <SolidColorBrush x:Key="PincelOliva100" Color="#E6EAD3" />
+  <SolidColorBrush x:Key="PincelOliva200" Color="#CDD7AE" />
+  <SolidColorBrush x:Key="PincelOliva300" Color="#B4C293" />
+
+  <LinearGradientBrush x:Key="GradienteCredito" StartPoint="0%,0%" EndPoint="100%,0%">
+    <GradientStop Color="#6B7F45" Offset="0" />
+    <GradientStop Color="#4D5C36" Offset="1" />
+  </LinearGradientBrush>
+
+  <LinearGradientBrush x:Key="GradienteBarra" StartPoint="0%,100%" EndPoint="0%,0%">
+    <GradientStop Color="#5E7240" Offset="0" />
+    <GradientStop Color="#45542F" Offset="1" />
+  </LinearGradientBrush>
+
+  <LinearGradientBrush x:Key="GradienteBarraAntes" StartPoint="0%,100%" EndPoint="0%,0%">
+    <GradientStop Color="#C9D5E4" Offset="0" />
+    <GradientStop Color="#A9B9CE" Offset="1" />
+  </LinearGradientBrush>
+
+  <!-- Esmeralda: usado só para custo menor / variação negativa -->
+  <SolidColorBrush x:Key="PincelVerde" Color="#0F7A55" />
+  <SolidColorBrush x:Key="PincelVerde050" Color="#EDF9F3" />
+  <SolidColorBrush x:Key="PincelVerdeLinha" Color="#C9EADB" />
+
+  <!-- Âmbar de alerta -->
+  <SolidColorBrush x:Key="PincelAmbar" Color="#9A5B06" />
+  <SolidColorBrush x:Key="PincelAmbar050" Color="#FFF8EA" />
+  <SolidColorBrush x:Key="PincelAmbarLinha" Color="#F0D6A4" />
+
+  <!-- Vermelho de risco -->
+  <SolidColorBrush x:Key="PincelVermelho" Color="#B42318" />
+  <SolidColorBrush x:Key="PincelVermelho050" Color="#FDECEA" />
+
+  <!-- Vidro e sombras -->
+  <SolidColorBrush x:Key="PincelBrancoTranslucido" Color="#E6FFFFFF" />
+  <SolidColorBrush x:Key="PincelSombra" Color="#0F172A" />
+  <SolidColorBrush x:Key="PincelSombraForte" Color="#5C6B80" />
+
+  <SolidColorBrush x:Key="PincelFoco" Color="#A9B98E" />
+
+</ResourceDictionary>

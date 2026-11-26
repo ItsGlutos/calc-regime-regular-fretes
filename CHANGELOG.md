@@ -9,6 +9,47 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ### Adicionado
 
+- **Perfis de transportadores (diária → mês)**: nova seção e API (`/api/perfis`, `/api/perfis/:id`,
+  `/api/perfis/calcular`, `/api/perfis/comparar`) para cadastrar transportadores por **diária** (R$/dia),
+  com nome, tipo de veículo, UFs, regime e forma de contagem de dias. O app converte a diária em
+  faturamento bruto e custo líquido **mês a mês** e em série **2026–2033**, com **calendário de dias úteis
+  e feriados nacionais** (19 a 23 dias úteis/mês, 253 em 2026), **diária-teto** contra o regime regular e
+  ranking **dentro do mesmo tipo de veículo**. Perfis persistidos em `app/data/perfis.json` (escrita
+  atômica), com quatro exemplos de fábrica. Ver [docs/perfis.md](docs/perfis.md) e
+  `scripts/verificar-perfis.mjs`.
+- **Pesquisa de custos de transportes** em `docs/especialista-custos-transportes/`: 21 fontes (13
+  oficiais), contagem de dias e jornada (EC 141/2026, Lei 13.103/2015), faixas de diária por tipo de
+  veículo derivadas do piso ANTT de 16/07/2026, modelo de cálculo, recomendações de produto e validação
+  cruzada. O agente reutilizável está em [agents/especialista-custos-transportes/](agents/especialista-custos-transportes/).
+- **Faixas de referência de diária no formulário**: tipo de veículo opcional preenche a diária base e
+  mostra a faixa (3/4 R$ 550–900; toco R$ 860–1.350; truck R$ 1.440–2.200; carreta R$ 2.820–4.300; bitrem
+  R$ 3.820–5.850), com alerta quando a diária fica fora da faixa ou abaixo de 40% da base, e aviso do
+  limite do MEI caminhoneiro (R$ 251.600,00/ano).
+- **App desktop Frete Líquido (.NET 8 + Avalonia 11) — `desktop/`**: primeira interface
+  instalável do produto, com a calculadora do custo líquido como tela principal e comparador,
+  horizonte 2025–2033 e memória de cálculo em abas secundárias. Mesmo XAML/C# para Windows
+  (agora) e Linux (fase 2). O design Soft UI usa a paleta do produto com o azul de crédito
+  trocado por **verde militar**. Roda com dados de demonstração atrás de `ISimuladorFrete`;
+  a troca pelos motores oficiais é a fase seguinte. Ver [desktop/README.md](desktop/README.md).
+- **Build, testes e publicação do desktop**: solução com `Core` (catálogo, cronograma da
+  LC 214/2025, formatação pt-BR), `Desktop` (Avalonia) e 31 testes xUnit que travam os números
+  documentados (R$ 837,50 em 2026, R$ 845,00 em 2027, R$ 730,00 em 2033); `scripts/publicar.ps1`
+  gera executável único autocontido (~43 MB); workflow `.github/workflows/desktop.yml` roda
+  verificação de XAML, build, testes e publish no Windows.
+- **Verificação visual e acessibilidade do desktop**: `scripts/capturar-janela.ps1` abre o app
+  e captura a janela real (DPI-aware), gerando os PNGs de `desktop/docs/preview/`; anel de foco
+  visível em botões e cartões e `AutomationProperties.Name` nos controles sem texto próprio
+  (abas, cartões de regime, segmentos, combos e botões de ícone).
+
+### Corrigido
+
+- **Percentual negativo na interface**: `Formatador.Variacao` emitia hífen ASCII (`-12,84%`)
+  enquanto `VariacaoMoeda` já usava o menos tipográfico; agora os dois usam `−`.
+- **Sombra azul remanescente na paleta oliva**: `Border.colunaDestaque` e o cartão de opção
+  selecionado ainda usavam `#470B5FA5`; agora usam a sombra oliva.
+- **Gradiente "antes da reforma" divergente**: `Cores.axaml`, `Paleta.cs` e a prévia HTML
+  tinham três valores diferentes para o mesmo gradiente; unificado em `#C9D5E4 → #A9B9CE`.
+
 - **Frete Líquido: hoje → amanhã (o horizonte do pagador)**: nova seção e endpoint `POST /api/pagador`
   com o desembolso e o custo líquido de hoje até 2033, cenário **preço de hoje × repasse integral** da
   carga, crédito total decomposto, **benchmark do regime regular**, **preço-teto** do regime atual

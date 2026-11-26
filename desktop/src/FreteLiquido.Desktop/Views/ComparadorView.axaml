@@ -1,0 +1,130 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FreteLiquido.Desktop.ViewModels"
+             x:Class="FreteLiquido.Desktop.Views.ComparadorView"
+             x:DataType="vm:ComparadorViewModel">
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="34,26,34,44" Spacing="20">
+
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="10" MaxWidth="660" HorizontalAlignment="Left">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Border Width="26" Height="2" CornerRadius="1"
+                    Background="{StaticResource PincelOliva}" VerticalAlignment="Center" />
+            <TextBlock Classes="eyebrow" Text="MESMO TRECHO · PREÇOS E REGIMES DIFERENTES" />
+          </StackPanel>
+          <TextBlock Classes="h1" Text="A transportadora mais barata no nominal raramente é a mais barata no líquido." />
+          <TextBlock Classes="corpo" MaxWidth="620" Text="{Binding Resumo}" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Spacing="10" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+          <Border Classes="chip">
+            <TextBlock Classes="fina forte apagado" Text="{Binding Contexto}" />
+          </Border>
+          <Button Theme="{StaticResource BotaoSuave}" Command="{Binding AdicionarCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Path Data="M12 5V19 M5 12H19"
+                    Stroke="{StaticResource PincelOliva}"
+                    StrokeThickness="2"
+                    StrokeLineCap="Round"
+                    Stretch="Uniform" Width="13" Height="13" />
+              <TextBlock Text="Adicionar transportadora" FontSize="13" FontWeight="SemiBold"
+                         Foreground="{StaticResource PincelOliva}" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </Grid>
+
+      <ItemsControl ItemsSource="{Binding Cartoes}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Columns="3" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:CartaoTransportadora">
+            <Border Classes="painel" Margin="0,0,16,16" Padding="22,20"
+                    Background="{Binding Fundo}"
+                    BorderBrush="{Binding Borda}"
+                    BorderThickness="1">
+              <StackPanel Spacing="14">
+
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <Border Width="30" Height="30" CornerRadius="15"
+                          Background="{StaticResource PincelSuperficie}">
+                    <TextBlock Text="{Binding Posicao}" FontSize="12" FontWeight="SemiBold"
+                               Foreground="{Binding CorDestino}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  </Border>
+                  <Border Grid.Column="2" Classes="chip"
+                          Background="{StaticResource PincelSuperficie}">
+                    <TextBlock Classes="fina forte apagado" Text="{Binding Regime}" />
+                  </Border>
+                </Grid>
+
+                <StackPanel Spacing="2">
+                  <TextBlock Classes="h3" Text="{Binding Nome}" />
+                  <TextBlock Classes="fina forte" Text="{Binding Diferenca}"
+                             Foreground="{Binding CorDestino}" />
+                </StackPanel>
+
+                <StackPanel Spacing="8">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Classes="fina" Text="Preço nominal" />
+                    <TextBlock Grid.Column="1" Classes="fina forte suave" Text="{Binding Preco}" />
+                  </Grid>
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Classes="fina" Text="Crédito aproveitável" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                      <TextBlock Classes="fina forte suave" Text="{Binding Credito}" />
+                      <TextBlock Classes="fina fraco" Text="{Binding Percentual}" />
+                    </StackPanel>
+                  </Grid>
+                </StackPanel>
+
+                <Border Classes="divisor" />
+
+                <StackPanel Spacing="4">
+                  <TextBlock Classes="rotulo" Text="CUSTO LÍQUIDO" />
+                  <TextBlock FontSize="27" FontWeight="SemiBold" LetterSpacing="-0.8"
+                             Text="{Binding Custo}" />
+                </StackPanel>
+
+                <ProgressBar Theme="{StaticResource BarraFina}"
+                             Minimum="0" Maximum="1"
+                             Value="{Binding Barra}" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <Border Classes="cartao" Padding="26,22">
+        <StackPanel Spacing="14">
+          <TextBlock Classes="h2" Text="Por que o ranking muda" />
+          <Grid ColumnDefinitions="*,*,*">
+            <StackPanel Spacing="4" Margin="0,0,18,0">
+              <TextBlock Classes="h3" Text="O crédito é o preço real" />
+              <TextBlock Classes="legenda"
+                         Text="Cada R$ 1,00 de crédito transferido vale R$ 1,00 de custo a menos. O nominal só importa depois do crédito." />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="4" Margin="0,0,18,0">
+              <TextBlock Classes="h3" Text="Simples não acompanha os 27%" />
+              <TextBlock Classes="legenda"
+                         Text="O optante do Simples recolhe CBS/IBS dentro do DAS e transfere o destaque do PGDAS, não a alíquota cheia." />
+            </StackPanel>
+            <StackPanel Grid.Column="2" Spacing="4">
+              <TextBlock Classes="h3" Text="O híbrido empata no fim" />
+              <TextBlock Classes="legenda"
+                         Text="Quando o ICMS deixa de existir, em 2033, o híbrido iguala o regime regular. Antes disso, perde crédito de ICMS." />
+            </StackPanel>
+          </Grid>
+          <TextBlock Classes="fina"
+                     Text="Ranking por custo líquido total. Empate técnico é resolvido pelo maior crédito transferido." />
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

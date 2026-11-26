@@ -1,0 +1,175 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FreteLiquido.Desktop.ViewModels"
+             x:Class="FreteLiquido.Desktop.Views.HorizonteView"
+             x:DataType="vm:HorizonteViewModel">
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="34,26,34,44" Spacing="20">
+
+      <!-- Cabeçalho -->
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="10" MaxWidth="620" HorizontalAlignment="Left">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Border Width="26" Height="2" CornerRadius="1"
+                    Background="{StaticResource PincelOliva}" VerticalAlignment="Center" />
+            <TextBlock Classes="eyebrow" Text="REFORMA TRIBUTÁRIA · 2025–2033" />
+          </StackPanel>
+          <TextBlock Classes="h1" Text="O mesmo frete atravessando a reforma, ano a ano." />
+          <TextBlock Classes="legenda" Text="{Binding Nota}" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Spacing="10" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+          <Border Classes="segmentado">
+            <StackPanel Orientation="Horizontal" Spacing="2">
+              <RadioButton Theme="{StaticResource Segmento}" Classes="segmento"
+                           GroupName="cenario" IsChecked="{Binding PrecoDeHoje, Mode=TwoWay}">
+                <TextBlock Text="Preço de hoje" FontSize="12.5" FontWeight="SemiBold" />
+              </RadioButton>
+              <RadioButton Theme="{StaticResource Segmento}" Classes="segmento"
+                           GroupName="cenario" IsChecked="{Binding ComRepasse, Mode=TwoWay}">
+                <TextBlock Text="Com repasse" FontSize="12.5" FontWeight="SemiBold" />
+              </RadioButton>
+            </StackPanel>
+          </Border>
+
+          <Border Classes="segmentado">
+            <StackPanel Orientation="Horizontal" Spacing="2">
+              <RadioButton Theme="{StaticResource Segmento}" Classes="segmento"
+                           GroupName="metrica" IsChecked="{Binding MetricaLiquidoSelecionada, Mode=TwoWay}">
+                <TextBlock Text="Custo líquido" FontSize="12.5" FontWeight="SemiBold" />
+              </RadioButton>
+              <RadioButton Theme="{StaticResource Segmento}" Classes="segmento"
+                           GroupName="metrica" IsChecked="{Binding MetricaCreditoSelecionada, Mode=TwoWay}">
+                <TextBlock Text="Crédito" FontSize="12.5" FontWeight="SemiBold" />
+              </RadioButton>
+              <RadioButton Theme="{StaticResource Segmento}" Classes="segmento"
+                           GroupName="metrica" IsChecked="{Binding MetricaCargaSelecionada, Mode=TwoWay}">
+                <TextBlock Text="Carga" FontSize="12.5" FontWeight="SemiBold" />
+              </RadioButton>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Grid>
+
+      <!-- KPIs -->
+      <ItemsControl ItemsSource="{Binding Kpis}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Columns="4" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ItemKpi">
+            <Border Classes="painel" Margin="0,0,16,0" Padding="20,16">
+              <StackPanel Spacing="4">
+                <TextBlock Classes="rotulo" Text="{Binding Rotulo}" />
+                <TextBlock FontSize="23" FontWeight="SemiBold" LetterSpacing="-0.6"
+                           Foreground="{Binding Cor}" Text="{Binding Valor}" />
+                <TextBlock Classes="fina" Text="{Binding Detalhe}" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- Gráfico -->
+      <Border Classes="cartao" Padding="26,22">
+        <StackPanel Spacing="16">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="2">
+              <TextBlock Classes="rotulo" Text="{Binding TituloMetrica}" />
+              <TextBlock Classes="h2" Text="A trajetória da reforma em nove anos" />
+            </StackPanel>
+            <TextBlock Grid.Column="1" Classes="fina fraco" VerticalAlignment="Bottom"
+                       Text="barras cinzas = antes da reforma" />
+          </Grid>
+
+          <Grid Height="268">
+            <ItemsControl ItemsSource="{Binding Barras}" VerticalAlignment="Stretch">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <UniformGrid Rows="1" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:BarraAno">
+                  <!-- Grid com linha elástica (*) em vez de StackPanel: a barra
+                       fica ancorada no rodapé da célula, então todas partem da
+                       mesma linha de base, independente da altura do valor. -->
+                  <Grid RowDefinitions="*,Auto,Auto,Auto" Margin="5,0">
+                    <StackPanel Grid.Row="0" VerticalAlignment="Bottom" Spacing="5">
+                      <TextBlock Classes="fina forte suave" FontSize="11.5"
+                                 Text="{Binding Valor}" HorizontalAlignment="Center" />
+                      <Border Height="{Binding Altura}" Background="{Binding Fundo}"
+                              CornerRadius="8,8,3,3" Margin="9,0" />
+                    </StackPanel>
+                    <TextBlock Grid.Row="1" Classes="fina fraco" Margin="0,5,0,0"
+                               Text="{Binding Percentual}" HorizontalAlignment="Center" />
+                    <TextBlock Grid.Row="2" Classes="fina forte suave" Margin="0,5,0,0"
+                               Text="{Binding Ano}" HorizontalAlignment="Center" />
+                    <TextBlock Grid.Row="3" Classes="fina fraco" FontSize="10" MinHeight="14"
+                               Margin="0,5,0,0" Text="{Binding Fase}"
+                               HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <!-- Tabela -->
+      <Border Classes="cartao" Padding="26,22">
+        <StackPanel Spacing="6">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="2">
+              <TextBlock Classes="h2" Text="Ano a ano" />
+              <TextBlock Classes="legenda"
+                         Text="Bruto, crédito e líquido do pagador. A variação compara sempre com 2026." />
+            </StackPanel>
+            <TextBlock Grid.Column="1" Classes="fina fraco" VerticalAlignment="Bottom"
+                       Text="valores do frete informado na calculadora" />
+          </Grid>
+
+          <Grid ColumnDefinitions="58,*,120,120,130,96" Margin="0,14,0,8">
+            <TextBlock Classes="rotulo" Text="ANO" />
+            <TextBlock Grid.Column="1" Classes="rotulo" Text="FASE" />
+            <TextBlock Grid.Column="2" Classes="rotulo" Text="BRUTO" HorizontalAlignment="Right" />
+            <TextBlock Grid.Column="3" Classes="rotulo" Text="CRÉDITO" HorizontalAlignment="Right" />
+            <TextBlock Grid.Column="4" Classes="rotulo" Text="LÍQUIDO" HorizontalAlignment="Right" />
+            <TextBlock Grid.Column="5" Classes="rotulo" Text="Δ VS. HOJE" HorizontalAlignment="Right" />
+          </Grid>
+
+          <ItemsControl ItemsSource="{Binding Linhas}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:LinhaAno">
+                <Border BorderBrush="{StaticResource PincelLinha}" BorderThickness="0,0,0,1"
+                        Padding="0,11">
+                  <Grid ColumnDefinitions="58,*,120,120,130,96">
+                    <TextBlock Classes="numero" Text="{Binding Ano}" />
+                    <TextBlock Grid.Column="1" Classes="fina apagado" Text="{Binding Fase}"
+                               VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Classes="fina suave" Text="{Binding Bruto}"
+                               HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="3" Classes="fina suave" Text="{Binding Credito}"
+                               HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="4" Classes="fina forte tinta" Text="{Binding Liquido}"
+                               HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="5" Classes="fina forte" Text="{Binding Variacao}"
+                               Foreground="{Binding CorVariacao}"
+                               HorizontalAlignment="Right" VerticalAlignment="Center" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <TextBlock Classes="fina" Margin="0,12,0,0"
+                     Text="Crédito = CBS/IBS + ICMS + PIS/COFINS creditáveis no ano. Carga = tributos destacados no documento. Dados de demonstração sobre o cronograma da LC 214/2025." />
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

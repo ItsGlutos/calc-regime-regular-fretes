@@ -1,0 +1,141 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Tipografia: Calibri e suas semelhantes (Carlito no Linux, Segoe UI como
+    último recurso). A escala é editorial: eyebrow em caixa alta espaçada,
+    títulos com entreletra negativa e o valor principal como herói da tela.
+  -->
+
+  <Style Selector="TextBlock">
+    <Setter Property="FontFamily" Value="Calibri, Carlito, Segoe UI" />
+    <Setter Property="Foreground" Value="{DynamicResource PincelTinta}" />
+  </Style>
+
+  <!-- Eyebrow / rótulos -->
+  <Style Selector="TextBlock.eyebrow">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="1.6" />
+    <Setter Property="Foreground" Value="{DynamicResource PincelOliva}" />
+  </Style>
+
+  <Style Selector="TextBlock.rotulo">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="1.1" />
+    <Setter Property="Foreground" Value="{DynamicResource PincelTextoFraco}" />
+  </Style>
+
+  <!-- Escala de títulos -->
+  <Style Selector="TextBlock.h1">
+    <Setter Property="FontSize" Value="31" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="-0.7" />
+    <Setter Property="LineHeight" Value="37" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <Style Selector="TextBlock.h2">
+    <Setter Property="FontSize" Value="20" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="-0.25" />
+    <Setter Property="LineHeight" Value="26" />
+  </Style>
+
+  <Style Selector="TextBlock.h3">
+    <Setter Property="FontSize" Value="15.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LineHeight" Value="21" />
+  </Style>
+
+  <!-- Corpo -->
+  <Style Selector="TextBlock.corpo">
+    <Setter Property="FontSize" Value="14.5" />
+    <Setter Property="LineHeight" Value="21" />
+    <Setter Property="Foreground" Value="{DynamicResource PincelTintaSuave}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <Style Selector="TextBlock.legenda">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="LineHeight" Value="18" />
+    <Setter Property="Foreground" Value="{DynamicResource PincelTexto}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <Style Selector="TextBlock.fina">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="LineHeight" Value="17" />
+    <Setter Property="Foreground" Value="{DynamicResource PincelTextoFraco}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <!-- Números -->
+  <Style Selector="TextBlock.heroi">
+    <Setter Property="FontSize" Value="54" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="-1.8" />
+    <Setter Property="LineHeight" Value="58" />
+  </Style>
+
+  <Style Selector="TextBlock.valor">
+    <Setter Property="FontSize" Value="24" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="-0.5" />
+  </Style>
+
+  <Style Selector="TextBlock.valorMedio">
+    <Setter Property="FontSize" Value="18" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="TextBlock.numero">
+    <Setter Property="FontSize" Value="14.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="TextBlock.mono">
+    <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, JetBrains Mono, monospace" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="LineHeight" Value="19" />
+  </Style>
+
+  <!-- Cores semânticas -->
+  <Style Selector="TextBlock.tinta">
+    <Setter Property="Foreground" Value="{DynamicResource PincelTinta}" />
+  </Style>
+  <Style Selector="TextBlock.suave">
+    <Setter Property="Foreground" Value="{DynamicResource PincelTintaSuave}" />
+  </Style>
+  <Style Selector="TextBlock.apagado">
+    <Setter Property="Foreground" Value="{DynamicResource PincelTexto}" />
+  </Style>
+  <Style Selector="TextBlock.fraco">
+    <Setter Property="Foreground" Value="{DynamicResource PincelTextoFraco}" />
+  </Style>
+  <Style Selector="TextBlock.oliva">
+    <Setter Property="Foreground" Value="{DynamicResource PincelOliva}" />
+  </Style>
+  <Style Selector="TextBlock.verde">
+    <Setter Property="Foreground" Value="{DynamicResource PincelVerde}" />
+  </Style>
+  <Style Selector="TextBlock.ambar">
+    <Setter Property="Foreground" Value="{DynamicResource PincelAmbar}" />
+  </Style>
+  <Style Selector="TextBlock.vermelho">
+    <Setter Property="Foreground" Value="{DynamicResource PincelVermelho}" />
+  </Style>
+  <Style Selector="TextBlock.branco">
+    <Setter Property="Foreground" Value="{DynamicResource PincelBranco}" />
+  </Style>
+
+  <!-- Fortes -->
+  <Style Selector="TextBlock.forte">
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.medio">
+    <Setter Property="FontWeight" Value="Medium" />
+  </Style>
+
+</Styles>

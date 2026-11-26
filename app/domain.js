@@ -164,7 +164,7 @@ export const TABELA_TRANSICAO = {
 }
 
 /** Anos oferecidos na interface. */
-export const ANOS = [2026, 2027, 2029, 2033]
+export const ANOS = [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033]
 
 /** UFs com região e município de referência (capital) para o IBS municipal. */
 export const UFS = [

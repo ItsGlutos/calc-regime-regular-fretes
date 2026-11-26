@@ -1,0 +1,39 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FreteLiquido.Desktop.ViewModels"
+             xmlns:views="using:FreteLiquido.Desktop.Views"
+             x:Class="FreteLiquido.Desktop.App"
+             RequestedThemeVariant="Light">
+
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://FreteLiquido/Temas/Cores.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://FreteLiquido/Temas/Tipografia.axaml" />
+    <StyleInclude Source="avares://FreteLiquido/Temas/Controles.axaml" />
+  </Application.Styles>
+
+  <!-- Cada ViewModel de tela vira a View correspondente dentro do ContentControl
+       de MainWindow, sem código de navegação no code-behind. -->
+  <Application.DataTemplates>
+    <DataTemplate DataType="{x:Type vm:CalculadoraViewModel}">
+      <views:CalculadoraView />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:ComparadorViewModel}">
+      <views:ComparadorView />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:HorizonteViewModel}">
+      <views:HorizonteView />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:MemoriaViewModel}">
+      <views:MemoriaView />
+    </DataTemplate>
+  </Application.DataTemplates>
+
+</Application>

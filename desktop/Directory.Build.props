@@ -1,0 +1,20 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Versão única do Avalonia para todos os projetos da solução desktop. -->
+    <AvaloniaVersion>11.3.23</AvaloniaVersion>
+
+    <Company>Frete Líquido</Company>
+    <Product>Frete Líquido — desktop</Product>
+    <Version>0.1.0</Version>
+    <Authors>Frete Líquido</Authors>
+    <NeutralLanguage>pt-BR</NeutralLanguage>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+</Project>

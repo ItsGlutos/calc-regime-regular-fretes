@@ -1,0 +1,402 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Frete Líquido — prévia desktop · Calculadora</title>
+<style>
+  :root{
+    --papel:#EDF0F5; --papel-fundo:#E6EBF2; --superficie:#fff; --superficie-suave:#F7F9FC;
+    --gelo:#F2F5FA; --afundado:#E7ECF3;
+    --tinta:#0B1220; --tinta-suave:#33405A; --texto:#556274; --texto-fraco:#7E8A9C;
+    --linha:#E4E9F0; --navy:#0F172A; --oliva:#4D5C36; --oliva-forte:#3C4829;
+    --oliva050:#F3F5EA; --oliva100:#E6EAD3; --oliva200:#CDD7AE; --oliva300:#B4C293;
+    --verde:#0F7A55; --verde050:#EDF9F3; --ambar:#9A5B06; --ambar050:#FFF8EA;
+    --ambar-linha:#F0D6A4; --vermelho:#B42318;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    width:1380px;min-height:906px;
+    background:var(--papel);color:var(--tinta);
+    font-family:Calibri,Carlito,"Segoe UI",sans-serif;
+    font-size:14px;-webkit-font-smoothing:antialiased;
+  }
+  /* ------------------------------------------------------------ topbar */
+  .topbar{height:76px;background:#fff;display:flex;align-items:center;
+    padding:0 30px;box-shadow:0 14px 30px -26px rgba(15,23,42,.28),0 1px 0 0 #E4E9F0;}
+  .marca{display:flex;align-items:center;gap:12px}
+  .marca__icone{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#1B2A44,#0F172A);box-shadow:0 12px 22px -14px rgba(15,23,42,.7)}
+  .marca__nome{font-size:19px;font-weight:700;letter-spacing:-.3px;line-height:1.15}
+  .marca__nome em{font-style:normal;color:var(--oliva)}
+  .marca__sub{font-size:11.5px;color:var(--texto-fraco)}
+  .nav{margin:0 auto;background:var(--afundado);border-radius:14px;padding:4px;
+    display:flex;gap:2px;box-shadow:inset 2px 2px 6px -2px #C9D3E0,inset -2px -2px 6px -2px #fff}
+  .nav__item{display:flex;align-items:center;gap:8px;padding:9px 15px;border-radius:13px;
+    font-size:13.5px;font-weight:600;color:var(--texto)}
+  .nav__item svg{stroke:var(--texto-fraco);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .nav__item--ativo{background:#fff;color:var(--tinta);box-shadow:0 12px 22px -16px rgba(15,23,42,.55)}
+  .nav__item--ativo svg{stroke:var(--oliva)}
+  .status{display:flex;align-items:center;gap:14px}
+  .status__chip{display:flex;align-items:center;gap:8px;padding:7px 11px;border-radius:11px;
+    background:var(--ambar050);border:1px solid var(--ambar-linha)}
+  .status__ponto{width:7px;height:7px;border-radius:4px;background:var(--ambar)}
+  .status__texto{font-size:11.5px;font-weight:600;color:var(--ambar)}
+  .status__versao{font-size:11.5px;color:var(--texto-fraco)}
+  /* ----------------------------------------------------------- conteúdo */
+  .conteudo{padding:26px 34px 44px;display:flex;flex-direction:column;gap:20px}
+  .abertura{display:grid;grid-template-columns:1fr auto;gap:20px}
+  .eyebrow{display:flex;align-items:center;gap:10px;font-size:10.5px;font-weight:600;
+    letter-spacing:1.6px;color:var(--oliva);text-transform:uppercase}
+  .eyebrow__traco{width:26px;height:2px;border-radius:1px;background:var(--oliva)}
+  h1{font-size:31px;font-weight:600;letter-spacing:-.7px;line-height:37px;max-width:660px;margin-top:10px}
+  .lede{font-size:14.5px;line-height:21px;color:var(--tinta-suave);max-width:600px;margin-top:10px}
+  .tiles{display:flex;gap:12px;align-items:flex-end}
+  .tile{background:#fff;border-radius:20px;padding:15px 18px;
+    box-shadow:0 18px 36px -30px rgba(15,23,42,.16),0 1px 2px 0 rgba(15,23,42,.03)}
+  .tile__rotulo{font-size:11px;font-weight:600;letter-spacing:1.1px;color:var(--texto-fraco);text-transform:uppercase}
+  .tile__valor{font-size:21px;font-weight:600;letter-spacing:-.4px;margin-top:3px;white-space:nowrap}
+  .tile__nota{font-size:11.5px;color:var(--texto-fraco);margin-top:3px}
+  /* workspace */
+  .workspace{display:grid;grid-template-columns:408px 1fr;gap:20px;align-items:start}
+  .cartao{background:#fff;border-radius:24px;padding:24px 26px;
+    box-shadow:0 26px 50px -34px rgba(15,23,42,.20),0 2px 4px 0 rgba(15,23,42,.04)}
+  .cartao__cab{display:flex;justify-content:space-between;align-items:flex-start}
+  h2{font-size:20px;font-weight:600;letter-spacing:-.25px}
+  .sub{font-size:12.5px;color:var(--texto);line-height:18px}
+  .icone-btn{width:38px;height:38px;border-radius:12px;background:#fff;display:grid;place-items:center;
+    box-shadow:0 10px 18px -14px rgba(15,23,42,.55)}
+  .campos{display:flex;flex-direction:column;gap:16px;margin-top:16px}
+  .campo{display:flex;flex-direction:column;gap:7px}
+  .campo__rotulo{font-size:11px;font-weight:600;letter-spacing:1.1px;color:var(--texto-fraco);text-transform:uppercase}
+  .caixa{background:var(--gelo);border-radius:14px;height:52px;display:flex;align-items:center;
+    padding:0 16px;box-shadow:inset 3px 3px 7px -3px #C9D3E0,inset -3px -3px 7px -3px #fff}
+  .caixa--valor{height:58px}
+  .caixa__prefixo{font-size:15px;font-weight:600;color:var(--texto-fraco);margin-right:10px}
+  .caixa__valor{font-size:17px;font-weight:600;letter-spacing:-.2px}
+  .caixa__texto{font-size:14px;color:var(--tinta);display:flex;flex:1;justify-content:space-between;align-items:center}
+  .dica{font-size:11.5px;line-height:17px;color:var(--texto-fraco)}
+  .opcao{background:var(--superficie-suave);border:1px solid var(--linha);border-radius:15px;
+    padding:12px 15px;display:flex;flex-direction:column;gap:2px}
+  .opcao--ativa{background:var(--oliva050);border-color:var(--oliva200);box-shadow:0 14px 26px -22px rgba(11,95,165,.28)}
+  .opcao__titulo{font-size:15.5px;font-weight:600;line-height:21px}
+  .opcao--ativa .opcao__titulo{color:var(--oliva-forte)}
+  .segmentado{background:var(--afundado);border-radius:14px;padding:4px;display:flex;
+    box-shadow:inset 2px 2px 6px -2px #C9D3E0,inset -2px -2px 6px -2px #fff}
+  .segmento{flex:1;text-align:center;padding:7px 14px;border-radius:11px;font-size:12.5px;font-weight:600;color:var(--texto)}
+  .segmento--ativo{background:#fff;color:var(--tinta);box-shadow:0 8px 16px -12px rgba(15,23,42,.55)}
+  .dupla{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .btn{height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;gap:10px;
+    font-size:14.5px;font-weight:600;color:#fff;background:linear-gradient(135deg,#1B2A44,#0F172A);
+    box-shadow:0 18px 30px -20px rgba(15,23,42,.6);margin-top:20px}
+  /* resultado */
+  .resultado{display:flex;flex-direction:column;gap:18px}
+  .chips{display:flex;gap:8px;align-items:center}
+  .chip{border-radius:9px;padding:4px 9px;background:var(--gelo);
+    font-size:11.5px;font-weight:600;color:var(--texto)}
+  .chip--oliva{background:var(--oliva050);color:var(--oliva)}
+  .chips__ano{font-size:11.5px;color:var(--texto-fraco);margin-left:4px}
+  .heroi__rotulo{font-size:11px;font-weight:600;letter-spacing:1.1px;color:var(--texto-fraco)}
+  .heroi{display:flex;align-items:flex-end;margin-top:2px}
+  .heroi__cifrao{font-size:19px;font-weight:600;color:var(--texto-fraco);margin:0 9px 11px 0}
+  .heroi__inteiro{font-size:54px;font-weight:600;letter-spacing:-1.8px;line-height:58px}
+  .heroi__centavos{font-size:24px;font-weight:600;color:var(--texto-fraco);margin-bottom:10px}
+  .heroi__sub{font-size:12.5px;color:var(--texto);line-height:18px;margin-top:2px}
+  .barra{height:10px;border-radius:6px;background:var(--afundado);overflow:hidden;margin-top:18px}
+  .barra__fill{height:100%;width:15.5%;border-radius:6px;background:linear-gradient(90deg,#6B7F45,#4D5C36)}
+  .barra__legenda{display:flex;justify-content:space-between;margin-top:7px;font-size:11.5px;color:var(--texto-fraco)}
+  .barra__legenda strong{font-weight:600}
+  .barra__legenda .oliva{color:var(--oliva)}
+  .trio{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-top:18px}
+  .coluna{background:var(--superficie-suave);border-radius:15px;padding:12px 14px}
+  .coluna--destaque{background:var(--oliva050);box-shadow:0 14px 26px -22px rgba(11,95,165,.28)}
+  .coluna__rotulo{font-size:11.5px;font-weight:600;color:var(--texto-fraco)}
+  .coluna--destaque .coluna__rotulo{color:var(--oliva)}
+  .coluna__valor{font-size:18px;font-weight:600;margin-top:4px;letter-spacing:-.3px}
+  .coluna__delta{font-size:11.5px;font-weight:600;margin-top:4px;color:var(--texto-fraco)}
+  .delta--sobe{color:var(--ambar)} .delta--desce{color:var(--verde)}
+  .insight{background:var(--ambar050);border:1px solid var(--ambar-linha);border-radius:16px;
+    padding:14px 16px;display:flex;gap:13px;margin-top:18px}
+  .insight__bolinha{width:26px;height:26px;border-radius:13px;background:var(--ambar);color:#fff;
+    display:grid;place-items:center;font-size:13px;font-weight:600;flex:none}
+  .insight__titulo{font-size:15.5px;font-weight:600;line-height:21px}
+  .insight__texto{font-size:12.5px;line-height:18px;color:var(--texto);margin-top:2px}
+  .detalhes{margin-top:18px;display:flex;flex-direction:column}
+  .detalhe{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-top:9px}
+  .detalhe__rotulo{font-size:12.5px;font-weight:600;color:var(--tinta-suave)}
+  .detalhe__nota{font-size:11.5px;color:var(--texto-fraco)}
+  .detalhe__valor{font-size:14.5px;font-weight:600}
+  .divisor{height:1px;background:var(--linha);margin:14px 0 10px}
+  .rodape-resultado{display:flex;justify-content:space-between;align-items:center}
+  .link{font-size:13px;font-weight:600;color:var(--oliva)}
+  .fonte{font-size:11.5px;color:var(--texto-fraco)}
+  /* série */
+  .serie__cab{display:flex;justify-content:space-between;align-items:flex-start}
+  .grafico{display:flex;gap:12px;height:176px;align-items:flex-end;margin-top:14px}
+  .col{flex:1;height:176px;display:flex;flex-direction:column;gap:5px;align-items:center;justify-content:flex-end}
+  .col__valor{font-size:11.5px;font-weight:600;color:var(--tinta-suave)}
+  .col__barra{width:calc(100% - 28px);border-radius:8px 8px 3px 3px;
+    background:linear-gradient(180deg,#5E7240,#45542F)}
+  .col__barra--antes{background:linear-gradient(180deg,#C9D5E4,#A9B9CE)}
+  .col__barra--destaque{background:linear-gradient(180deg,#6E8247,#3D4A29)}
+  .col__delta{font-size:11.5px;font-weight:600;color:var(--texto-fraco)}
+  .col__ano{font-size:11.5px;font-weight:600;color:var(--tinta-suave)}
+  .col__marco{font-size:10.5px;color:var(--texto-fraco)}
+  .nota-final{font-size:11.5px;color:var(--texto-fraco);line-height:17px}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="marca">
+    <div class="marca__icone">
+      <svg width="21" height="21" viewBox="0 0 24 24"><path d="M7 16H17M13.5 9.5L20 16l-6.5 6.5" stroke="#fff" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div>
+      <div class="marca__nome">Frete <em>Líquido</em></div>
+      <div class="marca__sub">consolidação desktop · Windows</div>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <div class="nav__item nav__item--ativo">
+      <svg width="15" height="15" viewBox="0 0 24 24"><path d="M4 4.5H20V19.5H4ZM4 8.5H20M7.5 12H9M11.5 12H13M15.5 12H17M7.5 15.5H9M11.5 15.5H13M15.5 15.5H17"/></svg>
+      Calculadora
+    </div>
+    <div class="nav__item">
+      <svg width="15" height="15" viewBox="0 0 24 24"><path d="M4 20V12M9.3 20V6M14.6 20V10M19.9 20V4M3 21.5H21"/></svg>
+      Comparador
+    </div>
+    <div class="nav__item">
+      <svg width="15" height="15" viewBox="0 0 24 24"><path d="M3.5 18L8.5 11L13 14L20.5 5.5M3 21.5H21"/></svg>
+      Horizonte
+    </div>
+    <div class="nav__item">
+      <svg width="15" height="15" viewBox="0 0 24 24"><path d="M6 3.5H14L18.5 8V20.5H6ZM14 3.5V8H18.5M9 12H15M9 15.5H15"/></svg>
+      Memória
+    </div>
+  </nav>
+
+  <div class="status">
+    <div class="status__chip"><span class="status__ponto"></span><span class="status__texto">Dados de demonstração</span></div>
+    <span class="status__versao">0.1.0 · prévia desktop</span>
+  </div>
+</header>
+
+<main class="conteudo">
+
+  <section class="abertura">
+    <div>
+      <div class="eyebrow"><span class="eyebrow__traco"></span>Simulador do pagador de frete · 2025–2033</div>
+      <h1>Quanto você paga de frete hoje — e quanto vai pagar até 2033.</h1>
+      <p class="lede">Informe o frete bruto que você paga. A calculadora mostra o custo líquido depois do crédito de ICMS, PIS/COFINS e CBS/IBS, compara com 2026 e projeta o regime pleno.</p>
+    </div>
+    <div class="tiles">
+      <div class="tile" style="width:172px">
+        <div class="tile__rotulo">Hoje · 2026</div>
+        <div class="tile__valor">R$ 837,50</div>
+        <div class="tile__nota">custo líquido</div>
+      </div>
+      <div class="tile" style="width:196px">
+        <div class="tile__rotulo">2033 · regime pleno</div>
+        <div class="tile__valor">R$ 730,00</div>
+        <div class="tile__nota"><span style="color:var(--verde);font-weight:600">−12,84%</span> vs. hoje</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="workspace">
+
+    <!-- ------------------------------------------------------- formulário -->
+    <div class="cartao">
+      <div class="cartao__cab">
+        <div>
+          <h2>Dados do frete</h2>
+          <p class="sub">Valor, regime e rota.</p>
+        </div>
+        <div class="icone-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24"><path d="M4 10A8 8 0 1 1 6.2 17.4M4 5V10H9" stroke="#7E8A9C" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+
+      <div class="campos">
+        <div class="campo">
+          <div class="campo__rotulo">Valor do frete</div>
+          <div class="caixa caixa--valor"><span class="caixa__prefixo">R$</span><span class="caixa__valor">1.000,00</span></div>
+          <div class="dica">Preço nominal cobrado pela transportadora.</div>
+        </div>
+
+        <div class="campo">
+          <div class="campo__rotulo">Regime tributário</div>
+          <div class="opcao">
+            <div class="opcao__titulo">Simples Nacional</div>
+            <div class="dica">DAS com PGDAS ou híbrido</div>
+          </div>
+          <div class="opcao opcao--ativa">
+            <div class="opcao__titulo">Regime regular</div>
+            <div class="dica">Lucro Real/Presumido ou MEI</div>
+          </div>
+        </div>
+
+        <div class="campo">
+          <div class="campo__rotulo">Modalidade</div>
+          <div class="caixa"><span class="caixa__texto">Regime regular (Lucro Real/Presumido) <span style="color:#7E8A9C">▾</span></span></div>
+          <div class="dica">Destaca CBS/IBS no CT-e e transfere o crédito integral ao tomador, somado ao ICMS enquanto ele existir.</div>
+        </div>
+
+        <div class="campo">
+          <div class="campo__rotulo">Tipo de operação</div>
+          <div class="segmentado">
+            <div class="segmento segmento--ativo">B2B</div>
+            <div class="segmento">B2C</div>
+          </div>
+          <div class="dica">Venda a contribuinte: o crédito do frete entra na apuração.</div>
+        </div>
+
+        <div class="campo">
+          <div class="campo__rotulo">Sua empresa — regime de crédito</div>
+          <div class="caixa"><span class="caixa__texto">Lucro Real — não cumulativo <span style="color:#7E8A9C">▾</span></span></div>
+          <div class="dica">Credita ICMS, PIS/COFINS (enquanto existirem) e CBS/IBS destacados no CT-e.</div>
+        </div>
+
+        <div class="dupla">
+          <div class="campo">
+            <div class="campo__rotulo">UF origem</div>
+            <div class="caixa"><span class="caixa__texto">SP — São Paulo <span style="color:#7E8A9C">▾</span></span></div>
+          </div>
+          <div class="campo">
+            <div class="campo__rotulo">UF destino</div>
+            <div class="caixa"><span class="caixa__texto">BA — Bahia <span style="color:#7E8A9C">▾</span></span></div>
+          </div>
+        </div>
+
+        <div class="campo">
+          <div class="campo__rotulo">Ano de referência</div>
+          <div class="caixa"><span class="caixa__texto">2027 — CBS cheia <span style="color:#7E8A9C">▾</span></span></div>
+          <div class="dica">CBS cheia e IBS em teste: primeiro ano com custo acima de hoje</div>
+        </div>
+
+        <div class="btn">Calcular custo líquido
+          <svg width="17" height="17" viewBox="0 0 24 24"><path d="M4 12H19M13 6L19 12L13 18" stroke="#fff" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+
+        <div class="dica">O cálculo é instantâneo: cada alteração no formulário recalcula o custo líquido. Esta build usa dados de demonstração.</div>
+      </div>
+    </div>
+
+    <!-- --------------------------------------------------------- resultado -->
+    <div class="resultado">
+
+      <div class="cartao">
+        <div class="chips">
+          <span class="chip chip--oliva">Regime regular</span>
+          <span class="chip">B2B</span>
+          <span class="chip">SP → BA</span>
+          <span class="chips__ano">2027 · CBS cheia</span>
+        </div>
+
+        <div style="margin-top:18px">
+          <div class="heroi__rotulo">CUSTO LÍQUIDO DO FRETE</div>
+          <div class="heroi">
+            <span class="heroi__cifrao">R$</span>
+            <span class="heroi__inteiro">845</span>
+            <span class="heroi__centavos">,00</span>
+          </div>
+          <div class="heroi__sub">de R$ 1.000,00 nominais · crédito de R$ 155,00 (15,50%)</div>
+
+          <div class="barra"><div class="barra__fill"></div></div>
+          <div class="barra__legenda">
+            <span><strong class="oliva">15,50%</strong> volta como crédito</span>
+            <span><strong>84,50%</strong> fica no custo</span>
+          </div>
+        </div>
+
+        <div class="trio">
+          <div class="coluna">
+            <div class="coluna__rotulo">2026 · hoje</div>
+            <div class="coluna__valor">R$ 837,50</div>
+            <div class="coluna__delta">ponto de partida</div>
+          </div>
+          <div class="coluna coluna--destaque">
+            <div class="coluna__rotulo">2027 · CBS cheia</div>
+            <div class="coluna__valor">R$ 845,00</div>
+            <div class="coluna__delta delta--sobe">+0,90%</div>
+          </div>
+          <div class="coluna">
+            <div class="coluna__rotulo">2033 · regime pleno</div>
+            <div class="coluna__valor">R$ 730,00</div>
+            <div class="coluna__delta delta--desce">−12,84%</div>
+          </div>
+        </div>
+
+        <div class="insight">
+          <div class="insight__bolinha">↑</div>
+          <div>
+            <div class="insight__titulo">Custo acima de hoje</div>
+            <div class="insight__texto">Em 2027 o mesmo frete custa R$ 7,50 a mais que em 2026 (+0,90%). A troca de PIS/COFINS por CBS derruba o crédito antes de o IBS entrar cheio.</div>
+          </div>
+        </div>
+
+        <div class="detalhes">
+          <div class="detalhe">
+            <div><div class="detalhe__rotulo">CBS/IBS creditável</div><div class="detalhe__nota">destaque do documento</div></div>
+            <div class="detalhe__valor">R$ 85,00</div>
+          </div>
+          <div class="detalhe">
+            <div><div class="detalhe__rotulo">ICMS + PIS/COFINS creditáveis</div><div class="detalhe__nota">tributos anteriores ainda creditáveis no ano</div></div>
+            <div class="detalhe__valor">R$ 70,00</div>
+          </div>
+          <div class="divisor"></div>
+          <div class="rodape-resultado">
+            <span class="link">Ver memória de cálculo →</span>
+            <span class="fonte">Destaque simulado · demonstração</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- série -->
+      <div class="cartao" style="padding:22px 26px">
+        <div class="serie__cab">
+          <div>
+            <div class="campo__rotulo">Antes e depois da reforma</div>
+            <h2 style="margin-top:2px">O mesmo frete, ano a ano</h2>
+            <div class="sub" style="margin-top:2px">Custo líquido do pagador nos marcos do cronograma, com o mesmo valor nominal.</div>
+          </div>
+          <span class="link">Abrir horizonte →</span>
+        </div>
+
+        <div class="grafico">
+          <div class="col">
+            <div class="col__valor">R$ 837,50</div>
+            <div class="col__barra col__barra--antes" style="height:64px"></div>
+            <div class="col__delta">—</div><div class="col__ano">2026</div><div class="col__marco">hoje</div>
+          </div>
+          <div class="col">
+            <div class="col__valor">R$ 845,00</div>
+            <div class="col__barra col__barra--destaque" style="height:67px"></div>
+            <div class="col__delta delta--sobe">+0,90%</div><div class="col__ano">2027</div><div class="col__marco">CBS cheia</div>
+          </div>
+          <div class="col">
+            <div class="col__valor">R$ 833,50</div>
+            <div class="col__barra" style="height:62px"></div>
+            <div class="col__delta delta--desce">−0,48%</div><div class="col__ano">2029</div><div class="col__marco">transição</div>
+          </div>
+          <div class="col">
+            <div class="col__valor">R$ 810,50</div>
+            <div class="col__barra" style="height:52px"></div>
+            <div class="col__delta delta--desce">−3,22%</div><div class="col__ano">2031</div><div class="col__marco">transição</div>
+          </div>
+          <div class="col">
+            <div class="col__valor">R$ 730,00</div>
+            <div class="col__barra" style="height:20px"></div>
+            <div class="col__delta delta--desce">−12,84%</div><div class="col__ano">2033</div><div class="col__marco">regime pleno</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="nota-final">Simulação para decisão de compra. O CBS/IBS não é apurado pelos motores oficiais nesta build; as alíquotas seguem o cronograma da LC 214/2025 e não substituem a apuração fiscal.</div>
+    </div>
+
+  </section>
+</main>
+</body>
+</html>

@@ -165,6 +165,38 @@
               <label for="atividade">Atividade no Simples</label>
               <select id="atividade"></select>
             </div>
+            <div class="field-grid">
+              <div class="field">
+                <label for="dasTotal">DAS total (%)</label>
+                <input
+                  id="dasTotal"
+                  name="dasTotal"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  value="12"
+                  placeholder="12"
+                  aria-describedby="pisoHint"
+                />
+              </div>
+              <div class="field">
+                <label for="insumos">Insumos sujeitos a CBS/IBS (%)</label>
+                <input
+                  id="insumos"
+                  name="insumos"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  value="60"
+                  placeholder="60"
+                  aria-describedby="pisoHint"
+                />
+              </div>
+            </div>
+            <p class="hint" id="pisoHint">
+              Opcional: estima o piso do transportador (DAS + insumos não creditáveis). Sem esses dados, o app
+              mostra só o seu preço de equilíbrio e avisa que o piso não foi calculado.
+            </p>
             <p class="hint" id="simplesHint">
               Informe a linha de alíquotas efetivas do PGDAS do transportador (CBS e IBS, em %). Com as duas
               preenchidas e ano a partir de 2027, o crédito é apurado pelo Motor do Simples Nacional. Em branco,
@@ -237,19 +269,195 @@
         </section>
       </div>
 
+      <section class="card perfis" id="perfis" aria-labelledby="perfisTitulo">
+        <div class="card__head perfis__head">
+          <div>
+            <p class="eyebrow-sm">Perfis de transportadores · diária → mês</p>
+            <h2 id="perfisTitulo">Cadastre a diária e veja o mês fechar</h2>
+            <p class="card__sub">
+              O mês tem 28 a 31 dias e 19 a 23 dias úteis, dependendo do ano. O perfil transforma a
+              diária em faturamento bruto, crédito e custo líquido mês a mês — e mostra quanto a
+              diária deveria ser para empatar com o regime regular.
+            </p>
+          </div>
+          <div class="perfis__acoes">
+            <button class="btn btn--ghost btn--tiny" type="button" id="perfisExemplos">Restaurar exemplos</button>
+            <button class="btn btn--primary btn--tiny" type="button" id="perfilNovo">Novo perfil</button>
+          </div>
+        </div>
+
+        <div class="perfis__layout">
+          <aside class="perfis__lista" aria-label="Perfis de transportadores salvos">
+            <div class="perfis__lista-head">
+              <span>Seus perfis</span>
+              <span class="chip chip--soft" id="perfisContagem">—</span>
+            </div>
+            <div id="perfisCards" class="perfis__cards"></div>
+          </aside>
+
+          <div class="perfis__painel">
+            <form class="perfil-form" id="perfilForm" novalidate aria-labelledby="perfilFormTitulo">
+              <div class="perfil-form__head">
+                <h3 id="perfilFormTitulo">Novo perfil</h3>
+                <span class="chip chip--soft" id="perfilStatus">não salvo</span>
+              </div>
+
+              <div class="field">
+                <label for="perfilNome">Nome do perfil</label>
+                <input
+                  id="perfilNome"
+                  name="perfilNome"
+                  type="text"
+                  maxlength="60"
+                  autocomplete="off"
+                  placeholder="Ex.: Carreta dedicada · SP → BA"
+                />
+              </div>
+
+              <div class="field">
+                <label for="perfilTipoVeiculo">Tipo de veículo (opcional)</label>
+                <select id="perfilTipoVeiculo" name="perfilTipoVeiculo"></select>
+                <p class="hint" id="perfilVeiculoHint"></p>
+              </div>
+
+              <div class="field-grid field-grid--3">
+                <div class="field">
+                  <label for="perfilDiaria">Diária (R$)</label>
+                  <div class="money">
+                    <span class="money__prefix" aria-hidden="true">R$</span>
+                    <input
+                      id="perfilDiaria"
+                      name="perfilDiaria"
+                      type="text"
+                      inputmode="decimal"
+                      autocomplete="off"
+                      placeholder="1.850,00"
+                    />
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="perfilModoDias">Dias no mês</label>
+                  <select id="perfilModoDias" name="perfilModoDias"></select>
+                </div>
+                <div class="field" id="perfilDiasFixoWrap" hidden>
+                  <label for="perfilDiasFixo">Dias fixos</label>
+                  <input
+                    id="perfilDiasFixo"
+                    name="perfilDiasFixo"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    value="22"
+                  />
+                </div>
+              </div>
+
+              <div class="field-grid">
+                <div class="field">
+                  <label for="perfilUfOrigem">UF origem</label>
+                  <select id="perfilUfOrigem" name="perfilUfOrigem"></select>
+                </div>
+                <div class="field">
+                  <label for="perfilUfDestino">UF destino</label>
+                  <select id="perfilUfDestino" name="perfilUfDestino"></select>
+                </div>
+              </div>
+              <p class="hint" id="perfilRotaHint">Operação interestadual.</p>
+
+              <div class="field">
+                <label for="perfilRegime">Regime do transportador</label>
+                <select id="perfilRegime" name="perfilRegime"></select>
+                <p class="hint" id="perfilRegimeHint"></p>
+              </div>
+
+              <div class="field-grid field-grid--3" id="perfilSimplesWrap" hidden>
+                <div class="field">
+                  <label for="perfilAliquotaCbs">CBS do PGDAS (%)</label>
+                  <input
+                    id="perfilAliquotaCbs"
+                    name="perfilAliquotaCbs"
+                    type="text"
+                    inputmode="decimal"
+                    autocomplete="off"
+                    placeholder="2,3591"
+                  />
+                </div>
+                <div class="field">
+                  <label for="perfilAliquotaIbs">IBS do PGDAS (%)</label>
+                  <input
+                    id="perfilAliquotaIbs"
+                    name="perfilAliquotaIbs"
+                    type="text"
+                    inputmode="decimal"
+                    autocomplete="off"
+                    placeholder="0,0260"
+                  />
+                </div>
+                <div class="field">
+                  <label for="perfilDas">DAS total (%)</label>
+                  <input
+                    id="perfilDas"
+                    name="perfilDas"
+                    type="text"
+                    inputmode="decimal"
+                    autocomplete="off"
+                    placeholder="12"
+                  />
+                </div>
+              </div>
+              <p class="hint" id="perfilSimplesHint" hidden>
+                Sem CBS e IBS do PGDAS, vale a faixa setorial estimada. O DAS é opcional: só serve
+                para mostrar a receita líquida do transportador.
+              </p>
+
+              <p class="hint perfil-form__contexto" id="perfilContextoHint"></p>
+
+              <div class="perfil-form__acoes">
+                <button class="btn btn--primary" type="submit" id="perfilSalvar">
+                  <span>Salvar perfil</span>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                    <path d="M5 12.5 9.5 17 19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </button>
+                <button class="btn btn--ghost" type="button" id="perfilUsar">Usar na simulação</button>
+                <button class="btn btn--ghost btn--perigo" type="button" id="perfilExcluir" hidden>Excluir</button>
+              </div>
+              <p class="hint perfil-form__erro" id="perfilFormErro" role="alert" hidden></p>
+            </form>
+
+            <div id="perfilResultado" class="perfil-resultado" aria-live="polite">
+              <div class="skeleton-wrap" aria-hidden="true">
+                <div class="skeleton skeleton--line w-30"></div>
+                <div class="skeleton skeleton--kpis"></div>
+                <div class="skeleton skeleton--line w-60"></div>
+                <div class="skeleton skeleton--block"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="perfis__comparacao" id="perfisComparacao"></div>
+      </section>
+
       <section class="card horizonte" id="hojeAmanha" aria-labelledby="horizonteTitulo" aria-busy="true">
         <div class="card__head horizonte__head">
           <div>
-            <p class="eyebrow-sm">Hoje → amanhã · crédito total do pagador</p>
+            <p class="eyebrow-sm">Seu líquido · hoje → 2033</p>
             <h2 id="horizonteTitulo">Seu frete ao longo da reforma</h2>
-            <p class="card__sub">O que você desembolsa, quanto recupera de crédito e quanto deveria pagar — ano a ano.</p>
+            <p class="card__sub">
+              Quanto sobra hoje, quanto sobra se o preço não mudar e quanto o preço precisa mudar para
+              preservar o seu líquido.
+            </p>
           </div>
-          <div class="segmented horizonte__cenario" id="horizonteCenario" role="radiogroup" aria-label="Cenário do preço do frete">
+          <div class="segmented segmented--3 horizonte__cenario" id="horizonteCenario" role="radiogroup" aria-label="Cenário do preço do frete">
             <button type="button" role="radio" data-cenario="congelado" aria-checked="true" title="O preço do contrato não muda">
-              Preço de hoje
+              Preço travado
             </button>
-            <button type="button" role="radio" data-cenario="repasse" aria-checked="false" title="O transportador repassa a carga tributária ao preço">
-              Com repasse
+            <button type="button" role="radio" data-cenario="equilibrio" aria-checked="false" title="O preço que mantém o seu custo líquido de hoje">
+              Preço de equilíbrio
+            </button>
+            <button type="button" role="radio" data-cenario="repasse" aria-checked="false" title="O preço que preserva a receita líquida do transportador">
+              Piso do transportador
             </button>
           </div>
         </div>
@@ -307,7 +515,8 @@
           <div>
             <h2 id="comparadorTitulo">Comparador de transportadoras</h2>
             <p class="card__sub">
-              Mesmo trecho, preços e regimes diferentes. A ordem é pelo custo líquido total — não pelo nominal.
+              Mesmo trecho, preços e regimes diferentes. A ordem é pelo custo líquido total — não pelo
+              nominal. A segunda tabela mostra o preço que manteria o seu líquido de hoje.
             </p>
           </div>
           <span class="chip chip--soft">2 a 3 transportadoras</span>

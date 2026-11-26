@@ -121,7 +121,7 @@ const aposCenario = await avaliar(`(() => ({
   liquido: document.querySelector('#resultado .net__val')?.textContent.trim(),
   chips: [...document.querySelectorAll('#resultado .chips .chip')].map((c) => c.textContent.trim()),
   ranking: document.querySelector('#comparacao .ranking__resumo')?.textContent.trim(),
-  linhas: [...document.querySelectorAll('#comparacao tbody tr:not(.audit-row)')].map((tr) => ({
+  linhas: [...document.querySelectorAll('#comparacao .ranking tbody tr:not(.audit-row)')].map((tr) => ({
     nome: tr.querySelector('.cell-name strong')?.textContent.trim(),
     liquido: tr.querySelector('.cell-net')?.textContent.trim(),
   }))

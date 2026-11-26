@@ -604,6 +604,11 @@ select {
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.14), 0 0 0 1px rgba(15, 23, 42, 0.03);
 }
 
+.segmented button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* -------------------------------------------------------------- buttons */
 
 .btn {
@@ -2577,6 +2582,11 @@ select {
     flex-wrap: wrap;
   }
 
+  .carrier__rates .carrier__field {
+    flex: 1 1 120px;
+    min-width: 120px;
+  }
+
   .carrier__remove {
     grid-area: remove;
     margin-bottom: 0;
@@ -2708,6 +2718,192 @@ select {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin-top: 16px;
+}
+
+.horizonte__caminhos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.caminho {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 14px 16px 13px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #fff;
+}
+
+.caminho--travado {
+  border-color: #eadcc3;
+  background: #fffaf0;
+}
+
+.caminho--ok {
+  border-color: #cfe8dc;
+  background: var(--green-050);
+}
+
+.caminho--alerta {
+  border-color: var(--amber-line);
+  background: var(--amber-050);
+}
+
+.caminho--piso {
+  border-color: #cfe0f2;
+  background: var(--blue-050);
+}
+
+.caminho__tag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.caminho__valor {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+  line-height: 1.1;
+}
+
+.caminho p {
+  margin-top: 2px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.caminho p b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.caminho__nota {
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--faint);
+}
+
+.horizonte__chart-wrap {
+  margin-top: 18px;
+  padding: 10px 12px 8px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface-2);
+  overflow-x: auto;
+}
+
+.horizonte__chart {
+  min-width: 680px;
+}
+
+.horizonte__chart svg.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.horizonte__legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 2px;
+  padding: 0 4px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.horizonte__legenda i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 5px;
+  border-radius: 2px;
+  vertical-align: 0;
+}
+
+.table--caminhos {
+  min-width: 720px;
+}
+
+.table--caminhos th {
+  white-space: nowrap;
+}
+
+.table--caminhos th small {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--faint);
+  white-space: normal;
+}
+
+.table--caminhos td {
+  padding: 9px 10px;
+}
+
+.table--caminhos tr.is-current td {
+  background: var(--blue-050);
+}
+
+.table--caminhos .cell-ano {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.comparator__caminhos {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px dashed rgba(15, 23, 42, 0.12);
+}
+
+.table--caminhos .cell-name {
+  min-width: 160px;
+}
+
+.table--caminhos .cell-name strong {
+  display: block;
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.table--caminhos .cell-meta {
+  display: block;
+  margin-top: 1px;
+  font-size: 9.5px;
+  color: var(--faint);
+}
+
+.table--caminhos td small {
+  display: block;
+  margin-top: 1px;
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.horizonte__cenario.segmented--3 {
+  min-width: 390px;
+}
+
+.horizonte__cenario.segmented--3 button {
+  height: 38px;
+  padding: 0 8px;
+  font-size: 11px;
+  line-height: 1.2;
 }
 
 .result__nota {
@@ -3065,6 +3261,7 @@ select {
 
 @media (max-width: 1080px) {
   .horizonte__kpis,
+  .horizonte__caminhos,
   .deveria__grid {
     grid-template-columns: 1fr;
   }
@@ -3081,6 +3278,70 @@ select {
 
   .horizonte__cenario {
     width: 100%;
+  }
+
+  .horizonte__cenario.segmented--3 {
+    min-width: 0;
+  }
+
+  .horizonte__cenario.segmented--3 button {
+    font-size: 10px;
+    padding: 0 4px;
+  }
+
+  .caminho__valor {
+    font-size: 20px;
+  }
+
+  .horizonte__chart {
+    min-width: 0;
+  }
+
+  .table--caminhos {
+    min-width: 0;
+  }
+
+  .table--caminhos thead {
+    display: none;
+  }
+
+  .table--caminhos tbody tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid #edf0f5;
+  }
+
+  .table--caminhos tbody td {
+    display: block;
+    padding: 0;
+    border: 0;
+    text-align: left;
+  }
+
+  .table--caminhos tbody td::before {
+    content: attr(data-rotulo);
+    display: block;
+    margin-bottom: 1px;
+    font-size: 8.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  .table--caminhos tbody td.cell-ano,
+  .table--caminhos tbody td.cell-name {
+    grid-column: 1 / -1;
+  }
+
+  .table--caminhos tbody td.cell-ano {
+    font-size: 12px;
+  }
+
+  .table--caminhos tbody td.cell-name strong {
+    font-size: 12px;
   }
 
   .horizonte__tabela-head {
@@ -3162,5 +3423,613 @@ select {
     background: var(--blue-050);
     border-radius: 10px;
     padding: 13px 12px;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Perfis de transportadores                                           */
+/* ------------------------------------------------------------------ */
+
+.perfis {
+  margin-top: 18px;
+}
+
+.perfis__head {
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.perfis__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: none;
+}
+
+.perfis__layout {
+  display: grid;
+  grid-template-columns: 292px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  margin-top: 18px;
+}
+
+.perfis__lista {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+}
+
+.perfis__lista-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.perfis__cards {
+  display: grid;
+  gap: 8px;
+}
+
+.perfil-card {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  padding: 12px 13px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.perfil-card:hover {
+  border-color: var(--line-2);
+  background: var(--surface-2);
+}
+
+.perfil-card:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.perfil-card.is-active {
+  border-color: var(--navy);
+  box-shadow: inset 0 0 0 1px var(--navy);
+  background: #fff;
+}
+
+.perfil-card__nome {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.perfil-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.perfil-card__meta span {
+  white-space: nowrap;
+}
+
+.perfil-card__valores {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.perfil-card__diaria {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.perfil-card__diaria small {
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--faint);
+}
+
+.perfil-card__bruto {
+  font-size: 10.5px;
+  color: var(--faint);
+  text-align: right;
+}
+
+.perfis__vazio {
+  display: grid;
+  gap: 8px;
+  padding: 22px 16px;
+  text-align: center;
+  border: 1px dashed var(--line-2);
+  border-radius: 13px;
+  background: var(--surface-2);
+}
+
+.perfis__vazio strong {
+  font-size: 13px;
+}
+
+.perfis__vazio p {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.perfis__painel {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.perfil-form {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-2);
+}
+
+.perfil-form__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.perfil-form__head h3 {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.perfil-form .field-grid--3 {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) minmax(0, 0.7fr);
+}
+
+.perfil-form__contexto {
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+
+.perfil-form__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.perfil-form__erro {
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid #f3c8c3;
+  background: #fdf3f2;
+  color: var(--red);
+}
+
+.btn--perigo {
+  color: var(--red);
+  border-color: #efd2ce;
+}
+
+.btn--perigo:hover {
+  background: #fdf3f2;
+  border-color: #e3b3ac;
+}
+
+.perfil-resultado {
+  min-width: 0;
+}
+
+.perfil-res {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.perfil-res__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.perfil-res__frase {
+  margin-top: 4px;
+  max-width: 62ch;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--ink-2);
+}
+
+.perfil-res__frase b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.perfil-res__controles {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+
+.perfil-res__controles label {
+  display: grid;
+  gap: 3px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.perfil-res__controles select {
+  min-width: 96px;
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
+.perfil-res__kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.perfil-res__secao {
+  display: grid;
+  gap: 7px;
+}
+
+.perfil-res__secao-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.perfil-res__secao-head h4 {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.perfil-res__secao-head span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.table--perfil {
+  font-size: 12px;
+}
+
+.table--perfil th,
+.table--perfil td {
+  padding: 7px 8px;
+}
+
+.table--perfil td small {
+  display: block;
+  font-size: 9.5px;
+  line-height: 1.35;
+  color: var(--faint);
+}
+
+.table--perfil tr.is-current td {
+  background: var(--blue-050);
+  font-weight: 600;
+}
+
+.table--perfil tr.is-total td {
+  border-top: 1px solid var(--line-2);
+  font-weight: 600;
+  background: var(--surface-2);
+}
+
+.table--perfil .cell-dash {
+  color: var(--faint);
+}
+
+.table--perfil .is-alta {
+  color: var(--amber);
+}
+
+.table--perfil .is-baixa {
+  color: var(--green);
+}
+
+.perfil-res__nota {
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.perfil-res__notas {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0 0 0 16px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.perfil-res__notas li::marker {
+  color: var(--line-2);
+}
+
+.perfis__comparacao {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.perfis__comparacao:empty {
+  display: none;
+}
+
+.perfis__comparacao-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.perfis__comparacao-head h3 {
+  margin-top: 2px;
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.table--perfis-rank {
+  font-size: 12px;
+}
+
+.table--perfis-rank th,
+.table--perfis-rank td {
+  padding: 8px 9px;
+}
+
+.table--perfis-rank td small {
+  display: block;
+  font-size: 9.5px;
+  color: var(--faint);
+}
+
+.table--perfis-rank tr.is-best td {
+  background: var(--green-050);
+}
+
+.table--perfis-rank tr.is-grupo th {
+  padding: 16px 9px 6px;
+  border-bottom: 1px solid var(--line-2);
+  background: transparent;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+  text-align: left;
+}
+
+.table--perfis-rank tbody:first-of-type tr.is-grupo th {
+  padding-top: 8px;
+}
+
+.table--perfis-rank .rank {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.table--perfis-rank tr.is-best .rank {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.perfis__vazio-painel {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding: 18px;
+  border: 1px dashed var(--line-2);
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+
+@media (max-width: 1080px) {
+  .perfis__layout {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .perfis__cards {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(238px, 1fr);
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scroll-snap-type: x proximity;
+  }
+
+  .perfil-card {
+    scroll-snap-align: start;
+  }
+
+  .perfil-res__kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .perfis__head {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .perfis__acoes {
+    width: 100%;
+  }
+
+  .perfis__acoes .btn {
+    flex: 1;
+  }
+
+  .perfil-form {
+    padding: 14px;
+  }
+
+  .perfil-form .field-grid--3,
+  .perfil-form .field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .perfil-form__acoes .btn {
+    flex: 1 1 100%;
+  }
+
+  .perfil-res {
+    padding: 14px;
+  }
+
+  .perfil-res__controles {
+    width: 100%;
+  }
+
+  .perfil-res__controles label {
+    flex: 1;
+  }
+
+  .perfil-res__controles select {
+    width: 100%;
+  }
+
+  .perfil-res__kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .perfil-res__kpis .kpi__valor {
+    font-size: 17px;
+  }
+
+  .table--perfil,
+  .table--perfis-rank {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .table--perfil tbody,
+  .table--perfis-rank tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .table--perfil thead,
+  .table--perfis-rank thead {
+    display: none;
+  }
+
+  .table--perfil tbody tr,
+  .table--perfis-rank tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px 10px;
+    padding: 10px 2px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .table--perfis-rank .rank,
+  .table--perfis-rank tbody td.cell-vazio {
+    display: none;
+  }
+
+  .table--perfis-rank tr.is-grupo {
+    display: block;
+    padding: 14px 2px 2px;
+    border-bottom: none;
+  }
+
+  .table--perfis-rank tr.is-grupo th {
+    display: block;
+    padding: 0;
+    border: none;
+  }
+
+  .table--perfis-rank tbody td:last-child,
+  .table--perfil tbody td.cell-variacao,
+  .table--perfil tr.is-total td:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .table--perfil tbody td,
+  .table--perfis-rank tbody td {
+    display: block;
+    padding: 3px 0;
+    border: none;
+    text-align: left !important;
+  }
+
+  .table--perfil tbody td::before,
+  .table--perfis-rank tbody td::before {
+    content: attr(data-rotulo);
+    display: block;
+    margin-bottom: 1px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  .table--perfil tbody td.cell-mes,
+  .table--perfis-rank tbody td.cell-perfil {
+    grid-column: 1 / -1;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .table--perfil tbody tr.is-current,
+  .table--perfil tbody tr.is-total {
+    border-radius: 10px;
+    padding: 10px 8px;
+  }
+
+  .table--perfil tbody td.cell-dias-total,
+  .table--perfis-rank tbody td.cell-vazio {
+    display: none;
   }
 }
