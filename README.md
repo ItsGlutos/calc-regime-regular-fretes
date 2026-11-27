@@ -89,33 +89,26 @@ CT-e como crédito apropriável e o custo líquido (frete − crédito), com a m
 
 ### App web: Frete Líquido (custo líquido do pagador)
 
-Interface web local, sem build step, para quem **paga** o frete comparar transportadoras de regimes
-tributários diferentes pelo custo líquido total — não pelo preço nominal.
+Interface web local, sem build step, para quem **paga** o frete acompanhar o custo líquido ao longo da
+reforma. A interface principal foi redesenhada em **quatro páginas**:
 
-- formulário começa pelo **regime tributário** (Simples Nacional ou regime regular) e pela modalidade
-  (Simples/DAS com PGDAS, Simples híbrido, Lucro Real/Presumido ou autônomo/MEI), com valor do frete, tipo
-  de operação (B2B/B2C), UFs de origem e destino, **regime de crédito da pagadora** e ano de referência;
-- **Simples/DAS**: alíquotas efetivas do PGDAS (CBS e IBS) informadas na tela, com a alíquota efetiva total;
-  com elas e ano a partir de 2027, o crédito é apurado pelo motor do Simples (CT-e `tpDoc 57`, `CRT 1`,
-  atividade `05`). Sem elas, vale a faixa setorial estimada (0,92% a 4%);
-- **Simples híbrido**: CBS/IBS apurados pelo regime regular e creditados integralmente — não é estimativa; o
-  ICMS e o PIS/COFINS continuam no DAS e não geram crédito;
-- **crédito total** (ICMS + PIS/COFINS + CBS/IBS) decomposto, custo líquido total e alerta visual quando o
-  crédito de CBS/IBS fica abaixo de 4%;
-- **hoje → amanhã (2026–2033)**: o desembolso com o preço de hoje e com repasse integral da carga, o crédito
-  ano a ano, o **preço que você deveria pagar** (benchmark do regime regular e preço-teto do regime atual) e
-  as **ações de ajuste** com número (renegociar, caixa, contrato, regime, calendário);
-- **antes e depois da reforma (2025–2033)**: linha do tempo com a carga tributária (ICMS/PIS/COFINS +
-  CBS/IBS) e o crédito total/custo líquido de cada ano, alternando entre as três leituras e comparando com o
-  benchmark do regime regular;
-- **perfis de transportadores por diária (2026–2033)**: cadastro com nome, tipo de veículo, rota, regime e
-  **diária (R$/dia)**; o app calcula o faturamento bruto e o custo líquido **mês a mês** (19 a 23 dias úteis,
-  com feriados nacionais descontados), a **diária-teto** que empata com o regime regular e um ranking
-  **dentro do mesmo tipo de veículo**. É a seção que mostra por que uma carreta 5,7% mais barata no nominal
-  pode custar R$ 93 mil mais caro no ano quando o crédito do Simples não acompanha;
-- comparador de 2 a 3 transportadoras ordenado por custo líquido total pós-crédito, com as alíquotas do PGDAS
-  por transportadora;
-- memória de cálculo com a resposta bruta do motor usado, para auditoria.
+- **Calculadora** — perfil do transportador (diária, competência, dias faturáveis, regime, operação e rota),
+  crédito do mês, custo líquido, composição do crédito e gráfico bruto × líquido dos 12 meses;
+- **Horizonte** — crédito efetivo por marco (2026, 2027, 2029 e 2033), líquido por R$ 100 mil e variação
+  contra 2026;
+- **Comparador** — os três regimes no mesmo trecho e ano, ranking por custo líquido, barra bruto/líquido e a
+  leitura de por que a diária mais barata pode custar mais depois do crédito;
+- **Memória** — recibo do mês, premissas, memória do motor e resposta bruta; exportação do cenário em JSON;
+- **perfis salvos** — carregar, salvar, atualizar e excluir cenários; a diária vira faturamento mensal pelo
+  calendário de dias úteis, com os mesmos motores oficiais.
+
+O **Simples/DAS** usa as alíquotas efetivas do PGDAS quando informadas (motor do Simples, CT-e `tpDoc 57`,
+`CRT 1`, atividade `05`); sem elas, vale a faixa setorial estimada. O **Simples híbrido** credita só o CBS/IBS
+do regime regular — ICMS e PIS/COFINS ficam no DAS. O **regime regular** credita ICMS, PIS/COFINS e, a partir
+de 2027, CBS/IBS. Em B2C o crédito é zero.
+
+A interface anterior (página única, linha do tempo 2025–2033, horizonte do pagador e edição completa dos
+perfis) está preservada em `/legado/index.html`.
 
 Cada simulação chama o motor do regime escolhido: `POST /api/calculadora/regime-geral` (8080) ou
 `POST /api/calculadora/observabilidade/simples-nacional/nao-assistido` (8082). A carga e os percentuais de
@@ -133,6 +126,8 @@ Interface local: `http://127.0.0.1:5180` · site do projeto:
 <https://itsglutos.github.io/calc-regime-regular-fretes/>
 
 Detalhes e API em [app/README.md](app/README.md) · arquitetura em [ARCHITECTURE.md](ARCHITECTURE.md).
+
+As imagens abaixo são da interface anterior, preservada em `/legado/index.html`.
 
 ![Frete Líquido](app/docs/web-desktop.png)
 

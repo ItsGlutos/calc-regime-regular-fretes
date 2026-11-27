@@ -1,0 +1,19 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-11-27T00:20:00Z" },
+  "title": "Frete Líquido — redesign corporativo duotone",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 1440, "h": 1500, "title": "Calculadora · custo líquido", "expand": "fill", "is_interactive": true },
+    "Horizonte.dc.html": { "x": 1520, "y": 0, "w": 1440, "h": 1700, "title": "Horizonte 2026–2033", "expand": "fill", "is_interactive": true },
+    "CalculadoraMobile.dc.html": { "x": 3040, "y": 0, "w": 390, "h": 844, "title": "Calculadora · mobile", "is_interactive": true },
+    "Comparador.dc.html": { "x": 0, "y": 1820, "w": 1440, "h": 1480, "title": "Comparador de transportadoras", "expand": "fill", "is_interactive": true },
+    "Memoria.dc.html": { "x": 1520, "y": 1820, "w": 1440, "h": 1350, "title": "Memória de cálculo", "expand": "fill", "is_interactive": true }
+  },
+  "order": ["Main.dc.html", "Horizonte.dc.html", "CalculadoraMobile.dc.html", "Comparador.dc.html", "Memoria.dc.html"],
+  "notes": {
+    "brief": { "x": 0, "y": -260, "text": "Frete Líquido — redesign corporativo duotone", "kind": "title1", "maxW": 3430 }
+  },
+  "designSystems": []
+}

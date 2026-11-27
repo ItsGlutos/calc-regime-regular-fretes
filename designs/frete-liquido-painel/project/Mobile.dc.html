@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Frete Líquido — Calculadora mobile</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./base.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Sora:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#070B11}
+</style>
+</helmet>
+<div class="fl-root m-root" style="--accent: {{accent}}; min-height: 844px;">
+  <header class="m-header">
+    <a class="brand m-brand" href="#">Frete Líquido<span class="brand-dot">.</span></a>
+    <span class="m-date">nov 2026</span>
+  </header>
+
+  <nav class="m-tabs" aria-label="Páginas">
+    <a class="m-tab is-active" href="#" aria-current="page">Calculadora</a>
+    <a class="m-tab" href="#">Horizonte</a>
+    <a class="m-tab" href="#">Comparador</a>
+    <a class="m-tab" href="#">Memória</a>
+  </nav>
+
+  <main class="m-content">
+    <section>
+      <p class="eyebrow m-eyebrow">01 — Resultado</p>
+      <h1 class="h1 m-h1">Custo líquido</h1>
+      <p class="sub m-sub">novembro 2026 · 19 dias úteis</p>
+    </section>
+
+    <section class="m-hero">
+      <p class="hero-label">Custo líquido do mês</p>
+      <div class="hero-value m-value"><span class="cur">R$</span><span class="int">55.693</span><span class="dec">,75</span></div>
+      <p class="m-meta">Bruto R$ 66.500,00 · crédito R$ 10.806,25</p>
+      <div class="comp-bar m-comp" aria-hidden="true"><div class="comp-net" style="width:83.75%"></div><div class="comp-credit" style="width:16.25%"></div></div>
+      <p class="m-rate">16,25% de crédito</p>
+    </section>
+
+    <section class="m-chart-block" aria-labelledby="m-chart-title">
+      <div class="m-chart-head">
+        <h2 class="m-chart-title" id="m-chart-title">Bruto e líquido</h2>
+        <span class="m-chart-note">2026</span>
+      </div>
+      <div class="m-chart" role="img" aria-label="Gráfico de barras do frete bruto e líquido em 2026. Novembro: bruto de 66.500 reais, líquido de 55.693,75 reais.">
+        <div class="m-axis" aria-hidden="true"><span>80k</span><span>40k</span><span>0</span></div>
+        <div class="m-plot" aria-hidden="true">
+          <div class="m-bar"><div class="m-bar-track" style="height:119px"><div class="m-bar-fill" style="height:99px"></div></div><span class="m-bar-label">jan</span></div>
+          <div class="m-bar"><div class="m-bar-track" style="height:113px"><div class="m-bar-fill" style="height:95px"></div></div><span class="m-bar-label">fev</span></div>
+          <div class="m-bar"><div class="m-bar-track" style="height:124px"><div class="m-bar-fill" style="height:104px"></div></div><span class="m-bar-label">mar</span></div>
+          <div class="m-bar"><div class="m-bar-track" style="height:119px"><div class="m-bar-fill" style="height:99px"></div></div><span class="m-bar-label">abr</span></div>
+          <div class="m-bar"><div class="m-bar-track" style="height:113px"><div class="m-bar-fill" style="height:95px"></div></div><span class="m-bar-label">mai</span></div>
+          <div class="m-bar"><div class="m-bar-track" style="height:119px"><div class="m-bar-fill" style="height:99px"></div></div><span class="m-bar-label">jun</span></div>
+          <div class="m-bar"><div class="m-bar-track" style="height:130px"><div class="m-bar-fill" style="height:109px"></div></div><span class="m-bar-label">jul</span></div>
+          <div class="m-bar"><div class="m-bar-track" style="height:119px"><div class="m-bar-fill" style="height:99px"></div></div><span class="m-bar-label">ago</span></div>
+          <div class="m-bar"><div class="m-bar-track" style="height:124px"><div class="m-bar-fill" style="height:104px"></div></div><span class="m-bar-label">set</span></div>
+          <div class="m-bar"><div class="m-bar-track" style="height:124px"><div class="m-bar-fill" style="height:104px"></div></div><span class="m-bar-label">out</span></div>
+          <div class="m-bar is-current"><div class="m-bar-track" style="height:107px"><div class="m-bar-fill" style="height:90px"></div></div><span class="m-bar-label">nov</span></div>
+          <div class="m-bar"><div class="m-bar-track" style="height:119px"><div class="m-bar-fill" style="height:99px"></div></div><span class="m-bar-label">dez</span></div>
+        </div>
+      </div>
+      <p class="m-legend">barra = bruto · preenchimento = líquido · vazio = crédito</p>
+    </section>
+
+    <div class="m-form">
+      <div class="m-form-head"><h2 class="m-form-title">Cenário</h2><span class="m-form-hint">prévia</span></div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="m-diaria">Diária</label>
+          <div class="input"><span class="prefix" aria-hidden="true">R$</span><input id="m-diaria" name="m-diaria" type="text" inputmode="decimal" value="3.500,00" autocomplete="off"></div>
+        </div>
+        <div class="field">
+          <label for="m-dias">Dias úteis</label>
+          <div class="input"><input id="m-dias" name="m-dias" type="number" min="1" max="31" value="19"><span class="suffix">dias</span></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="m-comp">Competência</label>
+        <div class="select-wrap">
+          <select id="m-comp" name="m-comp" class="select">
+            <option selected>Novembro de 2026</option>
+            <option>Dezembro de 2026</option>
+            <option>Janeiro de 2027</option>
+          </select>
+          <svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="#8A97A9" stroke-width="1.2" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+
+      <details class="prem">
+        <summary><span>Premissas<em>Regular · B2B · SP → BA</em></span><span class="plus" aria-hidden="true">+</span></summary>
+        <div class="prem-body">
+          <div class="field">
+            <span class="field-label" id="m-regime-label">Regime</span>
+            <div class="seg" role="group" aria-labelledby="m-regime-label">
+              <label><input type="radio" name="m-regime" checked><span>Regular</span></label>
+              <label><input type="radio" name="m-regime"><span>Simples</span></label>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label" id="m-operacao-label">Operação</span>
+            <div class="seg" role="group" aria-labelledby="m-operacao-label">
+              <label><input type="radio" name="m-operacao" checked><span>B2B</span></label>
+              <label><input type="radio" name="m-operacao"><span>B2C</span></label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="m-rota">Rota</label>
+            <div class="select-wrap">
+              <select id="m-rota" name="m-rota" class="select">
+                <option selected>SP → BA</option>
+                <option>SP → MG</option>
+                <option>SP → PE</option>
+              </select>
+              <svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="#8A97A9" stroke-width="1.2" stroke-linecap="round"/></svg>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <button class="cta" type="button">Calcular custo líquido</button>
+      <p class="form-note">LC 214/2025 · motor 1.7.2</p>
+    </div>
+
+    <p class="m-footer">Cenário de demonstração · valores calculados pelo motor 1.7.2</p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF6A2C"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#FF6A2C' };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Frete Líquido — Memória</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./base.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Sora:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#070B11}
+</style>
+</helmet>
+<div class="fl-root" style="--accent: {{accent}}; min-height: 840px;">
+  <aside class="side">
+    <a class="brand" href="#">Frete Líquido<span class="brand-dot">.</span></a>
+    <p class="brand-sub">Custo líquido de frete</p>
+    <nav class="nav" aria-label="Páginas">
+      <a class="nav-item" href="#"><span class="nav-num">01</span><span>Calculadora</span></a>
+      <a class="nav-item" href="#"><span class="nav-num">02</span><span>Horizonte</span></a>
+      <a class="nav-item" href="#"><span class="nav-num">03</span><span>Comparador</span></a>
+      <a class="nav-item is-active" href="#" aria-current="page"><span class="nav-num">04</span><span>Memória</span></a>
+    </nav>
+    <div class="side-scenario">
+      <p class="side-label">Cenário</p>
+      <p class="scenario-name">Carreta dedicada</p>
+      <p class="scenario-meta">SP → BA · nov 2026<br>Regular · B2B</p>
+      <a class="scenario-edit" href="#">Editar cenário</a>
+    </div>
+    <div class="side-engine">
+      <p class="side-label">Motores</p>
+      <div class="engine-row"><span class="dot"></span><span>1.7.2 · 1.8.2</span></div>
+      <p class="engine-note">Base V0073 · conectados</p>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-in">
+        <div class="crumb"><a class="crumb-link" href="#">Painel</a><span class="top-sep">/</span><b>Memória</b></div>
+        <button class="ghost" type="button">Exportar</button>
+      </div>
+    </header>
+
+    <main class="content">
+      <section>
+        <p class="eyebrow">04 — Memória</p>
+        <h1 class="h1">A conta aberta</h1>
+        <p class="sub">Cada tributo e cada crédito do frete de novembro.</p>
+      </section>
+
+      <div class="mem-grid">
+        <section class="receipt" aria-labelledby="receipt-title">
+          <div class="receipt-head">
+            <div>
+              <div class="receipt-title" id="receipt-title">Novembro 2026</div>
+              <div class="receipt-sub">19 dias úteis · R$ 3.500,00/dia</div>
+            </div>
+            <span class="receipt-tag">Recibo</span>
+          </div>
+
+          <dl class="rec-body">
+            <div class="rec-line rec-gross"><dt>Frete bruto</dt><dd>R$ 66.500,00</dd></div>
+          </dl>
+
+          <p class="rec-label">Crédito recuperável</p>
+          <dl class="rec-body">
+            <div class="rec-line"><dt>ICMS <span class="tax-rate">7%</span></dt><dd>R$ 4.655,00</dd></div>
+            <div class="rec-line"><dt>PIS <span class="tax-rate">1,65%</span></dt><dd>R$ 1.097,25</dd></div>
+            <div class="rec-line"><dt>COFINS <span class="tax-rate">7,6%</span></dt><dd>R$ 5.054,00</dd></div>
+            <div class="rec-line rec-subtotal"><dt>Crédito</dt><dd>R$ 10.806,25</dd></div>
+          </dl>
+
+          <p class="rec-label">Fase de teste · sem crédito</p>
+          <dl class="rec-body">
+            <div class="rec-line rec-info"><dt>CBS <span class="tax-rate">0,9%</span></dt><dd>R$ 598,50</dd></div>
+            <div class="rec-line rec-info"><dt>IBS <span class="tax-rate">0,1%</span></dt><dd>R$ 66,50</dd></div>
+          </dl>
+
+          <dl class="rec-total"><dt>Custo líquido</dt><dd>R$ 55.693,75</dd></dl>
+          <p class="rec-note">Crédito de 16,25% sobre o frete bruto.</p>
+        </section>
+
+        <aside class="premises" aria-labelledby="prem-title">
+          <h2 class="prem-title" id="prem-title">Premissas</h2>
+          <dl class="prem-list">
+            <div class="premise-line"><dt>Competência</dt><dd>Novembro 2026</dd></div>
+            <div class="premise-line"><dt>Dias úteis</dt><dd>19</dd></div>
+            <div class="premise-line"><dt>Diária</dt><dd>R$ 3.500,00</dd></div>
+            <div class="premise-line"><dt>Rota</dt><dd>SP → BA</dd></div>
+            <div class="premise-line"><dt>Operação</dt><dd>B2B</dd></div>
+            <div class="premise-line"><dt>Regime</dt><dd>Regular</dd></div>
+          </dl>
+          <div class="mem-alert">
+            <span class="dot" aria-hidden="true"></span>
+            <p>CBS e IBS de 2026 estão em fase de teste e não entram no crédito nem no custo líquido.</p>
+          </div>
+          <p class="mem-base">Base V0073 · motor 1.7.2 · LC 214/2025</p>
+        </aside>
+      </div>
+
+      <footer class="footer">
+        <p>Cálculo pela LC 214/2025 · 19 dias úteis em novembro de 2026</p>
+        <p class="right">Base V0073 · motor 1.7.2</p>
+      </footer>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF6A2C"},"$preview":{"width":1440,"height":840}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#FF6A2C' };
+  }
+}
+</script>
+</body>
+</html>

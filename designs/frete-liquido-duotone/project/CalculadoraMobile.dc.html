@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Calculadora · mobile · Frete Líquido</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+  :root{--magma:#FF6A2C}
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:#080C12}
+  a{color:#E4EAF3;text-decoration:none}
+  a:hover{color:var(--magma)}
+  .phone{width:100%;max-width:390px;margin:0 auto;background:#080C12;font-family:"Inter",system-ui,-apple-system,sans-serif;color:#E4EAF3}
+  .display{font-family:"Archivo","Helvetica Neue",Arial,sans-serif}
+  .mono{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-variant-numeric:tabular-nums}
+  .label{font-size:9px;line-height:1.3;letter-spacing:.13em;text-transform:uppercase;color:#8A97A9;font-weight:600;margin:0}
+  .card{background:#0F151F;border:1px solid #202A38;border-radius:9px;box-shadow:inset 0 1px 0 rgba(255,255,255,.02)}
+  .nav{display:flex;align-items:stretch;gap:2px;padding:0 8px;overflow-x:auto;border-top:1px solid #141C28}
+  .nav a{display:flex;align-items:center;height:43px;padding:0 8px;font-size:11px;font-weight:500;color:#8A97A9;border-bottom:2px solid transparent;white-space:nowrap}
+  .nav a[aria-current="page"]{color:#F5F8FC;border-bottom-color:var(--magma)}
+  .input{width:100%;height:42px;background:#0B1018;border:1px solid #26303F;border-radius:7px;color:#EEF3F9;font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:500;padding:0 12px;outline:none}
+  .input:focus{border-color:var(--magma);box-shadow:0 0 0 3px rgba(255,106,44,.12)}
+  .money{position:relative}
+  .money .input{padding-left:37px}
+  .money span{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:11px;color:#8A97A9}
+  .select{position:relative}
+  .select select{appearance:none;-webkit-appearance:none;width:100%;height:42px;background:#0B1018;border:1px solid #26303F;border-radius:7px;color:#E4EAF3;font-family:"Inter",sans-serif;font-size:11.5px;font-weight:500;padding:0 30px 0 10px;outline:none}
+  .select svg{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:#8A97A9;pointer-events:none}
+  .select option{background:#0B1018;color:#E4EAF3}
+  .radio{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+  .regime-opt{position:relative;display:flex;align-items:flex-start;gap:7px;padding:9px;min-height:56px;background:#0B1018;border:1px solid #26303F;border-radius:7px}
+  .regime-opt.is-on,.regime-opt:has(input:checked){border-color:var(--magma);background:rgba(255,106,44,.055)}
+  .regime-mark{width:12px;height:12px;flex:none;margin-top:1px;border-radius:50%;border:1px solid #46566C;background:#0B1018}
+  .regime-opt.is-on .regime-mark,.regime-opt:has(input:checked) .regime-mark{background:var(--magma);border-color:var(--magma);box-shadow:inset 0 0 0 2.5px #0B1018}
+  .seg{display:flex;background:#0B1018;border:1px solid #26303F;border-radius:7px;padding:2px;gap:2px}
+  .seg label{flex:1;display:flex;align-items:center;justify-content:center;height:30px;border-radius:5px;font-size:11px;font-weight:600;color:#8A97A9;cursor:pointer}
+  .seg label.is-on,.seg label:has(input:checked){background:#1B2431;color:#F3F6FA}
+  .tag{display:inline-flex;align-items:center;height:18px;padding:0 6px;border:1px solid rgba(255,106,44,.42);border-radius:3px;background:rgba(255,106,44,.075);color:var(--magma);font-family:"JetBrains Mono",monospace;font-size:8px;font-weight:600;letter-spacing:.08em}
+  .btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:44px;border:1px solid var(--magma);border-radius:7px;background:var(--magma);color:#160E08;font-family:"Inter",sans-serif;font-size:12.5px;font-weight:600;cursor:pointer}
+  .icon-btn{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;background:#0B1018;border:1px solid #26303F;border-radius:6px;color:#8A97A9;padding:0}
+  .bar{height:5px;background:#1A2330;border-radius:3px;overflow:hidden;display:flex}
+</style>
+</helmet>
+<div class="phone">
+  <header style="background:#0A0F16;border-bottom:1px solid #1E2735">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;height:54px;padding:0 16px">
+      <a href="Main.dc.html" aria-label="Frete Líquido — página inicial" style="display:flex;align-items:baseline;gap:5px">
+        <span class="display" style="font-size:16px;font-weight:700;letter-spacing:-.025em;color:#F3F6FA">Frete</span>
+        <span class="display" style="font-size:16px;font-weight:400;letter-spacing:-.015em;color:#A7B3C4">Líquido</span>
+      </a>
+      <span class="mono" style="font-size:8.5px;color:#8A97A9">LC 214/2025</span>
+    </div>
+    <nav class="nav" aria-label="Páginas do sistema">
+      <a href="Main.dc.html" aria-current="page">Calculadora</a>
+      <a href="Horizonte.dc.html">Horizonte</a>
+      <a href="Comparador.dc.html">Comparador</a>
+      <a href="Memoria.dc.html">Memória</a>
+    </nav>
+  </header>
+
+  <main style="padding:18px 16px 30px">
+    <p class="label" style="display:flex;align-items:center;gap:8px;color:#9AA7BA;font-size:8.5px">
+      <span aria-hidden="true" style="display:inline-block;width:14px;height:1px;background:var(--magma)"></span>
+      Simulador do pagador · 2026
+    </p>
+    <h1 class="display" style="margin:10px 0 0;font-size:29px;line-height:1.08;letter-spacing:-.02em;font-weight:600;color:#F5F8FC;max-width:320px">Quanto o frete custa, de verdade.</h1>
+    <p style="margin:10px 0 0;font-size:12px;line-height:1.6;color:#9AA7BA">Calcule o bruto, o crédito de CBS/IBS e o líquido do mês.</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:8px 10px;border:1px solid #26303F;border-radius:7px;background:#0B1018">
+      <span style="font-size:10.5px;color:#C7D1DE">Carreta dedicada · SP → BA</span>
+      <span class="mono" style="font-size:9px;color:#8A97A9">nov/2026 · 19 dias</span>
+    </div>
+
+    <section class="card" style="margin-top:12px;padding:16px;background:#101722;border-color:#273244" aria-labelledby="m-res">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <p class="label" id="m-res">Custo líquido · nov 2026</p>
+        <span class="tag">REGULAR</span>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px">
+        <span class="mono" style="font-size:12px;color:#8A97A9">R$</span>
+        <span class="mono" style="font-size:33px;line-height:1;font-weight:500;letter-spacing:-.035em;color:#F5F8FC">55.693,75</span>
+      </div>
+      <p style="margin:7px 0 0;font-size:10px;line-height:1.5;color:#8A97A9">19 dias × R$ 3.500,00 · bruto R$ 66.500,00</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;padding-top:11px;border-top:1px solid #212B39">
+        <div>
+          <p class="label" style="margin:0 0 4px;font-size:8.5px">Crédito</p>
+          <p class="mono" style="margin:0;font-size:12px;color:var(--magma)">10.806,25</p>
+        </div>
+        <div>
+          <p class="label" style="margin:0 0 4px;font-size:8.5px">Carga efetiva</p>
+          <p class="mono" style="margin:0;font-size:12px;color:#DCE4EE">16,25%</p>
+        </div>
+      </div>
+      <div class="bar" style="margin-top:12px" role="img" aria-label="83,75% de custo líquido e 16,25% de crédito">
+        <div style="width:83.75%;background:#3A475A"></div>
+        <div style="width:16.25%;background:var(--magma)"></div>
+      </div>
+    </section>
+
+    <form class="card" aria-labelledby="m-form" style="margin-top:12px;padding:16px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+        <div>
+          <p class="label" style="margin:0 0 4px">01 · Entrada</p>
+          <h2 id="m-form" class="display" style="margin:0;font-size:15px;font-weight:600;letter-spacing:-.01em;color:#F3F6FA">Dados do frete</h2>
+        </div>
+        <button type="button" class="icon-btn" aria-label="Restaurar exemplo" title="Restaurar exemplo">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 10a8 8 0 1 1 2.2 7.4M4 5v5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div>
+        <label for="m-diaria" class="label" style="display:block;margin-bottom:6px">Diária do frete</label>
+        <div class="money">
+          <span class="mono" aria-hidden="true">R$</span>
+          <input id="m-diaria" class="input" type="text" inputmode="decimal" value="3.500,00" autocomplete="off" />
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.25fr .75fr;gap:8px">
+        <div>
+          <label for="m-comp" class="label" style="display:block;margin-bottom:6px">Competência</label>
+          <div class="select">
+            <select id="m-comp">
+              <option>Nov · 2026</option>
+              <option>Dez · 2026</option>
+            </select>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <div>
+          <label for="m-dias" class="label" style="display:block;margin-bottom:6px">Dias</label>
+          <div class="select">
+            <select id="m-dias">
+              <option>19</option>
+              <option>20</option>
+              <option>21</option>
+            </select>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+      </div>
+      <fieldset style="border:0;padding:0;margin:0">
+        <legend class="label" style="padding:0;margin-bottom:7px">Regime tributário</legend>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <label class="regime-opt">
+            <input class="radio" type="radio" name="m-regime" checked />
+            <span class="regime-mark" aria-hidden="true"></span>
+            <span>
+              <span style="display:block;font-size:11px;font-weight:600;color:#F3F6FA">Regular</span>
+              <span style="display:block;font-size:9px;color:#8A97A9;margin-top:2px">CBS/IBS no CT-e</span>
+            </span>
+          </label>
+          <label class="regime-opt">
+            <input class="radio" type="radio" name="m-regime" />
+            <span class="regime-mark" aria-hidden="true"></span>
+            <span>
+              <span style="display:block;font-size:11px;font-weight:600;color:#C7D1DE">Simples</span>
+              <span style="display:block;font-size:9px;color:#8A97A9;margin-top:2px">crédito no DAS</span>
+            </span>
+          </label>
+        </div>
+      </fieldset>
+      <div>
+        <p class="label" style="margin:0 0 7px">Tipo de operação</p>
+        <div class="seg" role="radiogroup" aria-label="Tipo de operação">
+          <label><input class="radio" type="radio" name="m-operacao" value="b2b" checked />B2B</label>
+          <label><input class="radio" type="radio" name="m-operacao" value="b2c" />B2C</label>
+        </div>
+      </div>
+      <button type="button" class="btn">
+        Calcular custo líquido
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <p style="margin:0;font-size:9px;line-height:1.5;color:#8A97A9">Motores oficiais da Receita. Nenhuma alíquota é recalculada no cliente.</p>
+    </form>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF6A2C","options":["#FF6A2C","#FF7A45","#D9541B"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#FF6A2C' };
+  }
+}
+</script>
+</body>
+</html>

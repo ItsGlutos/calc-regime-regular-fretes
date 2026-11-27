@@ -1,0 +1,75 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-11-27T12:20:00Z"
+  },
+  "title": "Frete Líquido — nova interface",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Calculadora.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1040,
+      "title": "Calculadora",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Horizonte.dc.html": {
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 1180,
+      "title": "Horizonte",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Comparador.dc.html": {
+      "x": 0,
+      "y": 1320,
+      "w": 1440,
+      "h": 960,
+      "title": "Comparador",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Memoria.dc.html": {
+      "x": 1560,
+      "y": 1320,
+      "w": 1440,
+      "h": 840,
+      "title": "Memória",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Mobile.dc.html": {
+      "x": 3120,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Calculadora — mobile",
+      "is_interactive": true
+    }
+  },
+  "order": [
+    "Calculadora.dc.html",
+    "Horizonte.dc.html",
+    "Comparador.dc.html",
+    "Memoria.dc.html",
+    "Mobile.dc.html"
+  ],
+  "notes": {
+    "titulo": {
+      "x": 0,
+      "y": -320,
+      "text": "Frete Líquido — nova interface",
+      "kind": "title1",
+      "maxW": 3510
+    }
+  },
+  "designSystems": []
+}

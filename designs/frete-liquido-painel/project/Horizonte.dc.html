@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Frete Líquido — Horizonte</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./base.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Sora:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#070B11}
+</style>
+</helmet>
+<div class="fl-root" style="--accent: {{accent}}; min-height: 1180px;">
+  <aside class="side">
+    <a class="brand" href="#">Frete Líquido<span class="brand-dot">.</span></a>
+    <p class="brand-sub">Custo líquido de frete</p>
+    <nav class="nav" aria-label="Páginas">
+      <a class="nav-item" href="#"><span class="nav-num">01</span><span>Calculadora</span></a>
+      <a class="nav-item is-active" href="#" aria-current="page"><span class="nav-num">02</span><span>Horizonte</span></a>
+      <a class="nav-item" href="#"><span class="nav-num">03</span><span>Comparador</span></a>
+      <a class="nav-item" href="#"><span class="nav-num">04</span><span>Memória</span></a>
+    </nav>
+    <div class="side-scenario">
+      <p class="side-label">Cenário</p>
+      <p class="scenario-name">Carreta dedicada</p>
+      <p class="scenario-meta">SP → BA · nov 2026<br>Regular · B2B</p>
+      <a class="scenario-edit" href="#">Editar cenário</a>
+    </div>
+    <div class="side-engine">
+      <p class="side-label">Motores</p>
+      <div class="engine-row"><span class="dot"></span><span>1.7.2 · 1.8.2</span></div>
+      <p class="engine-note">Base V0073 · conectados</p>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-in">
+        <div class="crumb"><a class="crumb-link" href="#">Painel</a><span class="top-sep">/</span><b>Horizonte</b></div>
+        <button class="ghost" type="button">Exportar</button>
+      </div>
+    </header>
+
+    <main class="content">
+      <section>
+        <p class="eyebrow">02 — Projeção</p>
+        <h1 class="h1">O crédito muda de patamar</h1>
+        <p class="sub">Quatro marcos da reforma e o efeito no custo líquido do frete.</p>
+      </section>
+
+      <section class="h-hero">
+        <div>
+          <p class="hero-label">Crédito efetivo em 2033</p>
+          <div class="hero-value h-value"><span class="int">27,00</span><span class="dec">%</span></div>
+        </div>
+        <div class="h-side">
+          <p class="h-kicker">De 16,25% para 27,00%</p>
+          <p class="h-delta">+10,75 p.p. até o regime pleno</p>
+          <p class="h-note">O crédito cresce a cada marco. O custo líquido depende de como o frete acompanha essa transição.</p>
+        </div>
+      </section>
+
+      <section class="h-chart" aria-labelledby="rate-title">
+        <div class="chart-head">
+          <div>
+            <h2 class="chart-title" id="rate-title">Crédito efetivo por marco</h2>
+            <p class="chart-note">percentual do frete recuperável como crédito</p>
+          </div>
+        </div>
+        <div class="rate" role="img" aria-label="Crédito efetivo por marco: 16,25% em 2026, 15,50% em 2027, 16,65% em 2029 e 27,00% em 2033.">
+          <div class="rate-axis" aria-hidden="true"><span>30%</span><span>20%</span><span>10%</span><span>0</span></div>
+          <div class="rate-plot" aria-hidden="true">
+            <div class="rate-bar start" style="left:6%;height:130px"><span class="val">16,25%</span><span class="yr">2026</span></div>
+            <div class="rate-bar" style="left:18%;height:124px"><span class="val">15,50%</span><span class="yr">2027</span></div>
+            <div class="rate-bar" style="left:44%;height:133px"><span class="val">16,65%</span><span class="yr">2029</span></div>
+            <div class="rate-bar final" style="left:90%;height:216px"><span class="val">27,00%</span><span class="yr">2033</span></div>
+          </div>
+        </div>
+        <p class="chart-note" style="margin-top:26px">Valores anuais cheios. Entre os marcos, a regra de transição da LC 214/2025.</p>
+      </section>
+
+      <section class="h-table" aria-labelledby="table-title">
+        <div class="table-head">
+          <h2 class="table-title" id="table-title">O efeito no caixa</h2>
+          <p class="table-note">por R$ 100 mil de frete</p>
+        </div>
+        <table class="data">
+          <thead>
+            <tr><th scope="col">Marco</th><th scope="col">Crédito efetivo</th><th scope="col">Líquido por R$ 100 mil</th><th scope="col">Variação vs. 2026</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">2026</th><td>16,25%</td><td>R$ 83.750,00</td><td>—</td></tr>
+            <tr><th scope="row">2027</th><td>15,50%</td><td>R$ 84.500,00</td><td>+R$ 750,00</td></tr>
+            <tr><th scope="row">2029</th><td>16,65%</td><td>R$ 83.350,00</td><td>−R$ 400,00</td></tr>
+            <tr class="final"><th scope="row">2033</th><td>27,00%</td><td>R$ 73.000,00</td><td>−R$ 10.750,00</td></tr>
+          </tbody>
+        </table>
+        <p class="insight-line">O custo líquido cai <b>R$ 10.750</b> a cada R$ 100 mil de frete entre 2026 e 2033 — mas o <b>custo absoluto</b> só melhora se o valor do frete não subir na mesma proporção.</p>
+      </section>
+
+      <footer class="footer">
+        <p>Projeção pelos marcos da LC 214/2025 · valores por R$ 100 mil de frete</p>
+        <p class="right">27 nov 2026</p>
+      </footer>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF6A2C"},"$preview":{"width":1440,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#FF6A2C' };
+  }
+}
+</script>
+</body>
+</html>

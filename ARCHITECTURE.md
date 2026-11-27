@@ -9,7 +9,7 @@ O projeto tem três partes executáveis e uma vitrine estática:
 |---|---|---|---|
 | Motor do regime regular | Java 25 / Spring Boot | `8080` | apura CBS/IBS do regime regular e devolve a memória |
 | Motor do Simples Nacional | Java 25 / Spring Boot | `8082` | apura CBS/IBS do Simples (CT-e, NF-e, NFS-e) |
-| Aplicação | Node 20+ (sem dependências) | `5180` | valida a entrada, escolhe o motor, aplica a regra do regime e serve a página única |
+| Aplicação | Node 20+ (sem dependências) | `5180` | valida a entrada, escolhe o motor, aplica a regra do regime e serve a SPA de quatro views |
 | Vitrine | HTML + CSS estáticos | — | site do projeto no GitHub Pages |
 
 Os motores são forks locais de
@@ -28,7 +28,7 @@ na interface, e a resposta original fica disponível para auditoria.
 ```
 ┌──────────────────────────┐
 │ Navegador                │
-│ página única             │
+│ SPA de 4 views          │
 └────────────┬─────────────┘
              │ fetch /api/simular, /api/comparar
              ▼
@@ -78,7 +78,7 @@ schema é único e já contém as tabelas do Simples (migrações a partir da `V
 ### `app/server.js`
 
 HTTP, validação, orquestração, escolha do motor e memória de cálculo. Sem framework: `node:http`, sem
-dependências. Também serve a página única e os assets, com proteção contra path traversal e limite de corpo
+dependências. Também serve a SPA de quatro views, o legado e os assets, com proteção contra path traversal e limite de corpo
 de 200 KB.
 
 Rotas:
@@ -101,8 +101,13 @@ do regular e testa o endpoint oficial quando o catálogo não existe (motor “p
 
 ### `app/public/`
 
-Página única (`index.html`, `styles.css`, `app.js`). Sem build step e sem framework. O estado do
-comparador e da simulação vive no navegador; a aplicação não persiste dados.
+Interface principal em quatro views (`Calculadora`, `Horizonte`, `Comparador`, `Memória`), sem build step e
+sem framework: `index.html` é o shell, `estilo-base.css` + `styles.css` formam o sistema visual duotone e
+`app.js` controla formulário, navegação, perfis salvos, comparador e memória. O estado da simulação e do
+comparador vive no navegador; os perfis ficam em `app/data/perfis.json`, via API do Node.
+
+A página única anterior (linha do tempo 2025–2033, horizonte do pagador e edição completa dos perfis) está
+preservada em `app/public/legado/` e continua servida em `/legado/index.html`.
 
 ## Contrato com o motor
 
@@ -225,11 +230,11 @@ Simples resolve o anexo e a vigência.
 
 ```
 .
-├── app/                     # aplicação Node + página única
+├── app/                     # aplicação Node + SPA de quatro views
 │   ├── server.js            # HTTP, validação, escolha do motor, memória, comparador
 │   ├── domain.js            # perfis, faixas, atividades do Simples, UFs, cronograma
 │   ├── engine.js            # clientes dos motores regular e do Simples
-│   ├── public/              # index.html, styles.css, app.js
+│   ├── public/              # index.html, estilo-base.css, styles.css, app.js e legado/
 │   └── docs/                # capturas usadas na documentação
 ├── simples-nacional/        # subtree do motor do Simples (Java/Spring)
 ├── site/                    # vitrine estática publicada no GitHub Pages

@@ -13,7 +13,25 @@ ambos com licença MIT e execução local, e a resposta bruta fica disponível n
 | Regime regular e Simples híbrido | [`calculadora-rtc-regime-regular`](https://github.com/ReceitaFederal/calculadora-rtc-regime-regular) | `8080` |
 | Simples/DAS com alíquotas do PGDAS | [`calculadora-rtc-simples-nacional`](https://github.com/ReceitaFederal/calculadora-rtc-simples-nacional) | `8082` |
 
-![Frete Líquido no desktop](docs/web-desktop.png)
+## Nova interface
+
+A interface principal em `http://127.0.0.1:5180/` foi redesenhada em **quatro páginas** — Calculadora,
+Horizonte, Comparador e Memória — com o sistema duotone graphite navy / haze silver / magma orange,
+navegação lateral no desktop e quatro abas no celular. Ela trabalha com o **perfil do transportador**
+(diária, competência, dias faturáveis, regime e rota): a calculadora fecha o mês, o horizonte mostra a
+trajetória por R$ 100 mil, o comparador coloca três regimes no mesmo trecho e a memória abre o recibo e a
+resposta bruta do motor. O cálculo continua sendo apurado pelos motores oficiais; nenhuma alíquota de
+CBS/IBS é recalculada na interface.
+
+A interface nova abre em **novembro de 2026** com o perfil salvo *Carreta dedicada · SP → BA* (R$ 3.500,00/dia,
+19 dias úteis, 16,25% de crédito). A página aceita qualquer ano de 2026 a 2033 e mantém os cenários salvos em
+`app/data/perfis.json`.
+
+A interface anterior — página única com a linha do tempo 2025–2033, o horizonte do pagador e a edição completa
+dos perfis — continua disponível em `/legado/index.html` para consulta e rollback. As capturas e as seções
+*Hoje → amanhã*, *Perfis de transportadores* e *Antes e depois da reforma* abaixo descrevem essa versão anterior.
+
+![Frete Líquido](docs/web-desktop.png)
 
 ![Antes e depois da reforma](docs/web-reforma.png)
 
@@ -95,7 +113,7 @@ faixa setorial de 0,92% a 4% do frete, sinalizada como estimativa.
    crédito do ano é ICMS + PIS/COFINS.
 7. Em B2C o pagador é o consumidor final: o crédito é zero e o custo é o preço cheio.
 
-O ano de referência padrão é **2033 (regime pleno, CBS 8,50% + IBS 18,50%)**. O motor do Simples só tem
+O padrão do endpoint e da interface anterior é **2033 (regime pleno, CBS 8,50% + IBS 18,50%)**; a interface nova abre em **novembro de 2026** e o seletor cobre 2026–2033. O motor do Simples só tem
 tabelas a partir de **2027**; em 2026, o Simples/DAS não tem crédito de CBS/IBS (art. 348, III, "c") e o
 crédito do regime regular é ICMS + PIS/COFINS. O Simples híbrido e o regime regular funcionam em todos os anos
 do cronograma.
@@ -268,9 +286,11 @@ app/
   engine.js        clientes dos motores regular e do Simples + projeção anual, sem regra tributária
   pagador.js       horizonte hoje → amanhã: preço travado, equilíbrio do pagador, piso do transportador, benchmark, preço-teto e ações
   public/
-    index.html     página única
-    styles.css     estilo, sem build
-    app.js         comportamento (formulário, resultado, horizonte, comparador e linha do tempo)
+    index.html     shell da interface nova (quatro views)
+    estilo-base.css tokens e componentes do sistema visual duotone
+    styles.css     camada da aplicação (shell, páginas, estados e responsivo)
+    app.js         comportamento da interface nova (calculadora, horizonte, comparador, memória, perfis e navegação)
+    legado/        página única anterior (index.html, styles.css e app.js) para rollback
 ```
 
 Variáveis de ambiente: `PORT` (padrão 5180), `MOTOR_URL` (padrão `http://127.0.0.1:8080`) e

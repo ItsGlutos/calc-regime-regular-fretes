@@ -223,12 +223,14 @@ function percentualDoPerfil(valor, campo) {
 
 /** Total do PGDAS de um perfil (null quando nenhuma das duas foi informada). */
 export function creditoDoSimples(perfil) {
-  const cbs = Number(perfil?.aliquotaCbs)
-  const ibs = Number(perfil?.aliquotaIbs)
-  const temCbs = Number.isFinite(cbs)
-  const temIbs = Number.isFinite(ibs)
+  const textoCbs = perfil?.aliquotaCbs
+  const textoIbs = perfil?.aliquotaIbs
+  const temCbs = textoCbs !== null && textoCbs !== undefined && String(textoCbs).trim() !== ''
+  const temIbs = textoIbs !== null && textoIbs !== undefined && String(textoIbs).trim() !== ''
   if (!temCbs && !temIbs) return null
-  return Number(((temCbs ? cbs : 0) + (temIbs ? ibs : 0)).toFixed(4))
+  const cbs = temCbs ? Number(textoCbs) : 0
+  const ibs = temIbs ? Number(textoIbs) : 0
+  return Number(((Number.isFinite(cbs) ? cbs : 0) + (Number.isFinite(ibs) ? ibs : 0)).toFixed(4))
 }
 
 /** Remove acentos e caixa para comparar nomes de perfil. */

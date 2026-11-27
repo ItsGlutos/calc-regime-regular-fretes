@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Comparador · Frete Líquido</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+  :root{--magma:#FF6A2C}
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:#080C12}
+  a{color:#E4EAF3;text-decoration:none}
+  a:hover{color:var(--magma)}
+  ::selection{background:rgba(255,106,44,.28);color:#fff}
+  .shell{width:100%;max-width:1360px;margin:0 auto;padding-left:48px;padding-right:48px}
+  .display{font-family:"Archivo","Helvetica Neue",Arial,sans-serif}
+  .mono{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-variant-numeric:tabular-nums}
+  .label{font-size:10px;line-height:1.3;letter-spacing:.14em;text-transform:uppercase;color:#8A97A9;font-weight:600;margin:0}
+  .card{background:#0F151F;border:1px solid #202A38;border-radius:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.02)}
+  .topbar{background:#0A0F16;border-bottom:1px solid #1E2735}
+  .brand{display:flex;align-items:baseline;gap:6px;flex:none}
+  .nav{display:flex;align-items:stretch;gap:2px;height:68px;margin-left:34px}
+  .nav a{display:flex;align-items:center;height:68px;padding:0 14px;font-size:12.5px;font-weight:500;color:#8A97A9;border-bottom:2px solid transparent;letter-spacing:.01em;white-space:nowrap}
+  .nav a:hover{color:#E4EAF3}
+  .nav a[aria-current="page"]{color:#F5F8FC;border-bottom-color:var(--magma)}
+  .status{display:flex;align-items:center;gap:14px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 14px;border-radius:7px;border:1px solid transparent;font-family:"Inter",sans-serif;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .btn-primary{background:var(--magma);color:#160E08;border-color:var(--magma)}
+  .btn-primary:hover{background:#FF824A;border-color:#FF824A;color:#160E08}
+  .btn-ghost{background:transparent;border-color:#2C3746;color:#DCE4EE}
+  .btn-ghost:hover{border-color:#46566C;color:#F5F8FC}
+  .tag{display:inline-flex;align-items:center;height:21px;padding:0 8px;border:1px solid rgba(255,106,44,.42);border-radius:4px;background:rgba(255,106,44,.075);color:var(--magma);font-family:"JetBrains Mono",monospace;font-size:9px;font-weight:600;letter-spacing:.09em}
+  .rank-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+  .metrics{display:grid;grid-template-columns:1fr 1fr;gap:11px 14px;margin-top:14px;padding-top:13px;border-top:1px solid #212B39}
+  .dumbbell{display:grid;grid-template-columns:206px minmax(0,1fr);gap:18px;align-items:center}
+  .track{position:relative;height:62px;border-top:1px solid #1C2533}
+  .track__base{position:absolute;left:0;right:0;top:50%;border-top:1px solid #1C2533}
+  .track__credit{position:absolute;top:50%;border-top:2px solid rgba(255,106,44,.55);transform:translateY(-1px)}
+  .dot{position:absolute;top:50%;width:10px;height:10px;border-radius:50%;transform:translate(-50%,-50%)}
+  .dot--net{background:var(--magma);box-shadow:0 0 0 3px rgba(255,106,44,.1)}
+  .dot--gross{background:#0F151F;border:1.5px solid #8A97A9}
+  .axis{display:flex;justify-content:space-between;margin-top:2px;padding-left:224px;font-family:"JetBrains Mono",monospace;font-size:9px;color:#8A97A9}
+  .grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .lg{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+  @media (max-width:1120px){
+    .shell{padding-left:28px;padding-right:28px}
+    .rank-grid{grid-template-columns:1fr !important}
+    .grid-3{grid-template-columns:1fr !important}
+    .dumbbell{grid-template-columns:1fr !important}
+    .axis{padding-left:0}
+  }
+  @media (max-width:860px){
+    .topbar__inner{height:auto !important;flex-wrap:wrap;gap:0 !important;padding-top:10px}
+    .nav{order:3;width:100%;margin:8px 0 0;height:48px;overflow-x:auto;border-top:1px solid #1E2735}
+    .nav a{height:48px;padding:0 12px;font-size:12px}
+    .status{display:none !important}
+    .intro{flex-direction:column;align-items:flex-start !important;gap:24px !important}
+    .scenario{width:100% !important}
+    h1{font-size:34px !important}
+    .dumbbell{min-width:640px}
+    .chart-scroll{overflow-x:auto}
+  }
+</style>
+</helmet>
+<div class="page" style="width:100%;background:#080C12;font-family:'Inter',system-ui,-apple-system,sans-serif;color:#E4EAF3;--magma:{{accent}}">
+  <header class="topbar">
+    <div class="shell topbar__inner" style="display:flex;align-items:center;height:68px">
+      <a class="brand" href="Main.dc.html" aria-label="Frete Líquido — página inicial">
+        <span class="display" style="font-size:18px;font-weight:700;letter-spacing:-.025em;color:#F3F6FA">Frete</span>
+        <span class="display" style="font-size:18px;font-weight:400;letter-spacing:-.015em;color:#A7B3C4">Líquido</span>
+      </a>
+      <nav class="nav" aria-label="Páginas do sistema">
+        <a href="Main.dc.html">Calculadora</a>
+        <a href="Horizonte.dc.html">Horizonte</a>
+        <a href="Comparador.dc.html" aria-current="page">Comparador</a>
+        <a href="Memoria.dc.html">Memória</a>
+      </nav>
+      <div class="status" style="margin-left:auto">
+        <span style="display:inline-flex;align-items:center;gap:7px;font-size:11px;color:#9AA7BA">
+          <span aria-hidden="true" style="width:6px;height:6px;border-radius:50%;background:var(--magma);box-shadow:0 0 0 3px rgba(255,106,44,.12)"></span>
+          Motores conectados
+        </span>
+        <span class="mono" style="font-size:10px;color:#8A97A9">v1.7.2 · v1.8.2</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell" style="padding-top:34px;padding-bottom:24px">
+    <section class="intro" style="display:flex;align-items:flex-end;justify-content:space-between;gap:48px;padding-bottom:24px;border-bottom:1px solid #1E2735">
+      <div style="max-width:720px">
+        <p class="label" style="display:flex;align-items:center;gap:10px;color:#9AA7BA">
+          <span aria-hidden="true" style="display:inline-block;width:18px;height:1px;background:var(--magma)"></span>
+          Comparador · mesmo contrato, três regimes
+        </p>
+        <h1 class="display" style="margin:14px 0 0;font-size:44px;line-height:1.07;letter-spacing:-.025em;font-weight:600;color:#F5F8FC;max-width:660px">O nominal mais barato pode ser o mais caro.</h1>
+        <p style="margin:14px 0 0;font-size:14.5px;line-height:1.65;color:#9AA7BA;max-width:610px">Ordene as transportadoras pelo custo líquido anual, não pela diária. O crédito de CBS/IBS é o que inverte o ranking.</p>
+      </div>
+      <aside class="card scenario" style="width:304px;flex:none;padding:16px;background:#0D131C" aria-label="Base do comparativo">
+        <p class="label" style="margin:0 0 12px">Base do comparativo</p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div>
+            <p style="margin:0;font-size:10px;color:#8A97A9">Exercício</p>
+            <p class="mono" style="margin:2px 0 0;font-size:12px;color:#C7D1DE">2026 · 253 dias úteis</p>
+          </div>
+          <div>
+            <p style="margin:0;font-size:10px;color:#8A97A9">Trecho</p>
+            <p style="margin:2px 0 0;font-size:12.5px;color:#E4EAF3">SP → BA · B2B</p>
+          </div>
+          <div>
+            <p style="margin:0;font-size:10px;color:#8A97A9">Preço</p>
+            <p style="margin:2px 0 0;font-size:12.5px;color:#E4EAF3">Diária congelada</p>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:22px">
+      <div>
+        <p class="label" style="margin:0 0 6px">Ranking · custo líquido anual</p>
+        <h2 class="display" style="margin:0;font-size:22px;font-weight:600;letter-spacing:-.01em;color:#F3F6FA">Quem custa menos no fim do ano</h2>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="btn btn-ghost">
+          Editar comparação
+        </button>
+        <button type="button" class="btn btn-primary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Adicionar transportadora
+        </button>
+      </div>
+    </div>
+    <p class="mono" style="margin:9px 0 0;font-size:10px;color:#8A97A9">2026 · 253 dias úteis · SP → BA · B2B · crédito sobre o valor do frete</p>
+
+    <div class="rank-grid" style="margin-top:14px">
+      <article class="card" style="padding:18px;border-color:rgba(255,106,44,.42)" aria-label="1º lugar: Carreta dedicada">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <span class="mono" style="font-size:11px;color:var(--magma)">01</span>
+          <span class="tag">MELHOR LÍQUIDO</span>
+        </div>
+        <h3 class="display" style="margin:11px 0 0;font-size:17px;font-weight:600;letter-spacing:-.01em;color:#F5F8FC">Carreta dedicada</h3>
+        <p style="margin:3px 0 0;font-size:10.5px;color:#8A97A9">Regime regular · Lucro Real</p>
+        <p class="label" style="margin:15px 0 4px">Custo líquido anual</p>
+        <p class="mono" style="margin:0;font-size:25px;letter-spacing:-.03em;color:var(--magma)">R$ 741.606,25</p>
+        <div class="metrics">
+          <div>
+            <p class="label" style="margin:0 0 4px;font-size:9px">Diária</p>
+            <p class="mono" style="margin:0;font-size:11.5px;color:#DCE4EE">3.500,00</p>
+          </div>
+          <div>
+            <p class="label" style="margin:0 0 4px;font-size:9px">Bruto</p>
+            <p class="mono" style="margin:0;font-size:11.5px;color:#DCE4EE">885.500,00</p>
+          </div>
+          <div>
+            <p class="label" style="margin:0 0 4px;font-size:9px">Crédito · 16,25%</p>
+            <p class="mono" style="margin:0;font-size:11.5px;color:#DCE4EE">143.893,75</p>
+          </div>
+          <div>
+            <p class="label" style="margin:0 0 4px;font-size:9px">vs melhor</p>
+            <p class="mono" style="margin:0;font-size:11.5px;color:#8A97A9">—</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="card" style="padding:18px" aria-label="2º lugar: Carreta híbrida">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <span class="mono" style="font-size:11px;color:#8A97A9">02</span>
+          <span style="font-size:9px;color:#8A97A9;letter-spacing:.08em">SIMPLES HÍBRIDO</span>
+        </div>
+        <h3 class="display" style="margin:11px 0 0;font-size:17px;font-weight:600;letter-spacing:-.01em;color:#F5F8FC">Carreta híbrida</h3>
+        <p style="margin:3px 0 0;font-size:10.5px;color:#8A97A9">Simples híbrido · CBS/IBS fora do DAS</p>
+        <p class="label" style="margin:15px 0 4px">Custo líquido anual</p>
+        <p class="mono" style="margin:0;font-size:25px;letter-spacing:-.03em;color:#F3F6FA">R$ 821.541,60</p>
+        <div class="metrics">
+          <div>
+            <p class="label" style="margin:0 0 4px;font-size:9px">Diária</p>
+            <p class="mono" style="margin:0;font-size:11.5px;color:#DCE4EE">3.280,00</p>
+          </div>
+          <div>
+            <p class="label" style="margin:0 0 4px;font-size:9px">Bruto</p>
+            <p class="mono" style="margin:0;font-size:11.5px;color:#DCE4EE">829.840,00</p>
+          </div>
+          <div>
+            <p class="label" style="margin:0 0 4px;font-size:9px">Crédito · 1,00%</p>
+            <p class="mono" style="margin:0;font-size:11.5px;color:#DCE4EE">8.298,40</p>
+          </div>
+          <div>
+            <p class="label" style="margin:0 0 4px;font-size:9px">vs melhor</p>
+            <p class="mono" style="margin:0;font-size:11.5px;color:#F3F6FA">+79.935,35</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="card" style="padding:18px" aria-label="3º lugar: Carreta parceira">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <span class="mono" style="font-size:11px;color:#8A97A9">03</span>
+          <span style="font-size:9px;color:#8A97A9;letter-spacing:.08em">SIMPLES / DAS</span>
+        </div>
+        <h3 class="display" style="margin:11px 0 0;font-size:17px;font-weight:600;letter-spacing:-.01em;color:#F5F8FC">Carreta parceira</h3>
+        <p style="margin:3px 0 0;font-size:10.5px;color:#8A97A9">Simples nacional · crédito no DAS</p>
+        <p class="label" style="margin:15px 0 4px">Custo líquido anual</p>
+        <p class="mono" style="margin:0;font-size:25px;letter-spacing:-.03em;color:#F3F6FA">R$ 834.900,00</p>
+        <div class="metrics">
+          <div>
+            <p class="label" style="margin:0 0 4px;font-size:9px">Diária</p>
+            <p class="mono" style="margin:0;font-size:11.5px;color:#DCE4EE">3.300,00</p>
+          </div>
+          <div>
+            <p class="label" style="margin:0 0 4px;font-size:9px">Bruto</p>
+            <p class="mono" style="margin:0;font-size:11.5px;color:#DCE4EE">834.900,00</p>
+          </div>
+          <div>
+            <p class="label" style="margin:0 0 4px;font-size:9px">Crédito</p>
+            <p class="mono" style="margin:0;font-size:11.5px;color:#DCE4EE">0,00</p>
+          </div>
+          <div>
+            <p class="label" style="margin:0 0 4px;font-size:9px">vs melhor</p>
+            <p class="mono" style="margin:0;font-size:11.5px;color:#F3F6FA">+93.293,75</p>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <section class="card" aria-labelledby="dumbbell-title" style="margin-top:18px;padding:22px 24px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px">
+        <div>
+          <p class="label" style="margin:0 0 6px">Do nominal ao líquido</p>
+          <h2 id="dumbbell-title" class="display" style="margin:0;font-size:20px;font-weight:600;letter-spacing:-.01em;color:#F3F6FA">O tamanho do crédito em cada regime</h2>
+        </div>
+        <div style="display:flex;gap:16px;font-size:10.5px;color:#8A97A9;flex:none">
+          <span><span class="lg" style="background:var(--magma)" aria-hidden="true"></span>Custo líquido</span>
+          <span><span class="lg" style="border:1.5px solid #8A97A9" aria-hidden="true"></span>Bruto nominal</span>
+        </div>
+      </div>
+      <div class="chart-scroll">
+        <div class="dumbbell" role="img" aria-label="Distância entre bruto e líquido: regime regular R$ 885.500 para R$ 741.606; híbrido R$ 829.840 para R$ 821.542; Simples R$ 834.900 sem crédito.">
+          <sc-for list="{{carriers}}" as="c" hint-placeholder-count="3">
+            <div style="display:flex;flex-direction:column;justify-content:center;height:62px;border-top:1px solid #1C2533;padding-right:8px">
+              <p style="margin:0;font-size:12.5px;font-weight:600;color:#E4EAF3">{{c.name}}</p>
+              <p style="margin:2px 0 0;font-size:10px;color:#8A97A9">{{c.regime}}</p>
+            </div>
+            <div class="track">
+              <div class="track__base"></div>
+              <div class="track__credit" style="left:{{c.netPct}}%;width:{{c.spanPct}}%"></div>
+              <span class="dot dot--net" style="left:{{c.netPct}}%"></span>
+              <span class="dot dot--gross" style="left:{{c.grossPct}}%"></span>
+              <span class="mono" style="position:absolute;left:{{c.grossPct}}%;top:5px;transform:translateX(-100%);font-size:9px;color:#9AA7BA;white-space:nowrap">R$ {{c.grossFmt}}</span>
+              <span class="mono" style="position:absolute;left:{{c.netPct}}%;bottom:5px;transform:translateX(-100%);font-size:9px;color:var(--magma);white-space:nowrap">R$ {{c.netFmt}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div class="axis" aria-hidden="true">
+        <span>R$ 0</span>
+        <span>300 mil</span>
+        <span>600 mil</span>
+        <span>900 mil</span>
+      </div>
+      <p style="margin:12px 0 0;font-size:10.5px;line-height:1.55;color:#8A97A9">Quanto maior a distância entre os pontos, maior o crédito recuperado. O Simples/DAS não destaca CBS/IBS; o híbrido credita apenas 1,00% em 2026.</p>
+    </section>
+
+    <div class="card" style="margin-top:18px;padding:18px 20px;border-color:rgba(255,106,44,.3);background:rgba(255,106,44,.035);display:flex;align-items:flex-start;gap:16px">
+      <span class="mono" style="flex:none;margin-top:2px;font-size:9px;letter-spacing:.12em;color:var(--magma)">LEITURA</span>
+      <p style="margin:0;font-size:12.5px;line-height:1.65;color:#C7D1DE">As duas alternativas são <strong style="color:#F5F8FC">5,7% a 6,3% mais baratas no nominal</strong> — e ficam <strong style="color:#F5F8FC">R$ 79.935,35 a R$ 93.293,75 mais caras no ano</strong>, depois do crédito. O crédito de 16,25% do regime regular é o que inverte o ranking.</p>
+    </div>
+
+    <section aria-labelledby="actions-title" style="margin-top:24px">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:12px">
+        <div>
+          <p class="label" style="margin:0 0 6px">O que fazer com esse ranking</p>
+          <h2 id="actions-title" class="display" style="margin:0;font-size:20px;font-weight:600;letter-spacing:-.01em;color:#F3F6FA">Três decisões, com número</h2>
+        </div>
+        <a href="Memoria.dc.html" style="font-size:11.5px;color:#E4EAF3;border-bottom:1px solid #46566C;padding-bottom:2px">Auditar o cálculo →</a>
+      </div>
+      <div class="grid-3">
+        <div class="card" style="padding:16px 17px">
+          <p class="mono" style="margin:0;font-size:9px;letter-spacing:.12em;color:var(--magma)">RENEGOCIAR</p>
+          <p style="margin:7px 0 0;font-size:13px;font-weight:600;color:#E4EAF3">A diária da carreta parceira teria de cair para R$ 2.931,25</p>
+          <p style="margin:6px 0 0;font-size:10.5px;line-height:1.55;color:#8A97A9">É o ponto em que o Simples/DAS empata com o líquido de R$ 741.606,25 do regime regular.</p>
+        </div>
+        <div class="card" style="padding:16px 17px">
+          <p class="mono" style="margin:0;font-size:9px;letter-spacing:.12em;color:var(--magma)">CONTRATAR</p>
+          <p style="margin:7px 0 0;font-size:13px;font-weight:600;color:#E4EAF3">Levar o crédito de 16,25% para a cláusula</p>
+          <p style="margin:6px 0 0;font-size:10.5px;line-height:1.55;color:#8A97A9">Só o regime regular destaca CBS/IBS e transfere R$ 143.893,75 de crédito no ano.</p>
+        </div>
+        <div class="card" style="padding:16px 17px">
+          <p class="mono" style="margin:0;font-size:9px;letter-spacing:.12em;color:var(--magma)">PROVISIONAR</p>
+          <p style="margin:7px 0 0;font-size:13px;font-weight:600;color:#E4EAF3">R$ 7.774,48 por mês de diferença</p>
+          <p style="margin:6px 0 0;font-size:10.5px;line-height:1.55;color:#8A97A9">É o custo extra mensal do Simples/DAS contra o melhor líquido do comparativo.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer style="margin-top:30px;border-top:1px solid #1E2735;padding-top:18px;display:flex;justify-content:space-between;gap:20px;font-size:10.5px;color:#8A97A9">
+      <span>Frete Líquido · comparador de transportadoras por custo líquido</span>
+      <span class="mono" style="color:#8A97A9">LC 214/2025 · base V0073 · motores 1.7.2 / 1.8.2</span>
+    </footer>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF6A2C","options":["#FF6A2C","#FF7A45","#D9541B"]},"$preview":{"width":1440,"height":1480}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#FF6A2C';
+    const fmt = (v) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const raw = [
+      { name: 'Carreta dedicada', regime: 'Regime regular · 3.500/dia', gross: 885500, net: 741606.25 },
+      { name: 'Carreta híbrida', regime: 'Simples híbrido · 3.280/dia', gross: 829840, net: 821541.60 },
+      { name: 'Carreta parceira', regime: 'Simples/DAS · 3.300/dia', gross: 834900, net: 834900 }
+    ];
+    const carriers = raw.map((c) => {
+      const netPct = (c.net / 900000) * 100;
+      const grossPct = (c.gross / 900000) * 100;
+      return {
+        name: c.name,
+        regime: c.regime,
+        grossFmt: fmt(c.gross),
+        netFmt: fmt(c.net),
+        netPct: netPct.toFixed(3),
+        grossPct: grossPct.toFixed(3),
+        spanPct: (grossPct - netPct).toFixed(3)
+      };
+    });
+    return { accent: accent, carriers: carriers };
+  }
+}
+</script>
+</body>
+</html>

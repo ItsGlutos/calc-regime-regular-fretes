@@ -3,568 +3,463 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Frete Líquido — custo real do frete pós-crédito de CBS/IBS</title>
+    <title>Frete Líquido — custo líquido do frete</title>
     <meta
       name="description"
-      content="Simulador do pagador de frete: compare transportadoras pelo custo líquido depois do crédito de CBS/IBS, com apuração pelos motores oficiais da Receita."
+      content="Simule a diária do transportador, veja o custo líquido depois do crédito de ICMS, PIS/COFINS e CBS/IBS e acompanhe a reforma até 2033."
     />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230F172A'/%3E%3Cpath d='M9 20.5h11.5M16 9.5l6.5 6.5-6.5 6.5' stroke='%23fff' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23070B11'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23FF6A2C'/%3E%3C/svg%3E"
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Calistoga&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Sora:wght@500;600;700&amp;display=swap"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="/estilo-base.css" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <a class="skip" href="#conteudo">Ir para o conteúdo</a>
 
-    <header class="topbar">
-      <div class="wrap topbar__inner">
-        <a class="brand" href="/" aria-label="Frete Líquido — página inicial">
-          <span class="brand__mark" aria-hidden="true">
-            <svg viewBox="0 0 32 32" width="18" height="18" fill="none">
-              <path d="M7 21h12.5M14 9.5 21.5 17 14 24.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
-              <circle cx="24.5" cy="9" r="2.2" stroke="currentColor" stroke-width="1.8" />
-            </svg>
-          </span>
-          <span class="brand__name">Frete<em>Líquido</em></span>
-        </a>
+    <div class="fl-root app">
+      <aside class="side" aria-label="Navegação principal">
+        <a class="brand" href="#calculadora" data-page-link="calculadora"
+          >Frete Líquido<span class="brand-dot">.</span></a
+        >
+        <p class="brand-sub">Custo líquido de frete</p>
 
-        <div class="topbar__right">
-          <span class="engine" id="enginePill" title="Status dos motores oficiais">
-            <span class="engine__dot" aria-hidden="true"></span>
-            <span class="engine__label">Motores da Receita</span>
-            <span class="engine__meta" id="engineVersion">conectando…</span>
-          </span>
-          <a
-            class="ghost-link"
-            href="https://github.com/ReceitaFederal/calculadora-rtc-regime-regular"
-            target="_blank"
-            rel="noreferrer"
-            >Código do motor
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" aria-hidden="true">
-              <path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </a>
-        </div>
-      </div>
-    </header>
+        <nav class="nav" aria-label="Páginas">
+          <a class="nav-item is-active" href="#calculadora" data-page-link="calculadora" aria-current="page"
+            ><span class="nav-num">01</span><span>Calculadora</span></a
+          >
+          <a class="nav-item" href="#horizonte" data-page-link="horizonte"
+            ><span class="nav-num">02</span><span>Horizonte</span></a
+          >
+          <a class="nav-item" href="#comparador" data-page-link="comparador"
+            ><span class="nav-num">03</span><span>Comparador</span></a
+          >
+          <a class="nav-item" href="#memoria" data-page-link="memoria"
+            ><span class="nav-num">04</span><span>Memória</span></a
+          >
+        </nav>
 
-    <main id="conteudo" class="wrap">
-      <section class="page-head">
-        <div class="page-head__copy">
-          <p class="eyebrow"><span class="eyebrow__rule" aria-hidden="true"></span>Simulador do pagador de frete · 2026–2033</p>
-          <h1>Quanto você paga de frete hoje<br />— e quanto vai pagar <span class="mark">até 2033</span>.</h1>
-          <p class="lede">
-            Informe o frete bruto que você paga. A ferramenta mostra o desembolso e o custo líquido depois do
-            crédito de ICMS, PIS/COFINS e CBS/IBS em cada ano, quanto você deveria pagar em cada regime e o que
-            fazer para se ajustar.
-          </p>
-        </div>
-        <dl class="facts">
-          <div class="fact">
-            <dt>Destaque no ano</dt>
-            <dd id="headDestaque">27,00%</dd>
-            <small id="headDestaqueSub">CBS 8,50 + IBS 18,50</small>
-          </div>
-          <div class="fact">
-            <dt>Crédito do pagador</dt>
-            <dd>Destaque → crédito</dd>
-            <small id="headCreditoSub">ICMS + PIS/COFINS + CBS/IBS</small>
-          </div>
-        </dl>
-      </section>
-
-      <div class="motor-alert" id="motorAlert" role="alert" hidden></div>
-
-      <div class="workspace">
-        <form class="card form" id="form" novalidate>
-          <div class="card__head">
-            <div>
-              <h2>Dados do frete</h2>
-              <p class="card__sub">Valor, regime e rota.</p>
-            </div>
-            <button class="icon-btn" type="button" id="reset" title="Restaurar exemplo" aria-label="Restaurar exemplo">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
-                <path d="M4 10a8 8 0 1 1 2.2 7.4M4 5v5h5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </button>
-          </div>
-
-          <div class="field">
-            <label for="valor">Valor do frete</label>
-            <div class="money">
-              <span class="money__prefix" aria-hidden="true">R$</span>
-              <input
-                id="valor"
-                name="valor"
-                type="text"
-                inputmode="decimal"
-                spellcheck="false"
-                autocomplete="off"
-                value="1.000,00"
-                aria-describedby="valorHint"
-              />
-            </div>
-            <p class="hint" id="valorHint">Preço nominal cobrado pela transportadora.</p>
-          </div>
-
-          <div class="field field--fieldset">
-            <span class="label" id="regimeLabel">Regime tributário</span>
-            <div class="regime" role="radiogroup" aria-labelledby="regimeLabel" id="regime"></div>
-            <p class="hint" id="regimeHint"></p>
-          </div>
-
-          <div class="field">
-            <label for="perfil">Modalidade</label>
-            <select id="perfil" name="perfil"></select>
-            <p class="hint" id="perfilHint"></p>
-          </div>
-
-          <div class="field field--simples" id="simplesWrap" hidden>
-            <div class="field__row">
-              <span class="label label--simples">CBS/IBS dentro do DAS</span>
-              <span class="badge-soft" id="simplesFonte" aria-live="polite">estimativa</span>
-            </div>
-            <div class="field-grid">
-              <div class="field">
-                <label for="aliquotaCbs">CBS (%)</label>
-                <input
-                  id="aliquotaCbs"
-                  name="aliquotaCbs"
-                  type="text"
-                  inputmode="decimal"
-                  autocomplete="off"
-                  placeholder="2,3591"
-                  aria-describedby="simplesHint"
-                />
-              </div>
-              <div class="field">
-                <label for="aliquotaIbs">IBS (%)</label>
-                <input
-                  id="aliquotaIbs"
-                  name="aliquotaIbs"
-                  type="text"
-                  inputmode="decimal"
-                  autocomplete="off"
-                  placeholder="0,0260"
-                  aria-describedby="simplesHint"
-                />
-              </div>
-            </div>
-            <div class="simples-total" id="simplesTotal" hidden>
-              <span>
-                Alíquota efetiva total
-                <small id="simplesTotalHint">CBS + IBS do PGDAS</small>
-              </span>
-              <strong id="simplesTotalValor">—</strong>
-            </div>
-            <div class="field">
-              <label for="atividade">Atividade no Simples</label>
-              <select id="atividade"></select>
-            </div>
-            <div class="field-grid">
-              <div class="field">
-                <label for="dasTotal">DAS total (%)</label>
-                <input
-                  id="dasTotal"
-                  name="dasTotal"
-                  type="text"
-                  inputmode="decimal"
-                  autocomplete="off"
-                  value="12"
-                  placeholder="12"
-                  aria-describedby="pisoHint"
-                />
-              </div>
-              <div class="field">
-                <label for="insumos">Insumos sujeitos a CBS/IBS (%)</label>
-                <input
-                  id="insumos"
-                  name="insumos"
-                  type="text"
-                  inputmode="decimal"
-                  autocomplete="off"
-                  value="60"
-                  placeholder="60"
-                  aria-describedby="pisoHint"
-                />
-              </div>
-            </div>
-            <p class="hint" id="pisoHint">
-              Opcional: estima o piso do transportador (DAS + insumos não creditáveis). Sem esses dados, o app
-              mostra só o seu preço de equilíbrio e avisa que o piso não foi calculado.
-            </p>
-            <p class="hint" id="simplesHint">
-              Informe a linha de alíquotas efetivas do PGDAS do transportador (CBS e IBS, em %). Com as duas
-              preenchidas e ano a partir de 2027, o crédito é apurado pelo Motor do Simples Nacional. Em branco,
-              vale a faixa setorial estimada.
-            </p>
-          </div>
-
-          <div class="field taxa" id="taxaWrap" hidden>
-            <div class="field__row">
-              <label for="taxaRange">Crédito do regime</label>
-              <output class="badge-soft" id="taxaOut" for="taxaRange">2,00%</output>
-            </div>
-            <input type="range" id="taxaRange" min="0.92" max="4" step="0.01" value="2" />
-            <div class="range-legend">
-              <span id="taxaMin">0,92%</span>
-              <span>estimativa setorial</span>
-              <span id="taxaMax">4,00%</span>
-            </div>
-          </div>
-
-          <div class="field field--fieldset">
-            <span class="label" id="operacaoLabel">Tipo de operação</span>
-            <div class="segmented" role="radiogroup" aria-labelledby="operacaoLabel" id="operacao"></div>
-            <p class="hint" id="operacaoHint"></p>
-          </div>
-
-          <div class="field" id="pagadoraWrap">
-            <label for="regimePagadora">Sua empresa — regime de crédito</label>
-            <select id="regimePagadora" name="regimePagadora"></select>
-            <p class="hint" id="regimePagadoraHint"></p>
-          </div>
-
-          <div class="field-grid">
-            <div class="field">
-              <label for="ufOrigem">UF origem</label>
-              <select id="ufOrigem"></select>
-            </div>
-            <div class="field">
-              <label for="ufDestino">UF destino</label>
-              <select id="ufDestino"></select>
-            </div>
-          </div>
-
-          <div class="field">
-            <label for="ano">Ano de referência</label>
-            <select id="ano"></select>
-            <p class="hint" id="anoHint"></p>
-          </div>
-
-          <button class="btn btn--primary btn--block" id="calcular" type="submit">
-            <span>Calcular custo líquido</span>
-            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
-              <path d="M4 12h15M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </button>
-          <p class="fineprint">
-            Cada cálculo consulta o motor do regime escolhido: regime regular (8080) ou Simples Nacional (8082).
-            Nenhuma alíquota de CBS/IBS é recalculada aqui.
-          </p>
-        </form>
-
-        <section class="card result" id="resultado" aria-live="polite" aria-busy="true">
-          <div class="skeleton-wrap" aria-hidden="true">
-            <div class="skeleton skeleton--line w-30"></div>
-            <div class="skeleton skeleton--hero"></div>
-            <div class="skeleton skeleton--line w-60"></div>
-            <div class="skeleton skeleton--bar"></div>
-            <div class="skeleton skeleton--block"></div>
-          </div>
-        </section>
-      </div>
-
-      <section class="card perfis" id="perfis" aria-labelledby="perfisTitulo">
-        <div class="card__head perfis__head">
-          <div>
-            <p class="eyebrow-sm">Perfis de transportadores · diária → mês</p>
-            <h2 id="perfisTitulo">Cadastre a diária e veja o mês fechar</h2>
-            <p class="card__sub">
-              O mês tem 28 a 31 dias e 19 a 23 dias úteis, dependendo do ano. O perfil transforma a
-              diária em faturamento bruto, crédito e custo líquido mês a mês — e mostra quanto a
-              diária deveria ser para empatar com o regime regular.
-            </p>
-          </div>
-          <div class="perfis__acoes">
-            <button class="btn btn--ghost btn--tiny" type="button" id="perfisExemplos">Restaurar exemplos</button>
-            <button class="btn btn--primary btn--tiny" type="button" id="perfilNovo">Novo perfil</button>
-          </div>
+        <div class="side-scenario">
+          <p class="side-label">Cenário</p>
+          <p class="scenario-name" id="sideCenarioNome">Carregando…</p>
+          <p class="scenario-meta" id="sideCenarioMeta">—</p>
+          <a class="scenario-edit" href="#calculadora" data-page-link="calculadora" id="editarCenario">Editar cenário</a>
         </div>
 
-        <div class="perfis__layout">
-          <aside class="perfis__lista" aria-label="Perfis de transportadores salvos">
-            <div class="perfis__lista-head">
-              <span>Seus perfis</span>
-              <span class="chip chip--soft" id="perfisContagem">—</span>
+        <div class="side-engine">
+          <p class="side-label">Motores</p>
+          <div class="engine-row">
+            <span class="dot" id="engineDot"></span>
+            <span id="engineVersion">conectando…</span>
+          </div>
+          <p class="engine-note" id="engineBase">Base —</p>
+          <a class="engine-link" href="/legado/index.html">Interface completa <span aria-hidden="true">↗</span></a>
+        </div>
+      </aside>
+
+      <div class="main">
+        <header class="mobile-head">
+          <div class="m-header">
+            <a class="brand m-brand" href="#calculadora" data-page-link="calculadora"
+              >Frete Líquido<span class="brand-dot">.</span></a
+            >
+            <span class="m-date" id="mobileDate">2026</span>
+          </div>
+          <nav class="m-tabs" aria-label="Páginas">
+            <a class="m-tab is-active" href="#calculadora" data-page-link="calculadora" aria-current="page">Calculadora</a>
+            <a class="m-tab" href="#horizonte" data-page-link="horizonte">Horizonte</a>
+            <a class="m-tab" href="#comparador" data-page-link="comparador">Comparador</a>
+            <a class="m-tab" href="#memoria" data-page-link="memoria">Memória</a>
+          </nav>
+        </header>
+
+        <header class="topbar app-topbar">
+          <div class="topbar-in">
+            <div class="crumb">
+              <a class="crumb-link" href="#calculadora" data-page-link="calculadora">Painel</a>
+              <span class="top-sep">/</span><b id="crumbPage">Calculadora</b>
             </div>
-            <div id="perfisCards" class="perfis__cards"></div>
-          </aside>
+            <div class="top-actions">
+              <button class="ghost" type="button" id="exportar">Exportar</button>
+            </div>
+          </div>
+        </header>
 
-          <div class="perfis__painel">
-            <form class="perfil-form" id="perfilForm" novalidate aria-labelledby="perfilFormTitulo">
-              <div class="perfil-form__head">
-                <h3 id="perfilFormTitulo">Novo perfil</h3>
-                <span class="chip chip--soft" id="perfilStatus">não salvo</span>
+        <main class="content" id="conteudo">
+          <section class="page" data-page="calculadora" id="page-calculadora" aria-labelledby="tituloCalculadora">
+            <header class="page-head">
+              <p class="eyebrow">01 — Resultado</p>
+              <h1 class="h1" id="tituloCalculadora" tabindex="-1">Custo líquido do mês</h1>
+              <p class="sub">Informe a diária do transportador e veja o que sobra depois dos tributos da reforma.</p>
+            </header>
+
+            <div class="callout callout--erro" id="calcErro" role="alert" hidden></div>
+
+            <section class="hero" aria-labelledby="heroLabel">
+              <div>
+                <p class="hero-label" id="heroLabel">Custo líquido · novembro de 2026</p>
+                <div class="hero-value" id="heroValue" aria-live="polite">
+                  <span class="cur">R$</span><span class="int">—</span>
+                </div>
+                <div class="hero-meta" id="heroMeta"><span>Calculando o cenário…</span></div>
               </div>
-
-              <div class="field">
-                <label for="perfilNome">Nome do perfil</label>
-                <input
-                  id="perfilNome"
-                  name="perfilNome"
-                  type="text"
-                  maxlength="60"
-                  autocomplete="off"
-                  placeholder="Ex.: Carreta dedicada · SP → BA"
-                />
+              <div class="comp">
+                <div class="comp-top"><span id="compBruto">Bruto —</span><span id="compCredito">Crédito —</span></div>
+                <div class="comp-bar" aria-hidden="true">
+                  <div class="comp-net" id="compNet" style="width: 0"></div>
+                  <div class="comp-credit" id="compCredit" style="width: 0"></div>
+                </div>
+                <dl class="breakdown" id="breakdown">
+                  <div><dt>ICMS</dt><dd>—</dd></div>
+                  <div><dt>PIS/COFINS</dt><dd>—</dd></div>
+                  <div><dt>CBS/IBS</dt><dd>—</dd></div>
+                  <div class="total"><dt>Crédito</dt><dd>—</dd></div>
+                </dl>
               </div>
+            </section>
 
-              <div class="field">
-                <label for="perfilTipoVeiculo">Tipo de veículo (opcional)</label>
-                <select id="perfilTipoVeiculo" name="perfilTipoVeiculo"></select>
-                <p class="hint" id="perfilVeiculoHint"></p>
-              </div>
-
-              <div class="field-grid field-grid--3">
-                <div class="field">
-                  <label for="perfilDiaria">Diária (R$)</label>
-                  <div class="money">
-                    <span class="money__prefix" aria-hidden="true">R$</span>
-                    <input
-                      id="perfilDiaria"
-                      name="perfilDiaria"
-                      type="text"
-                      inputmode="decimal"
-                      autocomplete="off"
-                      placeholder="1.850,00"
-                    />
+            <div class="calc-grid">
+              <section class="chart-block" aria-labelledby="chartTitle">
+                <div class="chart-head">
+                  <div>
+                    <h2 class="chart-title" id="chartTitle">Bruto e líquido, mês a mês</h2>
+                    <p class="chart-note" id="chartNote">Carregando o calendário…</p>
+                  </div>
+                  <div class="legend" aria-hidden="true">
+                    <span><span class="swatch gross"></span>Bruto</span>
+                    <span><span class="swatch net"></span>Líquido</span>
                   </div>
                 </div>
-                <div class="field">
-                  <label for="perfilModoDias">Dias no mês</label>
-                  <select id="perfilModoDias" name="perfilModoDias"></select>
+                <div
+                  class="chart"
+                  id="chartMensal"
+                  role="img"
+                  aria-label="Gráfico de barras do frete bruto e líquido mês a mês"
+                >
+                  <div class="axis" id="chartAxis" aria-hidden="true">
+                    <span>—</span><span></span><span></span><span></span><span></span>
+                  </div>
+                  <div class="plot" id="chartPlot" aria-hidden="true"></div>
                 </div>
-                <div class="field" id="perfilDiasFixoWrap" hidden>
-                  <label for="perfilDiasFixo">Dias fixos</label>
-                  <input
-                    id="perfilDiasFixo"
-                    name="perfilDiasFixo"
-                    type="text"
-                    inputmode="numeric"
-                    autocomplete="off"
-                    value="22"
-                  />
+                <div class="chart-insight">
+                  <p id="chartInsight">O crédito aparece quando o cenário é calculado.</p>
+                  <a class="text-link" href="#memoria" data-page-link="memoria"
+                    >Ver memória de cálculo <span aria-hidden="true">→</span></a
+                  >
                 </div>
-              </div>
+              </section>
 
-              <div class="field-grid">
-                <div class="field">
-                  <label for="perfilUfOrigem">UF origem</label>
-                  <select id="perfilUfOrigem" name="perfilUfOrigem"></select>
+              <form class="form" id="formSimulacao" novalidate>
+                <div class="form-head">
+                  <h2 class="form-title" id="formTitle">Cenário</h2>
+                  <span class="form-hint" id="formStatus">novo</span>
                 </div>
-                <div class="field">
-                  <label for="perfilUfDestino">UF destino</label>
-                  <select id="perfilUfDestino" name="perfilUfDestino"></select>
+
+                <div class="field-row field-row--diaria">
+                  <div class="field">
+                    <label for="diaria">Diária</label>
+                    <div class="input">
+                      <span class="prefix" aria-hidden="true">R$</span>
+                      <input id="diaria" name="diaria" type="text" inputmode="decimal" value="3.500,00" autocomplete="off" />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="modoDias">Dias</label>
+                    <div class="select-wrap">
+                      <select id="modoDias" class="select"></select>
+                      <svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="#8A97A9" stroke-width="1.2" stroke-linecap="round" /></svg>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <p class="hint" id="perfilRotaHint">Operação interestadual.</p>
 
-              <div class="field">
-                <label for="perfilRegime">Regime do transportador</label>
-                <select id="perfilRegime" name="perfilRegime"></select>
-                <p class="hint" id="perfilRegimeHint"></p>
-              </div>
-
-              <div class="field-grid field-grid--3" id="perfilSimplesWrap" hidden>
-                <div class="field">
-                  <label for="perfilAliquotaCbs">CBS do PGDAS (%)</label>
-                  <input
-                    id="perfilAliquotaCbs"
-                    name="perfilAliquotaCbs"
-                    type="text"
-                    inputmode="decimal"
-                    autocomplete="off"
-                    placeholder="2,3591"
-                  />
+                <div class="field-row">
+                  <div class="field">
+                    <label for="mes">Competência</label>
+                    <div class="select-wrap">
+                      <select id="mes" class="select"></select>
+                      <svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="#8A97A9" stroke-width="1.2" stroke-linecap="round" /></svg>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="ano">Ano</label>
+                    <div class="select-wrap">
+                      <select id="ano" class="select"></select>
+                      <svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="#8A97A9" stroke-width="1.2" stroke-linecap="round" /></svg>
+                    </div>
+                  </div>
                 </div>
-                <div class="field">
-                  <label for="perfilAliquotaIbs">IBS do PGDAS (%)</label>
-                  <input
-                    id="perfilAliquotaIbs"
-                    name="perfilAliquotaIbs"
-                    type="text"
-                    inputmode="decimal"
-                    autocomplete="off"
-                    placeholder="0,0260"
-                  />
+
+                <div class="field" id="diasFixoWrap" hidden>
+                  <label for="diasFixo">Dias fixos por mês</label>
+                  <div class="input">
+                    <input id="diasFixo" type="number" min="1" max="31" value="22" />
+                    <span class="suffix">dias</span>
+                  </div>
                 </div>
+
                 <div class="field">
-                  <label for="perfilDas">DAS total (%)</label>
-                  <input
-                    id="perfilDas"
-                    name="perfilDas"
-                    type="text"
-                    inputmode="decimal"
-                    autocomplete="off"
-                    placeholder="12"
-                  />
+                  <label for="regime">Regime do transportador</label>
+                  <div class="select-wrap">
+                    <select id="regime" class="select"></select>
+                    <svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="#8A97A9" stroke-width="1.2" stroke-linecap="round" /></svg>
+                  </div>
                 </div>
-              </div>
-              <p class="hint" id="perfilSimplesHint" hidden>
-                Sem CBS e IBS do PGDAS, vale a faixa setorial estimada. O DAS é opcional: só serve
-                para mostrar a receita líquida do transportador.
-              </p>
 
-              <p class="hint perfil-form__contexto" id="perfilContextoHint"></p>
+                <div class="field">
+                  <span class="field-label" id="operacaoLabel">Operação</span>
+                  <div class="seg" role="group" aria-labelledby="operacaoLabel">
+                    <label><input type="radio" name="operacao" value="B2B" checked /><span>B2B</span></label>
+                    <label><input type="radio" name="operacao" value="B2C" /><span>B2C</span></label>
+                  </div>
+                </div>
 
-              <div class="perfil-form__acoes">
-                <button class="btn btn--primary" type="submit" id="perfilSalvar">
-                  <span>Salvar perfil</span>
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
-                    <path d="M5 12.5 9.5 17 19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                </button>
-                <button class="btn btn--ghost" type="button" id="perfilUsar">Usar na simulação</button>
-                <button class="btn btn--ghost btn--perigo" type="button" id="perfilExcluir" hidden>Excluir</button>
-              </div>
-              <p class="hint perfil-form__erro" id="perfilFormErro" role="alert" hidden></p>
-            </form>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="ufOrigem">Origem</label>
+                    <div class="select-wrap">
+                      <select id="ufOrigem" class="select"></select>
+                      <svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="#8A97A9" stroke-width="1.2" stroke-linecap="round" /></svg>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="ufDestino">Destino</label>
+                    <div class="select-wrap">
+                      <select id="ufDestino" class="select"></select>
+                      <svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="#8A97A9" stroke-width="1.2" stroke-linecap="round" /></svg>
+                    </div>
+                  </div>
+                </div>
 
-            <div id="perfilResultado" class="perfil-resultado" aria-live="polite">
-              <div class="skeleton-wrap" aria-hidden="true">
-                <div class="skeleton skeleton--line w-30"></div>
-                <div class="skeleton skeleton--kpis"></div>
-                <div class="skeleton skeleton--line w-60"></div>
-                <div class="skeleton skeleton--block"></div>
-              </div>
+                <details class="prem" id="premissasDetalhe">
+                  <summary>
+                    <span>Premissas <em id="premResumo">—</em></span>
+                    <span class="plus" aria-hidden="true">+</span>
+                  </summary>
+                  <div class="prem-body">
+                    <div class="field">
+                      <label for="perfilSalvo">Cenário salvo</label>
+                      <div class="select-wrap">
+                        <select id="perfilSalvo" class="select" aria-describedby="perfilSalvoHint"></select>
+                        <svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="#8A97A9" stroke-width="1.2" stroke-linecap="round" /></svg>
+                      </div>
+                      <p class="hint" id="perfilSalvoHint">Carregue um cenário salvo ou edite os campos e salve como novo.</p>
+                    </div>
+
+                    <div class="field">
+                      <label for="regimePagadora">Regime da pagadora</label>
+                      <div class="select-wrap">
+                        <select id="regimePagadora" class="select"></select>
+                        <svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="#8A97A9" stroke-width="1.2" stroke-linecap="round" /></svg>
+                      </div>
+                    </div>
+
+                    <div class="field">
+                      <label for="tipoVeiculo">Tipo de veículo</label>
+                      <div class="select-wrap">
+                        <select id="tipoVeiculo" class="select"></select>
+                        <svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="#8A97A9" stroke-width="1.2" stroke-linecap="round" /></svg>
+                      </div>
+                      <p class="hint" id="tipoVeiculoHint">Referência de diária derivada do piso ANTT; não é cotação de mercado.</p>
+                    </div>
+
+                    <div id="simplesCampos" hidden>
+                      <div class="field-row">
+                        <div class="field">
+                          <label for="aliquotaCbs">CBS do PGDAS (%)</label>
+                          <div class="input">
+                            <input id="aliquotaCbs" type="text" inputmode="decimal" autocomplete="off" placeholder="2,3591" />
+                          </div>
+                        </div>
+                        <div class="field">
+                          <label for="aliquotaIbs">IBS do PGDAS (%)</label>
+                          <div class="input">
+                            <input id="aliquotaIbs" type="text" inputmode="decimal" autocomplete="off" placeholder="0,0260" />
+                          </div>
+                        </div>
+                      </div>
+                      <div class="field">
+                        <label for="dasTotal">DAS total (%) <span class="optional">opcional</span></label>
+                        <div class="input">
+                          <input id="dasTotal" type="text" inputmode="decimal" autocomplete="off" placeholder="12" />
+                        </div>
+                      </div>
+                      <p class="hint">Sem as duas alíquotas do PGDAS, o crédito do Simples usa a faixa setorial estimada.</p>
+                    </div>
+
+                    <div class="field">
+                      <label for="nomeCenario">Nome do cenário</label>
+                      <div class="input">
+                        <input id="nomeCenario" type="text" maxlength="60" autocomplete="off" placeholder="Ex.: Carreta dedicada · SP → BA" />
+                      </div>
+                    </div>
+
+                    <div class="form-actions">
+                      <button class="text-btn" type="button" id="salvarCenario">Salvar cenário</button>
+                      <button class="text-btn" type="button" id="novoCenario">Novo</button>
+                      <button class="text-btn text-btn--perigo" type="button" id="excluirCenario" hidden>Excluir</button>
+                    </div>
+                  </div>
+                </details>
+
+                <button class="cta" type="submit" id="calcular">Calcular custo líquido</button>
+                <p class="form-note" id="formNote">LC 214/2025 · motor oficial</p>
+                <p class="form-erro" id="formErro" role="alert" hidden></p>
+              </form>
             </div>
-          </div>
-        </div>
 
-        <div class="perfis__comparacao" id="perfisComparacao"></div>
-      </section>
+            <footer class="footer">
+              <p id="footerCalc">LC 214/2025 · valores calculados pelo motor oficial</p>
+              <p class="right" id="footerData">—</p>
+            </footer>
+          </section>
 
-      <section class="card horizonte" id="hojeAmanha" aria-labelledby="horizonteTitulo" aria-busy="true">
-        <div class="card__head horizonte__head">
-          <div>
-            <p class="eyebrow-sm">Seu líquido · hoje → 2033</p>
-            <h2 id="horizonteTitulo">Seu frete ao longo da reforma</h2>
-            <p class="card__sub">
-              Quanto sobra hoje, quanto sobra se o preço não mudar e quanto o preço precisa mudar para
-              preservar o seu líquido.
-            </p>
-          </div>
-          <div class="segmented segmented--3 horizonte__cenario" id="horizonteCenario" role="radiogroup" aria-label="Cenário do preço do frete">
-            <button type="button" role="radio" data-cenario="congelado" aria-checked="true" title="O preço do contrato não muda">
-              Preço travado
-            </button>
-            <button type="button" role="radio" data-cenario="equilibrio" aria-checked="false" title="O preço que mantém o seu custo líquido de hoje">
-              Preço de equilíbrio
-            </button>
-            <button type="button" role="radio" data-cenario="repasse" aria-checked="false" title="O preço que preserva a receita líquida do transportador">
-              Piso do transportador
-            </button>
-          </div>
-        </div>
-        <p class="stale-note" id="horizonteStale" hidden>
-          Os dados do frete mudaram — clique em Calcular custo líquido para atualizar a projeção.
-        </p>
-        <div id="horizonteConteudo">
-          <div class="skeleton-wrap" aria-hidden="true">
-            <div class="skeleton skeleton--line w-30"></div>
-            <div class="skeleton skeleton--kpis"></div>
-            <div class="skeleton skeleton--line w-60"></div>
-            <div class="skeleton skeleton--block"></div>
-          </div>
-        </div>
-      </section>
+          <section class="page" data-page="horizonte" id="page-horizonte" aria-labelledby="tituloHorizonte" hidden>
+            <header class="page-head">
+              <p class="eyebrow">02 — Projeção</p>
+              <h1 class="h1" id="tituloHorizonte" tabindex="-1">O crédito muda de patamar</h1>
+              <p class="sub">Quatro marcos da reforma e o efeito no custo líquido do frete.</p>
+            </header>
 
-      <section class="card timeline" id="linhaDoTempo" aria-labelledby="linhaTempoTitulo" aria-busy="true">
-        <div class="card__head timeline__head">
-          <div>
-            <p class="eyebrow-sm">Reforma tributária · 2025–2033</p>
-            <h2 id="linhaTempoTitulo">Antes e depois da reforma</h2>
-            <p class="card__sub">
-              O mesmo frete, ano a ano: carga tributária, crédito e custo líquido do pagador.
-            </p>
-          </div>
-          <div class="timeline__chips" id="timelineChips"></div>
-        </div>
+            <section class="h-hero">
+              <div>
+                <p class="hero-label">Crédito efetivo em 2033</p>
+                <div class="hero-value h-value" id="hValue"><span class="int">—</span><span class="dec">%</span></div>
+              </div>
+              <div class="h-side">
+                <p class="h-kicker" id="hKicker">—</p>
+                <p class="h-delta" id="hDelta">—</p>
+                <p class="h-note" id="hNote">Calculando a trajetória do cenário…</p>
+              </div>
+            </section>
 
-        <div class="timeline__toolbar">
-          <div
-            class="segmented segmented--3"
-            role="radiogroup"
-            aria-label="Métrica da linha do tempo"
-            id="timelineMetrica"
-          ></div>
-          <span class="timeline__fonte" id="timelineFonte">calculando…</span>
-        </div>
+            <section class="h-chart" aria-labelledby="hChartTitle">
+              <div class="chart-head">
+                <div>
+                  <h2 class="chart-title" id="hChartTitle">Crédito efetivo por marco</h2>
+                  <p class="chart-note">percentual do frete recuperável como crédito</p>
+                </div>
+              </div>
+              <div class="rate" id="hRate" role="img" aria-label="Crédito efetivo por marco da reforma">
+                <div class="rate-axis" id="hAxis" aria-hidden="true">
+                  <span>30%</span><span>20%</span><span>10%</span><span>0</span>
+                </div>
+                <div class="rate-plot" id="hPlot" aria-hidden="true"></div>
+              </div>
+              <p class="chart-note" id="hChartNote">Valores anuais cheios. Entre os marcos, a regra de transição da LC 214/2025.</p>
+            </section>
 
-        <p class="stale-note" id="timelineStale" hidden>
-          Os dados do frete mudaram — clique em Calcular custo líquido para atualizar a linha do tempo.
-        </p>
+            <section class="h-table" aria-labelledby="hTableTitle">
+              <div class="table-head">
+                <h2 class="table-title" id="hTableTitle">O efeito no caixa</h2>
+                <p class="table-note">por R$ 100 mil de frete</p>
+              </div>
+              <div class="table-wrap">
+                <table class="data" id="hTable">
+                  <thead>
+                    <tr>
+                      <th scope="col">Marco</th>
+                      <th scope="col">Crédito efetivo</th>
+                      <th scope="col">Líquido por R$ 100 mil</th>
+                      <th scope="col">Variação vs. 2026</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><th scope="row">—</th><td>—</td><td>—</td><td>—</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="insight-line" id="hInsight">O efeito no caixa aparece depois do cálculo.</p>
+            </section>
 
-        <div id="linhaDoTempoConteudo">
-          <div class="timeline__skeleton" aria-hidden="true">
-            <div class="skeleton skeleton--line w-30"></div>
-            <div class="skeleton skeleton--kpis"></div>
-            <div class="skeleton skeleton--line w-60"></div>
-            <div class="skeleton skeleton--block"></div>
-          </div>
-        </div>
-      </section>
+            <footer class="footer">
+              <p>Projeção pelos marcos da LC 214/2025 · valores por R$ 100 mil de frete</p>
+              <p class="right" id="hFooterData">—</p>
+            </footer>
+          </section>
 
-      <section class="card comparator" aria-labelledby="comparadorTitulo">
-        <div class="card__head">
-          <div>
-            <h2 id="comparadorTitulo">Comparador de transportadoras</h2>
-            <p class="card__sub">
-              Mesmo trecho, preços e regimes diferentes. A ordem é pelo custo líquido total — não pelo
-              nominal. A segunda tabela mostra o preço que manteria o seu líquido de hoje.
-            </p>
-          </div>
-          <span class="chip chip--soft">2 a 3 transportadoras</span>
-        </div>
+          <section class="page" data-page="comparador" id="page-comparador" aria-labelledby="tituloComparador" hidden>
+            <header class="page-head">
+              <p class="eyebrow">03 — Comparação</p>
+              <h1 class="h1" id="tituloComparador" tabindex="-1">Compare o custo real</h1>
+              <p class="sub">A diária mais barata pode custar mais no líquido. Veja o mesmo frete em três regimes.</p>
+            </header>
 
-        <div class="carriers" id="carriers"></div>
+            <div class="comp-legend" aria-hidden="true">
+              <span><span class="swatch gross"></span>Bruto</span>
+              <span><span class="swatch net"></span>Líquido</span>
+              <span>O vazio é o crédito</span>
+            </div>
 
-        <button class="btn btn--dashed" type="button" id="adicionar">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true">
-            <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          </svg>
-          Adicionar transportadora
-        </button>
+            <section class="comp-list" id="comparadorList" aria-label="Transportadoras comparadas" aria-live="polite">
+              <div class="loading-block">Comparando os três regimes no mesmo trecho…</div>
+            </section>
 
-        <div class="comparator__actions">
-          <button class="btn btn--primary" type="button" id="comparar">
-            <span>Comparar custo total</span>
-            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
-              <path d="M4 18V9M10 18V5M16 18v-6M22 18H2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
-            </svg>
-          </button>
-          <button class="btn btn--ghost" type="button" id="cenarioAceite">Cenário do aceite · PGDAS 2027</button>
-          <span class="comparator__hint">O vencedor é o menor custo líquido depois de todo o crédito.</span>
-        </div>
+            <section class="comp-insight">
+              <p id="compInsight">O comparativo aparece quando o cenário é calculado.</p>
+              <a class="text-link" href="#memoria" data-page-link="memoria"
+                >Ver memória do cenário <span aria-hidden="true">→</span></a
+              >
+            </section>
 
-        <p class="stale-note" id="staleNote" hidden>Dados do frete ou do comparador foram alterados — clique em Comparar para atualizar o ranking.</p>
+            <footer class="footer">
+              <p id="compFooter">—</p>
+              <p class="right" id="compFooterData">—</p>
+            </footer>
+          </section>
 
-        <div id="comparacao" aria-live="polite"></div>
-      </section>
+          <section class="page" data-page="memoria" id="page-memoria" aria-labelledby="tituloMemoria" hidden>
+            <header class="page-head">
+              <p class="eyebrow">04 — Memória</p>
+              <h1 class="h1" id="tituloMemoria" tabindex="-1">A conta aberta</h1>
+              <p class="sub">Cada tributo e cada crédito do frete do mês selecionado.</p>
+            </header>
 
-      <footer class="foot">
-        <p>
-          Motores:
-          <a href="https://github.com/ReceitaFederal/calculadora-rtc-regime-regular" target="_blank" rel="noreferrer"
-            >calculadora-rtc-regime-regular</a
-          >
-          e
-          <a href="https://github.com/ReceitaFederal/calculadora-rtc-simples-nacional" target="_blank" rel="noreferrer"
-            >calculadora-rtc-simples-nacional</a
-          >
-          (MIT) · CBS/IBS apurados pelas APIs oficiais, item de CT-e NBS 105011220.
-        </p>
-        <p>
-          Simulação para decisão de compra. O Simples/DAS usa as alíquotas efetivas do PGDAS quando informadas; sem
-          elas, e para autônomo/MEI, valem as faixas setoriais estimadas — não substituem a apuração fiscal.
-        </p>
-      </footer>
-    </main>
+            <div class="mem-grid">
+              <section class="receipt" id="memReceipt" aria-labelledby="memReceiptTitle">
+                <div class="loading-block">Calculando o recibo…</div>
+              </section>
+              <aside class="premises" id="memPremises" aria-labelledby="memPremTitle">
+                <h2 class="prem-title" id="memPremTitle">Premissas</h2>
+                <p class="loading-block">—</p>
+              </aside>
+            </div>
+
+            <details class="mem-raw" id="memMotorDetalhe">
+              <summary>
+                Memória do motor <span class="raw__meta" id="memMotorMeta">—</span>
+              </summary>
+              <div class="mem-raw__body">
+                <dl class="steps" id="memSteps"></dl>
+                <details class="raw">
+                  <summary>Resposta bruta do motor</summary>
+                  <pre id="memJson">—</pre>
+                </details>
+                <div class="raw__bar">
+                  <span id="memMotorOrigem">—</span>
+                  <button class="ghost" type="button" id="copiarJson">Copiar JSON</button>
+                </div>
+              </div>
+            </details>
+
+            <footer class="footer">
+              <p id="memFooter">Cálculo pela LC 214/2025</p>
+              <p class="right" id="memFooterData">—</p>
+            </footer>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <noscript>
+      <p class="wrap">Esta interface precisa de JavaScript para calcular o custo líquido.</p>
+    </noscript>
 
     <script type="module" src="/app.js"></script>
   </body>

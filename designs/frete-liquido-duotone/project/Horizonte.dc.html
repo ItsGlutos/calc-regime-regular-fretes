@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Horizonte 2026–2033 · Frete Líquido</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+  :root{--magma:#FF6A2C}
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:#080C12}
+  a{color:#E4EAF3;text-decoration:none}
+  a:hover{color:var(--magma)}
+  ::selection{background:rgba(255,106,44,.28);color:#fff}
+  .shell{width:100%;max-width:1360px;margin:0 auto;padding-left:48px;padding-right:48px}
+  .display{font-family:"Archivo","Helvetica Neue",Arial,sans-serif}
+  .mono{font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;font-variant-numeric:tabular-nums}
+  .label{font-size:10px;line-height:1.3;letter-spacing:.14em;text-transform:uppercase;color:#8A97A9;font-weight:600;margin:0}
+  .card{background:#0F151F;border:1px solid #202A38;border-radius:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.02)}
+  .topbar{background:#0A0F16;border-bottom:1px solid #1E2735}
+  .brand{display:flex;align-items:baseline;gap:6px;flex:none}
+  .nav{display:flex;align-items:stretch;gap:2px;height:68px;margin-left:34px}
+  .nav a{display:flex;align-items:center;height:68px;padding:0 14px;font-size:12.5px;font-weight:500;color:#8A97A9;border-bottom:2px solid transparent;letter-spacing:.01em;white-space:nowrap}
+  .nav a:hover{color:#E4EAF3}
+  .nav a[aria-current="page"]{color:#F5F8FC;border-bottom-color:var(--magma)}
+  .status{display:flex;align-items:center;gap:14px}
+  .seg{display:flex;background:#0B1018;border:1px solid #26303F;border-radius:7px;padding:2px;gap:2px;width:max-content}
+  .seg label{display:flex;align-items:center;justify-content:center;height:32px;padding:0 14px;border-radius:5px;font-size:12px;font-weight:600;color:#8A97A9;cursor:pointer;white-space:nowrap}
+  .seg label.is-on{background:#1B2431;color:#F3F6FA}
+  .radio{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+  .chip{display:inline-flex;align-items:center;justify-content:center;height:26px;padding:0 9px;background:#0B1018;border:1px solid #26303F;border-radius:5px;color:#8A97A9;font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:500;cursor:pointer}
+  .chip:hover{color:#F3F6FA;border-color:#3A475A}
+  .chip[aria-pressed="true"]{color:var(--magma);border-color:rgba(255,106,44,.5);background:rgba(255,106,44,.06)}
+  .kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  .grid-split{display:grid;grid-template-columns:1.05fr 1fr;gap:28px;align-items:start}
+  .monthly-grid{display:grid;grid-template-columns:1.02fr 1fr;gap:28px;align-items:start}
+  .grid-4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  .annual-bars{display:flex;align-items:flex-end;gap:12px;position:relative;padding:0 2px}
+  .annual-col{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px}
+  .annual-stack{width:100%;max-width:32px;display:flex;flex-direction:column;justify-content:flex-end}
+  .annual-credit{background:var(--magma);border-radius:2px 2px 0 0}
+  .annual-net{background:#3A475A}
+  .annual-pct{font-family:"JetBrains Mono",monospace;font-size:9px;font-weight:500;color:var(--magma);white-space:nowrap}
+  .annual-year{height:14px;font-family:"JetBrains Mono",monospace;font-size:9px;color:#8A97A9}
+  .chart{display:flex;align-items:flex-end;gap:6px;height:250px}
+  .chart__col{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:7px}
+  .chart__bars{flex:1;min-height:0;display:flex;align-items:flex-end;justify-content:center;gap:2px}
+  .bar{width:100%;max-width:15px;border-radius:2px 2px 0 0}
+  .bar--gross{background:#2B3646;border-top:1px solid #46566C}
+  .bar--net{background:var(--magma)}
+  .chart__month{font-family:"JetBrains Mono",monospace;font-size:9px;font-weight:500;text-align:center;letter-spacing:.02em;color:#8A97A9}
+  .lg{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  .lg--gross{background:#2B3646;border-top:1px solid #46566C}
+  .lg--net{background:var(--magma)}
+  .table{width:100%;border-collapse:collapse}
+  .table th{font-family:"Inter",sans-serif;font-size:9px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:#8A97A9;text-align:right;padding:0 7px 8px}
+  .table th:first-child{text-align:left}
+  .table td{border-top:1px solid #1C2533;padding:7px;text-align:right;font-family:"JetBrains Mono",monospace;font-size:10.5px;color:#C7D1DE;white-space:nowrap}
+  .table td:first-child{text-align:left;font-family:"Inter",sans-serif;font-size:11.5px;color:#E4EAF3}
+  .table tr.is-now td{background:rgba(255,106,44,.05)}
+  .table tr.is-end td{background:rgba(255,106,44,.04)}
+  .table .muted{color:#8A97A9}
+  @media (max-width:1120px){
+    .shell{padding-left:28px;padding-right:28px}
+    .kpi{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+    .grid-split{grid-template-columns:1fr !important}
+    .monthly-grid{grid-template-columns:1fr !important}
+    .grid-4{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+  }
+  @media (max-width:860px){
+    .topbar__inner{height:auto !important;flex-wrap:wrap;gap:0 !important;padding-top:10px}
+    .nav{order:3;width:100%;margin:8px 0 0;height:48px;overflow-x:auto;border-top:1px solid #1E2735}
+    .nav a{height:48px;padding:0 12px;font-size:12px}
+    .status{display:none !important}
+    .intro{flex-direction:column;align-items:flex-start !important;gap:24px !important}
+    .scenario{width:100% !important}
+    .kpi{grid-template-columns:1fr !important}
+    .grid-4{grid-template-columns:1fr !important}
+    h1{font-size:34px !important}
+    .chart{height:200px !important}
+    .table th,.table td{padding-left:5px;padding-right:5px}
+  }
+</style>
+</helmet>
+<div class="page" style="width:100%;background:#080C12;font-family:'Inter',system-ui,-apple-system,sans-serif;color:#E4EAF3;--magma:{{accent}}">
+  <header class="topbar">
+    <div class="shell topbar__inner" style="display:flex;align-items:center;height:68px">
+      <a class="brand" href="Main.dc.html" aria-label="Frete Líquido — página inicial">
+        <span class="display" style="font-size:18px;font-weight:700;letter-spacing:-.025em;color:#F3F6FA">Frete</span>
+        <span class="display" style="font-size:18px;font-weight:400;letter-spacing:-.015em;color:#A7B3C4">Líquido</span>
+      </a>
+      <nav class="nav" aria-label="Páginas do sistema">
+        <a href="Main.dc.html">Calculadora</a>
+        <a href="Horizonte.dc.html" aria-current="page">Horizonte</a>
+        <a href="Comparador.dc.html">Comparador</a>
+        <a href="Memoria.dc.html">Memória</a>
+      </nav>
+      <div class="status" style="margin-left:auto">
+        <span style="display:inline-flex;align-items:center;gap:7px;font-size:11px;color:#9AA7BA">
+          <span aria-hidden="true" style="width:6px;height:6px;border-radius:50%;background:var(--magma);box-shadow:0 0 0 3px rgba(255,106,44,.12)"></span>
+          Motores conectados
+        </span>
+        <span class="mono" style="font-size:10px;color:#8A97A9">v1.7.2 · v1.8.2</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell" style="padding-top:34px;padding-bottom:24px">
+    <section class="intro" style="display:flex;align-items:flex-end;justify-content:space-between;gap:48px;padding-bottom:24px;border-bottom:1px solid #1E2735">
+      <div style="max-width:720px">
+        <p class="label" style="display:flex;align-items:center;gap:10px;color:#9AA7BA">
+          <span aria-hidden="true" style="display:inline-block;width:18px;height:1px;background:var(--magma)"></span>
+          Horizonte da reforma · 2026–2033
+        </p>
+        <h1 class="display" style="margin:14px 0 0;font-size:44px;line-height:1.07;letter-spacing:-.025em;font-weight:600;color:#F5F8FC;max-width:660px">O frete muda de patamar em cada fase.</h1>
+        <p style="margin:14px 0 0;font-size:14.5px;line-height:1.65;color:#9AA7BA;max-width:600px">A mesma diária, o mesmo contrato: veja o bruto, o crédito e o custo líquido mês a mês, de 2026 ao regime pleno.</p>
+      </div>
+      <aside class="card scenario" style="width:304px;flex:none;padding:16px;background:#0D131C" aria-label="Cenário da projeção">
+        <p class="label" style="margin:0 0 12px">Contrato congelado</p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div>
+            <p style="margin:0;font-size:10px;color:#8A97A9">Trecho</p>
+            <p style="margin:2px 0 0;font-size:12.5px;color:#E4EAF3">Carreta dedicada · SP → BA</p>
+          </div>
+          <div>
+            <p style="margin:0;font-size:10px;color:#8A97A9">Base anual</p>
+            <p class="mono" style="margin:2px 0 0;font-size:12px;color:#C7D1DE">253 dias úteis · 2026</p>
+          </div>
+          <div>
+            <p style="margin:0;font-size:10px;color:#8A97A9">Diária</p>
+            <p class="mono" style="margin:2px 0 0;font-size:12px;color:#C7D1DE">R$ 3.500,00</p>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:20px">
+      <div class="seg" role="radiogroup" aria-label="Cenário do preço do frete">
+        <label class="is-on">
+          <input class="radio" type="radio" name="cenario" value="congelado" checked />
+          Preço congelado
+        </label>
+        <label>
+          <input class="radio" type="radio" name="cenario" value="repasse" />
+          Com repasse integral
+        </label>
+      </div>
+      <p class="mono" style="margin:0;font-size:10px;color:#8A97A9">projeção oficial do frete · base V0073</p>
+    </div>
+
+    <div class="kpi" style="margin-top:18px">
+      <div class="card" style="padding:16px 18px">
+        <p class="label" style="margin:0 0 9px">Frete bruto · 2026</p>
+        <p class="mono" style="margin:0;font-size:21px;letter-spacing:-.02em;color:#F3F6FA">R$ 885.500,00</p>
+        <p style="margin:5px 0 0;font-size:10.5px;color:#8A97A9">253 dias × R$ 3.500,00</p>
+      </div>
+      <div class="card" style="padding:16px 18px">
+        <p class="label" style="margin:0 0 9px">Crédito · 2026</p>
+        <p class="mono" style="margin:0;font-size:21px;letter-spacing:-.02em;color:var(--magma)">R$ 143.893,75</p>
+        <p style="margin:5px 0 0;font-size:10.5px;color:#8A97A9">16,25% do frete bruto</p>
+      </div>
+      <div class="card" style="padding:16px 18px">
+        <p class="label" style="margin:0 0 9px">Custo líquido · 2026</p>
+        <p class="mono" style="margin:0;font-size:21px;letter-spacing:-.02em;color:#F3F6FA">R$ 741.606,25</p>
+        <p style="margin:5px 0 0;font-size:10.5px;color:#8A97A9">83,75% do frete bruto</p>
+      </div>
+      <div class="card" style="padding:16px 18px">
+        <p class="label" style="margin:0 0 9px">Custo líquido · 2033</p>
+        <p class="mono" style="margin:0;font-size:21px;letter-spacing:-.02em;color:#F3F6FA">R$ 651.525,00</p>
+        <p class="mono" style="margin:5px 0 0;font-size:10px;color:var(--magma)">−R$ 90.081,25 vs 2026</p>
+      </div>
+    </div>
+
+    <section class="card" aria-labelledby="annual-title" style="margin-top:18px;padding:22px 24px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px">
+        <div>
+          <p class="label" style="margin:0 0 6px">Ano a ano</p>
+          <h2 id="annual-title" class="display" style="margin:0;font-size:20px;font-weight:600;letter-spacing:-.01em;color:#F3F6FA">O crédito cresce, o líquido cai</h2>
+        </div>
+        <div style="display:flex;gap:14px;font-size:10.5px;color:#8A97A9;flex:none">
+          <span><span class="lg" style="background:#3A475A" aria-hidden="true"></span>Líquido</span>
+          <span><span class="lg lg--net" aria-hidden="true"></span>Crédito CBS/IBS</span>
+        </div>
+      </div>
+      <div class="grid-split">
+        <div>
+          <div style="position:relative;padding-top:4px">
+            <div aria-hidden="true" style="position:absolute;left:0;right:0;bottom:20px;border-top:1px solid #202A38"></div>
+            <div class="annual-bars" role="img" aria-label="De 2026 a 2033, o crédito sobe de 16,25% para 27,00% do frete bruto e o custo líquido anual cai de R$ 741.606,25 para R$ 651.525,00.">
+              <sc-for list="{{years}}" as="y" hint-placeholder-count="8">
+                <div class="annual-col">
+                  <span class="annual-pct">{{y.pct}}</span>
+                  <div class="annual-stack" style="height:{{y.totalH}}px">
+                    <div class="annual-credit" style="height:{{y.creditH}}px"></div>
+                    <div class="annual-net" style="height:{{y.netH}}px"></div>
+                  </div>
+                  <span class="annual-year">{{y.y}}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <p style="margin:16px 0 0;font-size:10.5px;line-height:1.55;color:#8A97A9">Barra inteira = frete bruto do ano. A fatia laranja é o crédito apropriável; a fatia cinza, o custo que fica no caixa.</p>
+        </div>
+        <div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Ano</th>
+                <th scope="col">Bruto</th>
+                <th scope="col">Crédito</th>
+                <th scope="col">Líquido</th>
+                <th scope="col">vs 2026</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="is-now">
+                <td>2026 <span style="font-size:9px;color:var(--magma)">teste</span></td>
+                <td>885.500,00</td>
+                <td>143.893,75</td>
+                <td style="color:#F3F6FA">741.606,25</td>
+                <td class="muted">—</td>
+              </tr>
+              <tr>
+                <td>2027</td>
+                <td>892.500,00</td>
+                <td>138.337,50</td>
+                <td>754.162,50</td>
+                <td>+12.556,25</td>
+              </tr>
+              <tr>
+                <td>2028</td>
+                <td>882.000,00</td>
+                <td>136.710,00</td>
+                <td>745.290,00</td>
+                <td>+3.683,75</td>
+              </tr>
+              <tr>
+                <td>2029</td>
+                <td>885.500,00</td>
+                <td>147.435,75</td>
+                <td>738.064,25</td>
+                <td style="color:var(--magma)">−3.542,00</td>
+              </tr>
+              <tr>
+                <td>2030</td>
+                <td>896.000,00</td>
+                <td>159.488,00</td>
+                <td>736.512,00</td>
+                <td style="color:var(--magma)">−5.094,25</td>
+              </tr>
+              <tr>
+                <td>2031</td>
+                <td>896.000,00</td>
+                <td>169.792,00</td>
+                <td>726.208,00</td>
+                <td style="color:var(--magma)">−15.398,25</td>
+              </tr>
+              <tr>
+                <td>2032</td>
+                <td>896.000,00</td>
+                <td>180.096,00</td>
+                <td>715.904,00</td>
+                <td style="color:var(--magma)">−25.702,25</td>
+              </tr>
+              <tr class="is-end">
+                <td>2033 <span style="font-size:9px;color:var(--magma)">pleno</span></td>
+                <td>892.500,00</td>
+                <td style="color:var(--magma)">240.975,00</td>
+                <td style="color:#F3F6FA">651.525,00</td>
+                <td style="color:var(--magma)">−90.081,25</td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="margin:12px 0 0;font-size:10px;line-height:1.55;color:#8A97A9">Crédito = ICMS + PIS/COFINS + CBS/IBS conforme o cronograma. Em 2026, a CBS/IBS de 1,00% é compensada e não entra no crédito.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="monthly-title" style="margin-top:18px;padding:22px 24px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+        <div>
+          <p class="label" style="margin:0 0 6px">Mês a mês</p>
+          <h2 id="monthly-title" class="display" style="margin:0;font-size:20px;font-weight:600;letter-spacing:-.01em;color:#F3F6FA">O calendário de 2026</h2>
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap" role="group" aria-label="Ano da visão mensal">
+          <button type="button" class="chip" aria-pressed="true">2026</button>
+          <button type="button" class="chip" aria-pressed="false">2027</button>
+          <button type="button" class="chip" aria-pressed="false">2028</button>
+          <button type="button" class="chip" aria-pressed="false">2029</button>
+          <button type="button" class="chip" aria-pressed="false">2030</button>
+          <button type="button" class="chip" aria-pressed="false">2031</button>
+          <button type="button" class="chip" aria-pressed="false">2032</button>
+          <button type="button" class="chip" aria-pressed="false">2033</button>
+        </div>
+      </div>
+      <div class="monthly-grid">
+        <div>
+          <div style="display:flex;justify-content:space-between;gap:16px;margin-bottom:8px">
+            <p class="label" style="margin:0">Bruto × líquido · 2026</p>
+            <div style="display:flex;gap:12px;font-size:10px;color:#8A97A9">
+              <span><span class="lg lg--gross" aria-hidden="true"></span>Bruto</span>
+              <span><span class="lg lg--net" aria-hidden="true"></span>Líquido</span>
+            </div>
+          </div>
+          <div class="chart" role="img" aria-label="Mensal de 2026: o frete bruto varia com os dias úteis e o líquido mantém 83,75% do bruto.">
+            <sc-for list="{{months}}" as="m" hint-placeholder-count="12">
+              <div class="chart__col">
+                <div class="chart__bars">
+                  <div class="bar bar--gross" style="height:{{m.grossH}}px"></div>
+                  <div class="bar bar--net" style="height:{{m.netH}}px"></div>
+                </div>
+                <div class="chart__month" style="color:{{m.labelColor}}">{{m.m}}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;margin-top:16px;padding:12px 14px;border:1px solid #26303F;border-radius:8px;background:#0B1018">
+            <div>
+              <p class="label" style="margin:0 0 4px">Novembro · 2026</p>
+              <p class="mono" style="margin:0;font-size:11px;color:#C7D1DE">19 dias · R$ 66.500,00 brutos</p>
+            </div>
+            <div style="margin-left:auto;text-align:right">
+              <p class="label" style="margin:0 0 4px">Líquido</p>
+              <p class="mono" style="margin:0;font-size:14px;color:var(--magma)">R$ 55.693,75</p>
+            </div>
+          </div>
+          <p style="margin:12px 0 0;font-size:10.5px;line-height:1.55;color:#8A97A9">Dias úteis de segunda a sexta, feriados nacionais descontados. A diária fica congelada em R$ 3.500,00.</p>
+        </div>
+        <div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Mês</th>
+                <th scope="col">Dias</th>
+                <th scope="col">Bruto</th>
+                <th scope="col">Líquido</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Janeiro</td><td>21</td><td>73.500,00</td><td>61.556,25</td></tr>
+              <tr><td>Fevereiro</td><td>20</td><td>70.000,00</td><td>58.625,00</td></tr>
+              <tr><td>Março</td><td>22</td><td>77.000,00</td><td>64.487,50</td></tr>
+              <tr><td>Abril</td><td>21</td><td>73.500,00</td><td>61.556,25</td></tr>
+              <tr><td>Maio</td><td>20</td><td>70.000,00</td><td>58.625,00</td></tr>
+              <tr><td>Junho</td><td>22</td><td>77.000,00</td><td>64.487,50</td></tr>
+              <tr><td>Julho</td><td>23</td><td>80.500,00</td><td>67.418,75</td></tr>
+              <tr><td>Agosto</td><td>21</td><td>73.500,00</td><td>61.556,25</td></tr>
+              <tr><td>Setembro</td><td>21</td><td>73.500,00</td><td>61.556,25</td></tr>
+              <tr><td>Outubro</td><td>21</td><td>73.500,00</td><td>61.556,25</td></tr>
+              <tr class="is-now"><td>Novembro <span style="font-size:9px;color:var(--magma)">atual</span></td><td>19</td><td>66.500,00</td><td>55.693,75</td></tr>
+              <tr><td>Dezembro</td><td>22</td><td>77.000,00</td><td>64.487,50</td></tr>
+            </tbody>
+          </table>
+          <p style="margin:12px 0 0;font-size:10px;line-height:1.55;color:#8A97A9">O mês de referência define os dias úteis. Feriados estaduais e municipais não entram; Carnaval e Sexta da Paixão entram no modo efetivo.</p>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="phases-title" style="margin-top:24px">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:12px">
+        <div>
+          <p class="label" style="margin:0 0 6px">Marcos da transição</p>
+          <h2 id="phases-title" class="display" style="margin:0;font-size:20px;font-weight:600;letter-spacing:-.01em;color:#F3F6FA">Quatro viradas até 2033</h2>
+        </div>
+        <a href="Memoria.dc.html" style="font-size:11.5px;color:#E4EAF3;border-bottom:1px solid #46566C;padding-bottom:2px">Ver premissas →</a>
+      </div>
+      <div class="grid-4">
+        <div class="card" style="padding:15px 16px">
+          <p class="mono" style="margin:0;font-size:10px;color:var(--magma)">2026</p>
+          <p style="margin:5px 0 0;font-size:12.5px;font-weight:600;color:#E4EAF3">Fase de teste</p>
+          <p style="margin:5px 0 0;font-size:10.5px;line-height:1.5;color:#8A97A9">CBS 0,90% + IBS 0,10% compensados com ICMS e PIS/COFINS.</p>
+          <p class="mono" style="margin:9px 0 0;font-size:16px;color:#F3F6FA">16,25% <span style="font-size:9px;color:#8A97A9">crédito</span></p>
+        </div>
+        <div class="card" style="padding:15px 16px">
+          <p class="mono" style="margin:0;font-size:10px;color:var(--magma)">2027</p>
+          <p style="margin:5px 0 0;font-size:12.5px;font-weight:600;color:#E4EAF3">CBS cheia</p>
+          <p style="margin:5px 0 0;font-size:10.5px;line-height:1.5;color:#8A97A9">PIS/COFINS saem; a CBS entra integral no CT-e.</p>
+          <p class="mono" style="margin:9px 0 0;font-size:16px;color:#F3F6FA">15,50% <span style="font-size:9px;color:#8A97A9">crédito</span></p>
+        </div>
+        <div class="card" style="padding:15px 16px">
+          <p class="mono" style="margin:0;font-size:10px;color:var(--magma)">2029</p>
+          <p style="margin:5px 0 0;font-size:12.5px;font-weight:600;color:#E4EAF3">Transição do IBS</p>
+          <p style="margin:5px 0 0;font-size:10.5px;line-height:1.5;color:#8A97A9">O ICMS cai 10% ao ano; o IBS sobe até os 18,50%.</p>
+          <p class="mono" style="margin:9px 0 0;font-size:16px;color:#F3F6FA">16,65% <span style="font-size:9px;color:#8A97A9">crédito</span></p>
+        </div>
+        <div class="card" style="padding:15px 16px">
+          <p class="mono" style="margin:0;font-size:10px;color:var(--magma)">2033</p>
+          <p style="margin:5px 0 0;font-size:12.5px;font-weight:600;color:#E4EAF3">Regime pleno</p>
+          <p style="margin:5px 0 0;font-size:10.5px;line-height:1.5;color:#8A97A9">ICMS extinto. CBS 8,50% + IBS 18,50% no documento.</p>
+          <p class="mono" style="margin:9px 0 0;font-size:16px;color:#F3F6FA">27,00% <span style="font-size:9px;color:#8A97A9">crédito</span></p>
+        </div>
+      </div>
+    </section>
+
+    <footer style="margin-top:30px;border-top:1px solid #1E2735;padding-top:18px;display:flex;justify-content:space-between;gap:20px;font-size:10.5px;color:#8A97A9">
+      <span>Frete Líquido · horizonte da reforma sobre o mesmo contrato</span>
+      <span class="mono" style="color:#8A97A9">LC 214/2025 · EC 132/2023 · base V0073</span>
+    </footer>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF6A2C","options":["#FF6A2C","#FF7A45","#D9541B"]},"$preview":{"width":1440,"height":1700}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#FF6A2C';
+    const rawYears = [
+      [2026, 885500, 143893.75, 741606.25, '16,25%'],
+      [2027, 892500, 138337.50, 754162.50, '15,50%'],
+      [2028, 882000, 136710.00, 745290.00, '15,50%'],
+      [2029, 885500, 147435.75, 738064.25, '16,65%'],
+      [2030, 896000, 159488.00, 736512.00, '17,80%'],
+      [2031, 896000, 169792.00, 726208.00, '18,95%'],
+      [2032, 896000, 180096.00, 715904.00, '20,10%'],
+      [2033, 892500, 240975.00, 651525.00, '27,00%']
+    ];
+    const years = rawYears.map(([y, gross, credit, net, pct]) => {
+      const totalH = Math.round((gross / 896000) * 150);
+      const creditH = Math.round((credit / 896000) * 150);
+      return { y: y, pct: pct, totalH: totalH, creditH: creditH, netH: totalH - creditH };
+    });
+    const rawMonths = [
+      ['jan', 21, 73500, 61556.25, false],
+      ['fev', 20, 70000, 58625.00, false],
+      ['mar', 22, 77000, 64487.50, false],
+      ['abr', 21, 73500, 61556.25, false],
+      ['mai', 20, 70000, 58625.00, false],
+      ['jun', 22, 77000, 64487.50, false],
+      ['jul', 23, 80500, 67418.75, false],
+      ['ago', 21, 73500, 61556.25, false],
+      ['set', 21, 73500, 61556.25, false],
+      ['out', 21, 73500, 61556.25, false],
+      ['nov', 19, 66500, 55693.75, true],
+      ['dez', 22, 77000, 64487.50, false]
+    ];
+    const months = rawMonths.map(([m, d, gross, net, active]) => ({
+      m: m,
+      d: d,
+      grossH: Math.round((gross / 80500) * 200),
+      netH: Math.round((net / 80500) * 200),
+      labelColor: active ? 'var(--magma)' : '#8A97A9'
+    }));
+    return { accent: accent, years: years, months: months };
+  }
+}
+</script>
+</body>
+</html>
